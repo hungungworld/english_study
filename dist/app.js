@@ -24,6 +24,7 @@ let board = {posts:[],words:[]};
 let loading = true;
 let loadError = "";
 let period = "week";
+let boardPeriod = "all";
 let wordMember = 0;
 let quiz = null;
 let noticeTimer;
@@ -105,7 +106,8 @@ function render() {
   document.body.classList.toggle("study-mode",!landing);
   document.body.classList.toggle("study-home",studyHome);
   const member = page === "member" ? Number(key) : 0;
-  document.querySelector("#members").innerHTML = members.map((name,index) =>
+  document.body.classList.toggle("board-view",page === "feed" || page === "member");
+  document.querySelector("#members").innerHTML = '<a class="member" href="#feed">모든 조원</a>' + members.map((name,index) =>
     `<a class="member" href="#member/${index + 1}" ${member === index + 1 ? 'aria-current="page"' : ""}><span class="avatar" aria-hidden="true" style="--avatar:${colors[index % colors.length]}">${index + 1}</span>${e(name)}</a>`).join("");
   document.querySelectorAll("#nav a").forEach(link => {
     const active = link.hash === (studyHome ? "#study" : media ? "#home" : ["words","quiz"].includes(page) ? "#words" : "#feed");
@@ -123,13 +125,11 @@ function render() {
         <button type="button" class="primary" data-tv-write>＋ 공부 기록 쓰기</button></div>
       </section><div id="home-media"></div><div id="home-board"></div>`;
       const posts = sorted(board.posts);
-      const memberTabs = members.map((name,index) => `<a href="#member/${index+1}">${e(name)}</a>`).join("");
       main.querySelector("#home-board").innerHTML = `<section class="home-section" aria-labelledby="home-board-title">
-        <div class="home-section-head"><h2 id="home-board-title">전체 게시판</h2><a href="#feed" data-all-posts>전체 글 보기 ↗</a></div>
+        <div class="home-section-head"><h2 id="home-board-title">최근 공부 기록</h2><a href="#feed" data-all-posts>게시판 열기 ↗</a></div>
         ${!shared ? '<p class="home-board-status">미리보기 · 새 글은 이 브라우저에 저장돼요.</p>' : ""}
         <div class="stack">${loading ? empty("게시글을 불러오는 중이에요.") : loadError ? empty(loadError) : posts.slice(0,5).map(postCard).join("") || empty("아직 올라온 글이 없어요.")}</div>
-      </section><section class="home-section" aria-labelledby="home-members-title"><h2 id="home-members-title">조원별 게시판</h2>
-        <nav class="home-member-tabs" aria-label="조원 이름">${memberTabs}</nav></section>`;
+      </section>`;
       renderMedia(main.querySelector("#home-media"),mediaKey,"home");
     } else {
       if (main.querySelector("#home-media")) main.replaceChildren();
@@ -151,11 +151,10 @@ function render() {
       <div class="stack">${words.map(wordCard).join("") || empty("이 조건에 해당하는 단어가 없어요.")}</div>`;
   } else {
     const personal = members[member - 1];
-    const posts = sorted(personal ? board.posts.filter(post => post.author === member) : inPeriod(board.posts,period));
-    const title = personal ? personal + " 게시판" : {week:"이번 주 스터디",last:"지난주 스터디",all:"전체 게시판"}[period];
-    const description = personal ? "공유한 영어 공부 기록" : period === "all" ? "조원들의 영어 공부 기록" : weekLabel(period);
-    content = hero(title,description,personal ? "" : quizButton("week","이번 주 단어 퀴즈",inPeriod(board.words,"week"))) +
-      `<div class="toolbar">${personal ? '<a class="back" href="#feed">← 통합 게시판</a>' : periodTabs(period)}<span class="count">게시글 ${posts.length}개</span></div>
+    const posts = sorted(inPeriod(board.posts,boardPeriod).filter(post => !personal || post.author === member));
+    const description = boardPeriod === "all" ? "조원들의 영어 공부 기록" : weekLabel(boardPeriod);
+    content = hero("공부 게시판",description,quizButton("week","이번 주 단어 퀴즈",inPeriod(board.words,"week"))) +
+      `<div class="toolbar">${periodTabs(boardPeriod)}<div class="row"><button type="button" data-board-author aria-haspopup="dialog">${e(personal || "모든 조원")} ▾</button><span class="count">게시글 ${posts.length}개</span></div></div>
       <div class="stack">${posts.map(postCard).join("") || empty("아직 올라온 글이 없어요.")}</div>`;
   }
   main.innerHTML = (!shared ? '<div class="banner">미리보기 · 예시 글이 표시되며 새 기록은 이 브라우저에만 저장돼요.</div>' : "") + content;
@@ -321,7 +320,7 @@ main.addEventListener("change",event => {
   }
 });
 main.addEventListener("click",async event => {
-  if (event.target.closest("[data-all-posts]")) period = "all";
+  if (event.target.closest("[data-all-posts]")) boardPeriod = "all";
   const button = event.target.closest("button");
   if (!button) return;
   if ("tvMember" in button.dataset) {
@@ -338,10 +337,15 @@ main.addEventListener("click",async event => {
   }
   const id = location.hash.split("/")[1];
   const data = button.dataset;
+  if ("boardAuthor" in data) {
+    memberDrawer.showModal();
+    return;
+  }
   if (data.period) {
-    period = data.period;
+    if (document.body.classList.contains("board-view")) boardPeriod = data.period;
+    else period = data.period;
     render();
-    main.querySelector(`[data-period="${period}"]`)?.focus();
+    main.querySelector(`[data-period="${data.period}"]`)?.focus();
   }
   if ("newWord" in data) openEditor(true);
   if ("edit" in data) openEditor(false,board.posts.find(post => post.id === id));
