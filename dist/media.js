@@ -38,6 +38,26 @@ function scrapKey(item) {
   return url.href;
 }
 
+// Project each card's four corners through the same radial lens. Applying the
+// resulting homography to the button also moves its browser hit target.
+function lensTransform(left,top,width,height,project) {
+  const [a,b,c,d] = [
+    project(left,top),project(left+width,top),
+    project(left+width,top+height),project(left,top+height)
+  ].map(([x,y]) => [x-left,y-top]);
+  const [dx1,dx2,dx3] = [b[0]-c[0],d[0]-c[0],a[0]-b[0]+c[0]-d[0]];
+  const [dy1,dy2,dy3] = [b[1]-c[1],d[1]-c[1],a[1]-b[1]+c[1]-d[1]];
+  const determinant = dx1*dy2-dx2*dy1;
+  if (Math.abs(determinant) < 1e-6) return "none";
+  const g = (dx3*dy2-dx2*dy3)/determinant;
+  const h = (dx1*dy3-dx3*dy1)/determinant;
+  return `matrix3d(${[
+    (b[0]*(1+g)-a[0])/width,(b[1]*(1+g)-a[1])/width,0,g/width,
+    (d[0]*(1+h)-a[0])/height,(d[1]*(1+h)-a[1])/height,0,h/height,
+    0,0,1,0,a[0],a[1],0,1
+  ].join(",")})`;
+}
+
 function bendWall() {
   if (frame) return;
   frame = requestAnimationFrame(() => {
@@ -48,20 +68,27 @@ function bendWall() {
     const grid = feed.querySelector(".tv-grid");
     if (!grid) return;
     grid.style.translate = wallOffset + "px";
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const radius = Math.hypot(width,height)/2;
+    const project = (x,y) => {
+      const dx = x - width/2;
+      const dy = y - height/2;
+      const r2 = (dx*dx + dy*dy)/(radius*radius);
+      // Bounded radial compression keeps the mapping monotonic off-screen.
+      const scale = 1.12 / Math.sqrt(1 + .60*r2 + .08*r2*r2/(1+r2));
+      return [width/2 + dx*scale,height/2 + dy*scale];
+    };
     const cards = [...grid.querySelectorAll(".tv-card")];
     const positions = cards.map(card => ({
-      card,x:card.offsetLeft + card.offsetWidth / 2,y:card.offsetTop + card.offsetHeight / 2
+      card,left:card.offsetLeft + wallOffset,top:card.offsetTop - window.scrollY,
+      width:card.offsetWidth,height:card.offsetHeight
     }));
     for (const position of positions) {
-      const {card} = position;
-      const x = (position.x + wallOffset - width / 2) / (width / 2);
-      const y = (position.y - window.scrollY - height / 2) / (height / 2);
-      const tilt = Math.max(-1,Math.min(1,y));
-      card.style.setProperty("--curve-x", tilt * -20 + "deg");
-      card.style.setProperty("--curve-y", x * -32 + "deg");
-      const depth = Math.max(0,1 - .72 * x * x - .48 * y * y);
-      card.style.setProperty("--curve-depth", depth * 48 + "px");
-      card.style.setProperty("--curve-scale", .86 + depth * .055);
+      const {card,left,top,width:cardWidth,height:cardHeight} = position;
+      if (top > height + cardHeight || top + cardHeight < -cardHeight) continue;
+      card.style.setProperty("--wall-lens",lensTransform(left,top,cardWidth,cardHeight,project));
+      const distance = Math.hypot(left+cardWidth/2-width/2,top+cardHeight/2-height/2)/radius;
+      card.style.setProperty("--lens-shade",Math.min(.42,distance**2*.32));
     }
   });
 }
