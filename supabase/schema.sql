@@ -2,7 +2,7 @@ begin;
 
 create table if not exists public.study_posts (
   id uuid primary key default gen_random_uuid(),
-  author smallint not null check (author between 0 and 5),
+  author integer not null check (author >= 0),
   author_name text not null check (length(author_name) <= 40 and (author > 0 or length(trim(author_name)) > 0)),
   title text not null check (length(trim(title)) between 1 and 150),
   body text not null check (length(trim(body)) between 1 and 12000),
@@ -15,13 +15,18 @@ create table if not exists public.study_posts (
 create table if not exists public.study_words (
   id uuid primary key default gen_random_uuid(),
   post_id uuid references public.study_posts(id) on delete cascade,
-  author smallint not null check (author between 0 and 5),
+  author integer not null check (author >= 0),
   author_name text not null check (length(author_name) <= 40 and (author > 0 or length(trim(author_name)) > 0)),
   term text not null check (length(trim(term)) between 1 and 120),
   meaning text not null check (length(trim(meaning)) between 1 and 300),
   example text not null check (length(example) <= 600),
   created_at timestamptz not null default now()
 );
+
+alter table public.study_posts drop constraint if exists study_posts_author_check,
+  alter column author type integer, add constraint study_posts_author_check check (author >= 0);
+alter table public.study_words drop constraint if exists study_words_author_check,
+  alter column author type integer, add constraint study_words_author_check check (author >= 0);
 
 create index if not exists study_words_post_id on public.study_words(post_id);
 alter table public.study_posts enable row level security;
@@ -42,7 +47,7 @@ returns uuid language plpgsql security definer set search_path = ''
 as $$
 declare
   post_id_to_save uuid := post_key;
-  member_no smallint := (entry->>'author')::smallint;
+  member_no integer := (entry->>'author')::integer;
   display_name text := case when member_no = 0 then trim(entry->>'author_name') else '' end;
   token_digest text := encode(sha256(convert_to(edit_token, 'UTF8')), 'hex');
   words jsonb := entry->'words';
@@ -50,7 +55,7 @@ declare
   saved_word uuid;
   keep_words uuid[] := array[]::uuid[];
 begin
-  if member_no is null or member_no not between 0 and 5
+  if member_no is null or member_no < 0
      or (member_no = 0 and coalesce(length(display_name), 0) not between 1 and 40)
      or coalesce(length(edit_token), 0) not between 40 and 128
      or jsonb_typeof(words) is distinct from 'array' or jsonb_array_length(words) > 20 then

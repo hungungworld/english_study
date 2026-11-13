@@ -9,7 +9,8 @@ main.addEventListener("error",event => {
 const editor = document.querySelector("#editor");
 const memberEditor = document.querySelector("#member-editor");
 const savedNames = readLocal("member-names",[]);
-const members = defaultMembers.map((name,index) => savedNames?.[index] || name);
+const members = defaultMembers.map((name,index) => savedNames?.[index] || name)
+  .concat(Array.isArray(savedNames) ? savedNames.slice(defaultMembers.length) : []);
 const notice = document.querySelector("#notice");
 const colors = ["#e3d6fb","#f9dfcc","#d4eadd","#f5dbea","#dce6fa"];
 const day = 86400000;
@@ -90,7 +91,7 @@ function render() {
   document.body.classList.toggle("study-mode",!landing);
   const member = page === "member" ? Number(key) : 0;
   document.querySelector("#members").innerHTML = members.map((name,index) =>
-    `<a class="member" href="#member/${index + 1}" ${member === index + 1 ? 'aria-current="page"' : ""}><span class="avatar" aria-hidden="true" style="--avatar:${colors[index]}">${index + 1}</span>${e(name)}</a>`).join("");
+    `<a class="member" href="#member/${index + 1}" ${member === index + 1 ? 'aria-current="page"' : ""}><span class="avatar" aria-hidden="true" style="--avatar:${colors[index % colors.length]}">${index + 1}</span>${e(name)}</a>`).join("");
   document.querySelectorAll("#nav a").forEach(link => {
     const active = link.hash === (landing ? "#home" : media ? "#" + page : ["words","quiz"].includes(page) ? "#words" : "#feed");
     if (active) link.setAttribute("aria-current","page");
@@ -120,7 +121,7 @@ function render() {
     const personal = members[member - 1];
     const posts = sorted(personal ? board.posts.filter(post => post.author === member) : inPeriod(board.posts,period));
     const title = personal ? personal + " 게시판" : {week:"이번 주 스터디",last:"지난주 스터디",all:"전체 게시판"}[period];
-    const description = personal ? "공유한 영어 공부 기록" : period === "all" ? "다섯 조원의 영어 공부 기록" : weekLabel(period);
+    const description = personal ? "공유한 영어 공부 기록" : period === "all" ? "조원들의 영어 공부 기록" : weekLabel(period);
     content = hero(title,description,personal ? "" : quizButton("week","이번 주 단어 퀴즈",inPeriod(board.words,"week"))) +
       `<div class="toolbar">${personal ? '<a class="back" href="#feed">← 통합 게시판</a>' : periodTabs(period)}<span class="count">게시글 ${posts.length}개</span></div>
       <div class="stack">${posts.map(postCard).join("") || empty("아직 올라온 글이 없어요.")}</div>`;
@@ -331,12 +332,18 @@ document.querySelector("#tv-overlay").addEventListener("write-media",event => {
   openEditor(false,undefined,event.detail);
   editor.querySelector("textarea").focus();
 });
+const memberField = (name,index) => `<label>조원 ${index + 1}<input required maxlength="24" value="${e(name)}"></label>`;
 document.querySelector("#rename-members").addEventListener("click",() => {
-  memberEditor.innerHTML = `<div class="dialog-head"><h2 id="member-editor-title">조원 이름 변경</h2></div>
-    <p class="hint">변경한 이름은 이 브라우저에 저장돼요.</p>
-    <form>${members.map((name,index) => `<label>조원 ${index + 1}<input required maxlength="24" value="${e(name)}"></label>`).join("")}
+  memberEditor.innerHTML = `<div class="dialog-head"><h2 id="member-editor-title">조원 관리</h2></div>
+    <p class="hint">조원 목록은 이 브라우저에 저장돼요.</p>
+    <form><div class="stack" id="member-fields">${members.map(memberField).join("")}</div>
     <p class="form-error" role="alert" hidden>조원 이름을 모두 입력해 주세요.</p>
-    <div class="row"><button class="primary" type="submit">저장</button><button type="button" id="cancel-rename">취소</button></div></form>`;
+    <div class="row"><button type="button" id="add-member">＋ 조원 추가</button><button class="primary" type="submit">저장</button><button type="button" id="cancel-rename">취소</button></div></form>`;
+  const fields = memberEditor.querySelector("#member-fields");
+  memberEditor.querySelector("#add-member").onclick = () => {
+    fields.insertAdjacentHTML("beforeend",memberField("",fields.children.length));
+    fields.lastElementChild.querySelector("input").focus();
+  };
   memberEditor.querySelector("#cancel-rename").onclick = () => memberEditor.close();
   memberEditor.querySelector("form").onsubmit = event => {
     event.preventDefault();
@@ -349,7 +356,7 @@ document.querySelector("#rename-members").addEventListener("click",() => {
     writeLocal("member-names",members);
     memberEditor.close();
     render();
-    flash("조원 이름을 저장했어요.");
+    flash("조원 목록을 저장했어요.");
   };
   memberEditor.showModal();
 });
