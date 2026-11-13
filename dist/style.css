@@ -299,3 +299,45 @@ body:not(.media-mode) .tv-card .tv-label,body:not(.media-mode) .tv-footer,body:n
 }
 @media(max-width:700px){.top-inner{padding:0 15px;gap:15px;min-height:63px}.top nav{gap:11px;font-size:13px}.logo{width:29px;height:29px;font-size:20px}.brand{gap:6px;font-size:14px}.top button{padding:7px 8px;font-size:13px}.shell{display:block;padding:15px 15px 42px}aside{margin-bottom:13px}aside h2{margin:0 0 5px}aside nav{display:flex;overflow-x:auto;gap:3px;padding:3px}.member{flex:none;padding:5px 7px}.avatar{width:26px;height:26px}.hero{padding:22px 17px;margin-bottom:17px;align-items:start;flex-direction:column}.card{padding:15px}.toolbar{gap:8px}}
 
+.media-mode,.study-mode{
+  --film-dark:#211913;
+  --film-paper:#f2e8d8;
+  --film-highlight:#e6b788;
+}
+.media-mode{
+  background:radial-gradient(ellipse at 50% 28%,#32251d,var(--film-dark) 65%,#120e0b);
+}
+.media-mode .tv-card{
+  border-color:#f0c69a66;
+  box-shadow:0 0 18px #e6b78826;
+}
+.media-mode .tv-card .tv-screen::before{
+  background:radial-gradient(ellipse at 31% -13%,#ffe5bb91,transparent 56%);
+}
+.media-mode .tv-card .tv-screen img{filter:sepia(.16) saturate(.9)}
+.media-mode .tv-intro h1,.media-mode .tv-dock{
+  background:#30241be8;
+  color:var(--film-paper);
+  border:0;
+}
+.media-mode .tv-dock [data-tv-write]{background:var(--film-highlight);color:var(--film-dark)}
+.study-mode.study-home .club-cover{background:var(--film-dark)}
+.study-home .club-photo::after{background:linear-gradient(90deg,transparent 58%,var(--film-dark)),radial-gradient(at bottom left,#b75d4277,transparent 48%)}
+.study-home .home-member-tabs a{background:#e8dccc}
+.study-home .home-member-tabs a:hover{background:#dccbb6}
+@media(max-width:650px){
+  .study-home .club-photo::after{background:linear-gradient(180deg,transparent 55%,var(--film-dark))}
+}
+
+body :is(button,.tv-out,.tv-dock a,.home-member-tabs a,.top nav a),
+body :is(#editor,#member-editor,#member-picker,#tv-overlay) :is(button,.tv-out){
+  border:0;
+  border-radius:12px;
+}
+.media-mode .tv-grid .tv-card{border:1px solid #f0c69a66;border-radius:23% / 28%}
+.study-home.study-mode .tv-grid .tv-card{border-radius:0;border-right:1px solid var(--line)}
+.study-home.study-mode .tv-grid .tv-card:nth-child(3n){border-right:0}
+@media(max-width:650px){
+  .study-home.study-mode .tv-grid .tv-card:nth-child(3n){border-right:1px solid var(--line)}
+  .study-home.study-mode .tv-grid .tv-card:nth-child(2n){border-right:0}
+}
