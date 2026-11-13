@@ -14,11 +14,38 @@ let ready = false;
 let videoConfigured = false;
 let newsError = false;
 let videoError = false;
-let lastScroll = 0;
 let lastFocus = "";
 let generation = 0;
 let visible = [];
-let openKey = "";
+let section = "";
+let landingFilter = "all";
+let frame = 0;
+const overlay = document.querySelector("#tv-overlay");
+
+function bendWall() {
+  if (frame) return;
+  frame = requestAnimationFrame(() => {
+    frame = 0;
+    if (!feed?.isConnected || section) return;
+    const width = document.documentElement.clientWidth;
+    const height = window.innerHeight;
+    const cards = [...feed.querySelectorAll(".tv-card")];
+    const positions = cards.map(card => ({
+      card,x:card.offsetLeft + card.offsetWidth / 2,y:card.offsetTop + card.offsetHeight / 2
+    }));
+    for (const position of positions) {
+      const {card} = position;
+      const x = (position.x - width / 2) / (width / 2);
+      const y = (position.y - window.scrollY - height / 2) / (height / 2);
+      const tilt = Math.max(-1,Math.min(1,y));
+      card.style.setProperty("--curve-x", tilt * -13 + "deg");
+      card.style.setProperty("--curve-y", x * -25 + "deg");
+      card.style.setProperty("--curve-scale", 1 - Math.abs(x) * .075);
+    }
+  });
+}
+window.addEventListener("scroll",bendWall,{passive:true});
+window.addEventListener("resize",bendWall);
 
 function items() {
   if (filter === "news") return news;
@@ -89,14 +116,15 @@ async function more() {
   paintFooter();
 }
 function appendCards() {
-  if (!feed?.isConnected || openKey) return;
+  if (!feed?.isConnected) return;
   const grid = feed.querySelector(".tv-grid");
   const count = grid.children.length;
   grid.insertAdjacentHTML("beforeend",visible.slice(count).map(card).join(""));
   paintFooter();
+  bendWall();
 }
 function paintFooter() {
-  if (!feed?.isConnected || openKey) return;
+  if (!feed?.isConnected) return;
   observer?.disconnect();
   const foot = feed.querySelector(".tv-footer");
   const moreAvailable = items().length > visible.length || (filter !== "news" && next);
@@ -110,63 +138,90 @@ function paintFooter() {
   }
 }
 function paint() {
-  if (!feed?.isConnected || openKey) return;
+  if (!feed?.isConnected) return;
   if (!visible.length) visible = items().slice(0,LIMIT);
   const messages = [
     filter !== "video" && newsError ? "BBC 뉴스를 불러오지 못했어요." : "",
     filter !== "news" && videoError ? "영어 영상을 불러오지 못했어요." : "",
-    ready && filter !== "news" && !videoConfigured && !videoError ? "영어 영상은 YouTube 키를 연결하면 표시돼요." : ""
+    ready && filter === "video" && !videoConfigured && !videoError ? "영어 영상 목록을 아직 불러올 수 없어요." : ""
   ].filter(Boolean);
-  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>영어 TV</h1><p>보고 싶은 뉴스나 영상을 골라 보세요.</p></div>
-    <div class="tv-filters" aria-label="콘텐츠 유형">${Object.entries(filters).map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("")}</div>
-    ${messages.length ? `<div class="tv-message">${messages.join(" ")} ${newsError || videoError ? '<button data-reload>다시 시도</button>' : ""}</div>` : ""}
+  const controls = Object.entries(filters).map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
+  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section ? filters[section] : "영어 TV"}</h1></div>
+    ${section ? "" : `<nav class="tv-dock" aria-label="영어 TV 메뉴">${controls}<a href="#feed">▤ 게시물</a><a href="#study">스터디 홈 ↗</a></nav>`}
+    ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
     <div class="tv-grid">${visible.map(card).join("")}</div>
     ${ready && !visible.length && !messages.length ? '<p class="tv-message">표시할 콘텐츠가 없어요.</p>' : ""}
     <div class="tv-footer" role="status"></div></section>`;
   paintFooter();
+  bendWall();
 }
 function detail(item) {
-  return `<section class="tv-detail"><a class="back" href="#home">← 영어 TV</a>
+  return `<section class="tv-detail"><button type="button" class="tv-close" aria-label="닫기">✕</button>
     ${item.type === "video" ? `<iframe class="tv-player" title="${escape(item.title)}" src="https://www.youtube-nocookie.com/embed/${escape(item.id)}" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>` : screen(item,true)}
     <div class="tv-detail-copy"><p class="tv-label">${escape(item.source)} · ${date(item)}</p>
     <h1 lang="en">${escape(item.title)}</h1>
     <a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "YouTube에서 열기" : "BBC 원문 읽기"} ↗</a></div></section>`;
 }
-export function renderMedia(root, key) {
+function showDetail(item, origin) {
+  overlay.innerHTML = detail(item);
+  overlay.showModal();
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const target = overlay.getBoundingClientRect();
+    const x = origin ? origin.x + origin.width / 2 - target.x - target.width / 2 : 0;
+    const y = origin ? origin.y + origin.height / 2 - target.y - target.height / 2 : 0;
+    const scale = origin ? Math.min(origin.width / target.width,.85) : .92;
+    overlay.animate([{transform:`translate(${x}px,${y}px) scale(${scale})`,opacity:.7},
+      {transform:"none",opacity:1}],{duration:460,easing:"cubic-bezier(.2,.8,.2,1)"});
+  }
+}
+overlay.addEventListener("click",event => {
+  if (event.target === overlay || event.target.closest(".tv-close")) overlay.close();
+});
+overlay.addEventListener("error",event => {
+  if (event.target.matches?.(".news-thumbnail")) event.target.remove();
+},true);
+overlay.addEventListener("close",() => {
+  overlay.replaceChildren();
+  if (location.hash.startsWith("#tv/")) location.replace("#home");
+  if (lastFocus) {
+    [...(feed?.querySelectorAll("[data-media]") ?? [])].find(button => button.dataset.media === lastFocus)?.focus({preventScroll:true});
+    lastFocus = "";
+  }
+});
+export function renderMedia(root, key, view = "") {
   observer?.disconnect();
+  if (feed !== root || section !== view) {
+    section = view;
+    filter = view || landingFilter;
+    visible = [];
+    notice = "";
+    generation++;
+  }
   feed = root;
-  openKey = key || "";
+  paint();
+  if (!ready) loadFirst();
   if (key) {
     const item = [...news,...videos].find(item => item.id === key);
     if (item) {
-      feed.innerHTML = detail(item);
+      if (!overlay.open) showDetail(item);
       return;
     }
-    feed.innerHTML = '<a class="back" href="#home">← 영어 TV</a><p class="tv-message">콘텐츠를 확인하는 중이에요.</p>';
     if (!ready) loadFirst().then(() => {
-      if (openKey === key && feed?.isConnected) renderMedia(feed,key);
+      if (feed?.isConnected && location.hash.startsWith("#tv/")) renderMedia(feed,key,view);
     });
-    else feed.querySelector(".tv-message").textContent = "이 콘텐츠를 찾을 수 없어요. 영어 TV에서 다시 선택해 주세요.";
-    return;
+    else feed.querySelector(".tv-home").insertAdjacentHTML("afterbegin",'<p class="tv-message">이 콘텐츠를 찾을 수 없어요.</p>');
   }
-  paint();
-  if (!ready) loadFirst();
-  if (lastFocus) requestAnimationFrame(() => {
-    if (openKey || !feed?.isConnected) return;
-    const target = [...feed.querySelectorAll("[data-media]")].find(button => button.dataset.media === lastFocus);
-    target?.focus({preventScroll:true});
-    window.scrollTo(0,lastScroll);
-    lastFocus = "";
-  });
 }
 export function leaveMedia() {
   observer?.disconnect();
+  if (overlay.open) overlay.close();
   feed = null;
 }
 export function mediaClick(button) {
   const data = button.dataset;
   if (data.tvFilter) {
     filter = data.tvFilter;
+    landingFilter = filter;
     visible = [];
     notice = "";
     generation++;
@@ -175,8 +230,8 @@ export function mediaClick(button) {
   }
   if (data.media) {
     lastFocus = data.media;
-    lastScroll = window.scrollY;
-    location.hash = "tv/" + encodeURIComponent(data.media);
+    const item = items().find(item => item.id === data.media);
+    if (item) showDetail(item,button.querySelector(".tv-screen").getBoundingClientRect());
   }
   if ("more" in data) more();
   if ("reload" in data) {

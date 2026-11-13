@@ -81,25 +81,28 @@ function wordSelection() {
 }
 function render() {
   const [page, key] = (location.hash.slice(1) || "home").split("/");
-  const media = page === "home" || page === "tv";
-  document.body.classList.toggle("media-mode",media);
+  const landing = page === "home" || page === "tv";
+  const media = landing || page === "news" || page === "videos";
+  document.body.classList.toggle("media-mode",landing);
   const member = page === "member" ? Number(key) : 0;
   document.querySelector("#members").innerHTML = members.map((name,index) =>
     `<a class="member" href="#member/${index + 1}" ${member === index + 1 ? 'aria-current="page"' : ""}><span class="avatar" aria-hidden="true" style="--avatar:${colors[index]}">${index + 1}</span>${e(name)}</a>`).join("");
   document.querySelectorAll("#nav a").forEach(link => {
-    const active = link.hash === (media ? "#home" : ["words","quiz"].includes(page) ? "#words" : "#feed");
+    const active = link.hash === (landing ? "#home" : media ? "#" + page : ["words","quiz"].includes(page) ? "#words" : "#feed");
     if (active) link.setAttribute("aria-current","page");
     else link.removeAttribute("aria-current");
   });
   if (media) {
     let mediaKey;
     try { mediaKey = key && decodeURIComponent(key); } catch { mediaKey = key; }
-    renderMedia(main,mediaKey);
+    renderMedia(main,mediaKey,page === "news" ? "news" : page === "videos" ? "video" : "");
     return;
   }
   leaveMedia();
   let content;
-  if (loading) content = empty("스터디 기록을 불러오는 중이에요.");
+  if (page === "study") content = hero("스터디 서클","영어 공부 기록을 나누고, 함께 복습해요.") +
+    '<nav class="study-links" aria-label="스터디 홈"><a class="card" href="#feed">주간 게시판</a><a class="card" href="#words">공유 단어장</a><a class="card" href="#news">BBC 기사</a><a class="card" href="#videos">영어 영상</a></nav>';
+  else if (loading) content = empty("스터디 기록을 불러오는 중이에요.");
   else if (loadError) content = `<div class="card empty"><p>${e(loadError)}</p><button data-refresh>다시 불러오기</button></div>`;
   else if (page === "quiz") content = renderQuiz();
   else if (page === "post") content = renderPost(key);
@@ -261,7 +264,7 @@ main.addEventListener("change",event => {
 main.addEventListener("click",async event => {
   const button = event.target.closest("button");
   if (!button) return;
-  if (document.body.classList.contains("media-mode")) {
+  if (main.querySelector(".tv-home")) {
     mediaClick(button);
     return;
   }
@@ -316,6 +319,12 @@ async function refresh() {
   render();
 }
 document.querySelector("#write").addEventListener("click",() => openEditor(false));
-window.addEventListener("hashchange",() => { render(); window.scrollTo(0,0); });
+window.addEventListener("hashchange",event => {
+  const previous = new URL(event.oldURL).hash;
+  const current = location.hash;
+  const inLanding = hash => !hash || hash === "#home" || hash.startsWith("#tv/");
+  if (!inLanding(previous) || !inLanding(current)) window.scrollTo(0,0);
+  render();
+});
 render();
 refresh();
