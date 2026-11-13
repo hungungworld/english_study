@@ -1,6 +1,7 @@
 import {members as defaultMembers} from "./config.js";
 import {renderMedia,leaveMedia,mediaClick,setLandingFilter} from "./media.js";
 import {renderHome,leaveHome} from "./home.js";
+import {pagerHtml,pageCount,PER_PAGE} from "./pager.js";
 import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost, addMember} from "./data.js";
 
 const main = document.querySelector("#main");
@@ -28,6 +29,8 @@ let period = "week";
 let boardPeriod = "all";
 let wordMember = 0;
 let wordView = "all";
+const pages = {feed:1,words:1,groups:1,articles:1};
+let lastRoute = "";
 let quiz = null;
 let noticeTimer;
 let editorChanged = false;
@@ -96,6 +99,17 @@ function wordCard(word) {
 }
 const empty = message => `<div class="card empty">${e(message)}</div>`;
 const quizButton = (key,label,items) => items.length ? `<button type="button" data-quiz="${key}">${label} · ${items.length}개</button>` : "";
+// Five per page; the page number is kept per list and reset when the route or a filter changes.
+function paged(key, list) {
+  const total = pageCount(list.length);
+  pages[key] = Math.min(Math.max(1,pages[key]),total);
+  const start = (pages[key] - 1) * PER_PAGE;
+  return {items:list.slice(start,start + PER_PAGE),nav:pagerHtml(key,pages[key],total)};
+}
+function wordList(words) {
+  const shown = paged("words",words);
+  return `<div class="stack">${shown.items.map(wordCard).join("") || empty("이 조건에 해당하는 단어가 없어요.")}</div>${shown.nav}`;
+}
 // 글별 묶음: words grouped under the article (post) they were written for.
 function groupedWords(words) {
   const byPost = new Map();
@@ -107,12 +121,13 @@ function groupedWords(words) {
   const groups = [...byPost.entries()].map(([id,list]) => ({post:board.posts.find(post => post.id === id),list}))
     .sort((x,y) => (x.post ? 0 : 1) - (y.post ? 0 : 1) || Date.parse(y.post?.created_at ?? 0) - Date.parse(x.post?.created_at ?? 0));
   if (!groups.length) return empty("이 조건에 해당하는 단어가 없어요.");
-  return `<div class="stack">${groups.map(({post,list}) => `<section class="card word-group">
+  const shown = paged("groups",groups);
+  return `<div class="stack">${shown.items.map(({post,list}) => `<section class="card word-group">
     <div class="word-group-head"><h2>${post ? `<a href="#post/${e(post.id)}">${e(post.title)}</a>` : "글 없이 추가한 단어"}</h2>
       <div class="meta">${post ? `<span>${authorLink(post)}</span><time datetime="${e(post.created_at)}">${dateFormat.format(new Date(post.created_at))}</time>` : ""}<span>단어 ${list.length}개</span></div>
       ${post ? `<button type="button" data-quiz="post" data-post-id="${e(post.id)}">이 글 퀴즈</button>` : ""}</div>
     ${list.map(word => `<div class="word-row"><strong lang="en">${e(word.term)}</strong><span>${e(word.meaning)}</span>${word.example ? `<em lang="en">${e(word.example)}</em>` : ""}</div>`).join("")}
-  </section>`).join("")}</div>`;
+  </section>`).join("")}</div>${shown.nav}`;
 }
 function wordSelection() {
   return inPeriod(board.words,period).filter(word => !wordMember || word.author === wordMember);
@@ -136,6 +151,11 @@ function render() {
     if (page === "videos") setLandingFilter("video");
     location.replace("#" + legacy[page]);
     return;
+  }
+  const route = page + "/" + (key ?? "");
+  if (route !== lastRoute) {
+    lastRoute = route;
+    Object.assign(pages,{feed:1,words:1,groups:1,articles:1});
   }
   const homePage = page === "home";
   const landing = page === "explore" || page === "tv";
@@ -181,15 +201,16 @@ function render() {
         `<div class="toolbar">${views}</div>
         <div class="toolbar">${periodTabs(period)}<label><span class="hint">등록자</span><select id="word-member"><option value="0">모든 조원</option>${members.map((name,index) => `<option value="${index+1}" ${wordMember === index+1 ? "selected" : ""}>${e(name)}</option>`).join("")}</select></label></div>
         <div class="toolbar"><div class="tabs" aria-label="단어 보기"><button type="button" data-wview="all" aria-pressed="${wordView === "all"}">단어별</button><button type="button" data-wview="group" aria-pressed="${wordView === "group"}">글별 묶음</button></div><span class="count">단어 ${words.length}개</span>${quizButton("words","선택한 단어로 퀴즈",words)}${quizButton("review","다시 볼 단어",reviewWords())}</div>
-        ${wordView === "group" ? groupedWords(words) : `<div class="stack">${words.map(wordCard).join("") || empty("이 조건에 해당하는 단어가 없어요.")}</div>`}`;
+        ${wordView === "group" ? groupedWords(words) : wordList(words)}`;
     }
   } else {
     const personal = members[member - 1];
     const posts = sorted(inPeriod(board.posts,boardPeriod).filter(post => !personal || post.author === member));
+    const shown = paged("feed",posts);
     const description = boardPeriod === "all" ? "조원들의 영어 공부 기록" : weekLabel(boardPeriod);
     content = hero("게시판",description,quizButton("week","이번 주 단어 퀴즈",inPeriod(board.words,"week"))) +
       `<div class="toolbar">${periodTabs(boardPeriod)}<div class="row"><button type="button" data-board-author aria-haspopup="dialog">${e(personal || "모든 조원")} ▾</button><span class="count">게시글 ${posts.length}개</span></div></div>
-      <div class="stack">${posts.map(postCard).join("") || empty("아직 올라온 글이 없어요.")}</div>`;
+      <div class="stack">${shown.items.map(postCard).join("") || empty("아직 올라온 글이 없어요.")}</div>${shown.nav}`;
   }
   main.innerHTML = (!shared ? '<div class="banner">미리보기 · 예시 글이 표시되며 새 기록은 이 브라우저에만 저장돼요.</div>' : "") + content;
 }
@@ -229,8 +250,9 @@ function renderQuiz() {
     const options = [quizButton("week","이번 주 단어",inPeriod(board.words,"week")),quizButton("all","전체 단어",board.words),
       quizButton("review","다시 볼 단어",reviewWords())].join("");
     const articles = sorted(board.posts).map(post => ({post,count:board.words.filter(word => word.post_id === post.id).length})).filter(item => item.count);
-    const byArticle = articles.length ? `<h2 class="section-title">글별로 풀기</h2><div class="stack">${articles.map(({post,count}) =>
-      `<div class="word-row"><strong>${e(post.title)}</strong><span>단어 ${count}개</span><button type="button" data-quiz="post" data-post-id="${e(post.id)}">풀기</button></div>`).join("")}</div>` : "";
+    const shownArticles = paged("articles",articles);
+    const byArticle = articles.length ? `<h2 class="section-title">글별로 풀기</h2><div class="stack">${shownArticles.items.map(({post,count}) =>
+      `<div class="word-row"><strong>${e(post.title)}</strong><span>단어 ${count}개</span><button type="button" data-quiz="post" data-post-id="${e(post.id)}">풀기</button></div>`).join("")}</div>${shownArticles.nav}` : "";
     return `<section class="card quiz"><h1>퀴즈 범위 고르기</h1>${options
       ? `<p>범위를 고르면 최대 10문제가 나와요.</p><div class="row">${options}</div>${byArticle}`
       : "<p>아직 퀴즈로 풀 단어가 없어요. 글을 쓰면서 단어를 추가해 보세요.</p>"}</section>`;
@@ -357,6 +379,7 @@ editor.addEventListener("click",event => {
 main.addEventListener("change",event => {
   if (event.target.id === "word-member") {
     wordMember = Number(event.target.value);
+    pages.words = pages.groups = 1;
     render();
     document.querySelector("#word-member")?.focus();
   }
@@ -379,12 +402,19 @@ main.addEventListener("click",async event => {
   }
   const id = location.hash.split("/")[1];
   const data = button.dataset;
+  if (data.pageKey) {
+    pages[data.pageKey] = Number(data.page);
+    render();
+    window.scrollTo({top:0});
+    return;
+  }
   if (data.view) {
     location.hash = data.view === "quiz" ? "words/quiz" : "words";
     return;
   }
   if (data.wview) {
     wordView = data.wview;
+    pages.words = pages.groups = 1;
     render();
     main.querySelector(`[data-wview="${wordView}"]`)?.focus();
     return;
@@ -399,6 +429,7 @@ main.addEventListener("click",async event => {
     return;
   }
   if (data.period) {
+    pages.feed = pages.words = pages.groups = 1;
     if (document.body.classList.contains("board-view")) boardPeriod = data.period;
     else period = data.period;
     render();

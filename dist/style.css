@@ -652,3 +652,12 @@ body :is(#editor,#member-editor,#member-picker,#tv-overlay) :is(button,.tv-out){
 .word-row span{color:var(--muted)}
 .word-row em{flex-basis:100%;font-style:normal;font-size:13px;color:var(--muted)}
 .word-row button{margin-left:auto}
+
+/* ---- Page selector under long lists ---- */
+.pager{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px;margin:26px 0 8px}
+.pager button{min-width:38px;padding:7px 11px;border:1px solid var(--line,#ccc);border-radius:2px;background:transparent;color:var(--ink,#111);font-size:14px;font-weight:500}
+.pager button:hover:not(:disabled):not([aria-current]){background:var(--ink,#111);color:var(--paper,#fff);border-color:var(--ink,#111)}
+.pager button[aria-current=page]{background:var(--ink,#111);color:var(--paper,#fff);border-color:var(--ink,#111);cursor:default}
+.pager button:disabled{opacity:.35;cursor:default}
+.pager .gap{padding:0 4px;color:var(--muted,#666)}
+.tv-footer .pager{margin:18px 0 0}

@@ -1,5 +1,5 @@
 import {readFile, writeFile, mkdir} from "node:fs/promises";
-const files = {"index.html":"text/html","style.css":"text/css","app.js":"text/javascript","media.js":"text/javascript","data.js":"text/javascript","config.js":"text/javascript","favicon.svg":"image/svg+xml","home.js":"text/javascript"};
+const files = {"index.html":"text/html","style.css":"text/css","app.js":"text/javascript","media.js":"text/javascript","data.js":"text/javascript","config.js":"text/javascript","favicon.svg":"image/svg+xml","home.js":"text/javascript","pager.js":"text/javascript"};
 const assets = {};
 for (const [name,type] of Object.entries(files)) {
   assets["/" + name] = {type:type + "; charset=utf-8",body:await readFile(new URL("./dist/" + name,import.meta.url),"utf8")};

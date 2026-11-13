@@ -1,4 +1,5 @@
 import {readLocal,writeLocal} from "./data.js";
+import {pagerHtml,pageCount,PER_PAGE} from "./pager.js";
 
 const LIMIT = 12;
 const filters = {all:"전체",news:"BBC 뉴스",video:"영어 영상",scraps:"내 스크랩"};
@@ -29,6 +30,12 @@ let suppressClick = false;
 const overlay = document.querySelector("#tv-overlay");
 let selectedItem;
 let scraps = readLocal("media-scraps",[]);
+let scrapPage = 1;
+function scrapSlice() {
+  scrapPage = Math.min(Math.max(1,scrapPage),pageCount(scraps.length));
+  const start = (scrapPage - 1) * PER_PAGE;
+  return scraps.slice(start,start + PER_PAGE);
+}
 
 function scrapKey(item) {
   if (item.type === "video") return item.id;
@@ -227,6 +234,10 @@ function paintFooter() {
   observer?.disconnect();
   if (!section) return;
   const foot = feed.querySelector(".tv-footer");
+  if (section === "scraps") {
+    foot.innerHTML = pagerHtml("scrap",scrapPage,pageCount(scraps.length));
+    return;
+  }
   if (section === "home") {
     foot.innerHTML = pending ? "불러오는 중…" : '<a href="#videos">영상 더 보기 ↗</a><a href="#news">기사 더 보기 ↗</a>';
     return;
@@ -243,6 +254,7 @@ function paintFooter() {
 }
 function paint() {
   if (!feed?.isConnected) return;
+  if (section === "scraps") visible = scrapSlice();
   if (!visible.length) {
     visible = section === "home" && filter === "all"
       ? [...videos.slice(0,3),...news.slice(0,3)]
@@ -747,6 +759,7 @@ export function renderMedia(root, key, view = "") {
   observer?.disconnect();
   if (feed !== root || section !== view) {
     wallOffset = 0;
+    scrapPage = 1;
     section = view;
     filter = view === "home" ? homeFilter : view || landingFilter;
     visible = [];
@@ -783,6 +796,12 @@ export function leaveMedia() {
 export function mediaClick(button) {
   const data = button.dataset;
   if (!section) landingClick(data);
+  if (data.pageKey === "scrap") {
+    scrapPage = Number(data.page);
+    paint();
+    window.scrollTo({top:0});
+    return;
+  }
   if (data.tvFilter) {
     filter = data.tvFilter;
     if (section === "home") homeFilter = filter;
