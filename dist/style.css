@@ -342,6 +342,9 @@ body :is(#editor,#member-editor,#member-picker,#tv-overlay) :is(button,.tv-out){
   .study-home.study-mode .tv-grid .tv-card:nth-child(2n){border-right:0}
 }
 .media-mode .tv-grid{cursor:grab;user-select:none}
+@media(max-width:700px){
+  .media-mode .tv-grid{width:140%;margin-inline:-20%;grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 .media-mode .tv-grid.is-dragging,.media-mode .tv-grid.is-dragging button{cursor:grabbing}
 @media(prefers-reduced-motion:no-preference){
   .media-mode .tv-grid .tv-card{

@@ -58,6 +58,10 @@ function lensTransform(left,top,width,height,project) {
   ].join(",")})`;
 }
 
+function wallCycle(grid) {
+  return grid.clientWidth + (parseFloat(getComputedStyle(grid).columnGap) || 0);
+}
+
 function bendWall() {
   if (frame) return;
   frame = requestAnimationFrame(() => {
@@ -67,8 +71,9 @@ function bendWall() {
     const height = window.innerHeight;
     const grid = feed.querySelector(".tv-grid");
     if (!grid) return;
-    grid.style.translate = wallOffset + "px";
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const cycle = wallCycle(grid);
+    if (!cycle) return;
     const radius = Math.hypot(width,height)/2;
     const project = (x,y) => {
       const dx = x - width/2;
@@ -80,12 +85,17 @@ function bendWall() {
     };
     const cards = [...grid.querySelectorAll(".tv-card")];
     const positions = cards.map(card => ({
-      card,left:card.offsetLeft + wallOffset,top:card.offsetTop - window.scrollY,
+      card,left:card.offsetLeft,top:card.offsetTop - window.scrollY,
       width:card.offsetWidth,height:card.offsetHeight
     }));
     for (const position of positions) {
-      const {card,left,top,width:cardWidth,height:cardHeight} = position;
+      const {card,top,width:cardWidth,height:cardHeight} = position;
       if (top > height + cardHeight || top + cardHeight < -cardHeight) continue;
+      const center = position.left + cardWidth/2 + wallOffset;
+      const shift = wallOffset - Math.floor((center - width/2 + cycle/2)/cycle)*cycle;
+      const left = position.left + shift;
+      card.style.translate = shift + "px";
+      if (reducedMotion) continue;
       card.style.setProperty("--wall-lens",lensTransform(left,top,cardWidth,cardHeight,project));
       const distance = Math.hypot(left+cardWidth/2-width/2,top+cardHeight/2-height/2)/radius;
       card.style.setProperty("--lens-shade",Math.min(.42,distance**2*.32));
@@ -112,9 +122,8 @@ document.addEventListener("pointermove",event => {
     drag.grid.setPointerCapture(event.pointerId);
     drag.grid.classList.add("is-dragging");
   }
-  const extraWidth = drag.grid.clientWidth - document.documentElement.clientWidth;
-  const limit = Math.max(48,extraWidth * .38);
-  wallOffset = Math.max(-limit,Math.min(limit,drag.offset + dx));
+  const cycle = wallCycle(drag.grid);
+  wallOffset = cycle ? (drag.offset + dx) % cycle : 0;
   window.scrollTo(0,drag.scroll - dy);
   bendWall();
 });
