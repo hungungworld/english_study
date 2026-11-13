@@ -1,5 +1,7 @@
+import {readLocal,writeLocal} from "./data.js";
+
 const LIMIT = 12;
-const filters = {all:"전체",news:"BBC 뉴스",video:"영어 영상"};
+const filters = {all:"전체",news:"BBC 뉴스",video:"영어 영상",scraps:"내 스크랩"};
 const dateFormat = new Intl.DateTimeFormat("ko-KR",{month:"short",day:"numeric",timeZone:"Asia/Seoul"});
 const escape = value => String(value ?? "").replace(/[&<>"']/g,char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[char]);
 let feed;
@@ -21,6 +23,16 @@ let section = "";
 let landingFilter = "all";
 let frame = 0;
 const overlay = document.querySelector("#tv-overlay");
+let selectedItem;
+let scraps = readLocal("media-scraps",[]);
+
+function scrapKey(item) {
+  if (item.type === "video") return item.id;
+  const url = new URL(item.url);
+  url.search = "";
+  url.hash = "";
+  return url.href;
+}
 
 function bendWall() {
   if (frame) return;
@@ -48,6 +60,7 @@ window.addEventListener("scroll",bendWall,{passive:true});
 window.addEventListener("resize",bendWall);
 
 function items() {
+  if (filter === "scraps") return scraps;
   if (filter === "news") return news;
   if (filter === "video") return videos;
   return [...news,...videos].sort((a,b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0));
@@ -93,12 +106,12 @@ async function loadFirst() {
 async function more() {
   if (pending) return;
   const remaining = items().filter(item => !visible.some(shown => shown.id === item.id));
-  if (remaining.length >= LIMIT || (remaining.length && (!next || filter === "news"))) {
+  if (remaining.length >= LIMIT || (remaining.length && (!next || filter === "news" || filter === "scraps"))) {
     visible.push(...remaining.slice(0,LIMIT));
     appendCards();
     return;
   }
-  if (!next || filter === "news") return;
+  if (!next || filter === "news" || filter === "scraps") return;
   const current = generation;
   const token = next;
   notice = "";
@@ -127,7 +140,7 @@ function paintFooter() {
   if (!feed?.isConnected) return;
   observer?.disconnect();
   const foot = feed.querySelector(".tv-footer");
-  const moreAvailable = items().length > visible.length || (filter !== "news" && next);
+  const moreAvailable = items().length > visible.length || (["all","video"].includes(filter) && next);
   foot.innerHTML = pending ? "불러오는 중…" : notice ? `${notice} <button data-more>다시 시도</button>` :
     moreAvailable ? '<button data-more>더 보기</button>' : visible.length ? "현재 가져올 수 있는 콘텐츠를 모두 봤어요." : "";
   if (!pending && !notice && moreAvailable && "IntersectionObserver" in window) {
@@ -140,29 +153,33 @@ function paintFooter() {
 function paint() {
   if (!feed?.isConnected) return;
   if (!visible.length) visible = items().slice(0,LIMIT);
-  const messages = [
+  const messages = section === "scraps" ? [] : [
     filter !== "video" && newsError ? "BBC 뉴스를 불러오지 못했어요." : "",
     filter !== "news" && videoError ? "영어 영상을 불러오지 못했어요." : "",
     ready && filter === "video" && !videoConfigured && !videoError ? "영어 영상 목록을 아직 불러올 수 없어요." : ""
   ].filter(Boolean);
-  const controls = Object.entries(filters).map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
+  const controls = Object.entries(filters).filter(([id]) => id !== "scraps").map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
   feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section ? filters[section] : "영어 TV"}</h1></div>
-    ${section ? "" : `<nav class="tv-dock" aria-label="영어 TV 메뉴">${controls}<a href="#feed">▤ 게시물</a><a href="#study">스터디 홈 ↗</a><button type="button" data-tv-write>＋ 글쓰기</button></nav>`}
+    ${section ? "" : `<nav class="tv-dock" aria-label="영어 TV 메뉴">${controls}<a href="#scraps">내 스크랩</a><a href="#feed">▤ 게시물</a><a href="#study">스터디 홈 ↗</a><button type="button" data-tv-write>＋ 글쓰기</button></nav>`}
     ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
     <div class="tv-grid">${visible.map(card).join("")}</div>
-    ${ready && !visible.length && !messages.length ? '<p class="tv-message">표시할 콘텐츠가 없어요.</p>' : ""}
+    ${(ready || section === "scraps") && !visible.length && !messages.length ? '<p class="tv-message">표시할 콘텐츠가 없어요.</p>' : ""}
     <div class="tv-footer" role="status"></div></section>`;
   paintFooter();
   bendWall();
 }
 function detail(item) {
+  const saved = scraps.some(entry => scrapKey(entry) === scrapKey(item));
   return `<section class="tv-detail"><button type="button" class="tv-close" aria-label="닫기">✕</button>
     ${item.type === "video" ? `<iframe class="tv-player" title="${escape(item.title)}" src="https://www.youtube-nocookie.com/embed/${escape(item.id)}" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>` : screen(item,true)}
     <div class="tv-detail-copy"><p class="tv-label">${escape(item.source)} · ${date(item)}</p>
     <h1 lang="en">${escape(item.title)}</h1>
-    <a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "YouTube에서 열기" : "BBC 원문 읽기"} ↗</a></div></section>`;
+    <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "YouTube에서 열기" : "BBC 원문 읽기"} ↗</a>
+    <button type="button" class="tv-action" data-write-source>＋ 글쓰기</button>
+    <button type="button" class="tv-action" data-scrap aria-pressed="${saved}">${saved ? "스크랩 해제" : "스크랩"}</button></div></div></section>`;
 }
 function showDetail(item, origin) {
+  selectedItem = item;
   overlay.innerHTML = detail(item);
   overlay.showModal();
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -175,12 +192,30 @@ function showDetail(item, origin) {
   }
 }
 overlay.addEventListener("click",event => {
+  if (selectedItem && event.target.closest("[data-write-source]")) {
+    overlay.close();
+    overlay.dispatchEvent(new CustomEvent("write-media",{detail:selectedItem}));
+  }
+  const scrapButton = event.target.closest("[data-scrap]");
+  if (selectedItem && scrapButton) {
+    const key = scrapKey(selectedItem);
+    const saved = scraps.some(item => scrapKey(item) === key);
+    scraps = saved ? scraps.filter(item => scrapKey(item) !== key) : [selectedItem,...scraps];
+    writeLocal("media-scraps",scraps);
+    scrapButton.setAttribute("aria-pressed",String(!saved));
+    scrapButton.textContent = saved ? "스크랩" : "스크랩 해제";
+    if (section === "scraps") {
+      visible = scraps.slice(0,Math.max(visible.length,LIMIT));
+      paint();
+    }
+  }
   if (event.target === overlay || event.target.closest(".tv-close")) overlay.close();
 });
 overlay.addEventListener("error",event => {
   if (event.target.matches?.(".news-thumbnail")) event.target.remove();
 },true);
 overlay.addEventListener("close",() => {
+  selectedItem = undefined;
   overlay.replaceChildren();
   if (location.hash.startsWith("#tv/")) location.replace("#home");
   if (lastFocus) {
@@ -199,7 +234,7 @@ export function renderMedia(root, key, view = "") {
   }
   feed = root;
   paint();
-  if (!ready) loadFirst();
+  if (!ready && section !== "scraps") loadFirst();
   if (key) {
     const item = [...news,...videos].find(item => item.id === key);
     if (item) {

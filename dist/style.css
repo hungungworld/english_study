@@ -103,6 +103,9 @@ textarea{resize:vertical;min-height:130px}
 .tv-detail-copy .tv-label{margin-left:0}
 .tv-player{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:16px;background:#000}
 .tv-out{display:inline-block;background:#f0cf91;color:#24202a;font-weight:700;border-radius:9px;padding:10px 14px}
+#tv-overlay .tv-action{background:#302837;color:#f8f3e8;border-color:#ffffff45}
+#tv-overlay .tv-action:hover,#tv-overlay .tv-action[aria-pressed=true]{background:#f0cf91;color:#24202a}
+.top nav{flex-wrap:wrap}
 @media(max-width:700px){.media-mode .shell{padding-top:24px}.media-mode .top-inner{flex-wrap:wrap;gap:8px 12px;padding-block:8px}.media-mode .top nav{order:3;flex:0 0 100%}.tv-grid{gap:14px}}
 @media(prefers-reduced-motion:reduce){.tv-card{transition:none}}
 .study-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;font-weight:700}

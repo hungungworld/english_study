@@ -85,7 +85,7 @@ function wordSelection() {
 function render() {
   const [page, key] = (location.hash.slice(1) || "home").split("/");
   const landing = page === "home" || page === "tv";
-  const media = landing || page === "news" || page === "videos";
+  const media = landing || ["news","videos","scraps"].includes(page);
   document.body.classList.toggle("media-mode",landing);
   document.body.classList.toggle("study-mode",!landing);
   const member = page === "member" ? Number(key) : 0;
@@ -99,7 +99,7 @@ function render() {
   if (media) {
     let mediaKey;
     try { mediaKey = key && decodeURIComponent(key); } catch { mediaKey = key; }
-    renderMedia(main,mediaKey,page === "news" ? "news" : page === "videos" ? "video" : "");
+    renderMedia(main,mediaKey,{news:"news",videos:"video",scraps:"scraps"}[page] ?? "");
     return;
   }
   leaveMedia();
@@ -174,7 +174,7 @@ function wordFields(word = {}, removable = true) {
   <label>예문 (선택)<input name="example" maxlength="600" value="${e(word.example)}"></label>
   ${removable ? '<button type="button" data-remove-word>단어 빼기</button>' : ""}</fieldset>`;
 }
-function openEditor(standalone, post) {
+function openEditor(standalone, post, source) {
   const last = readLocal("author",{author:1,author_name:""});
   const selected = post ?? last;
   const words = post ? board.words.filter(word => word.post_id === post.id) : [];
@@ -182,10 +182,10 @@ function openEditor(standalone, post) {
   editor.innerHTML = `<div class="dialog-head"><h2 id="editor-title">${standalone ? "단어 추가" : post ? "글 수정" : "글쓰기"}</h2><button type="button" data-close aria-label="닫기">✕</button></div>
   <form><label>작성자<select name="author">${members.map((name,index) => `<option value="${index+1}">${e(name)}</option>`).join("")}<option value="0">기타</option></select></label>
   <label id="guest-label">표시 이름<input name="author_name" maxlength="40" value="${e(selected.author_name)}"></label>
-  ${standalone ? "" : `<label>제목<input name="title" required maxlength="150" value="${e(post?.title)}"></label>
+  ${standalone ? "" : `<label>제목<input name="title" required maxlength="150" value="${e(post?.title ?? source?.title.slice(0,150))}"></label>
   <label>본문<textarea name="body" required maxlength="12000">${e(post?.body)}</textarea></label>
-  <label>참고 링크 (선택)<input type="url" name="link" value="${e(post?.link)}" maxlength="2000" placeholder="https://"></label>
-  <label>태그 (선택)<input name="tag" maxlength="30" value="${e(post?.tag)}" placeholder="기사, 토익, 회화 등"></label>`}
+  <label>참고 링크 (선택)<input type="url" name="link" value="${e(post?.link ?? source?.url)}" maxlength="2000" placeholder="https://"></label>
+  <label>태그 (선택)<input name="tag" maxlength="30" value="${e(post?.tag ?? (source ? source.type === "video" ? "영상" : "기사" : ""))}" placeholder="기사, 토익, 회화 등"></label>`}
   <div class="stack" id="editor-words">${standalone ? wordFields({},false) : words.map(word => wordFields(word)).join("")}</div>
   <div class="row">${standalone ? "" : '<button type="button" data-add-word>＋ 단어 추가</button>'}<button class="primary" type="submit">${post ? "수정 저장" : "등록하기"}</button></div>
   <p class="form-error" role="alert" hidden></p></form>`;
@@ -327,6 +327,10 @@ async function refresh() {
   render();
 }
 document.querySelector("#write").addEventListener("click",() => openEditor(false));
+document.querySelector("#tv-overlay").addEventListener("write-media",event => {
+  openEditor(false,undefined,event.detail);
+  editor.querySelector("textarea").focus();
+});
 document.querySelector("#rename-members").addEventListener("click",() => {
   memberEditor.innerHTML = `<div class="dialog-head"><h2 id="member-editor-title">조원 이름 변경</h2></div>
     <p class="hint">변경한 이름은 이 브라우저에 저장돼요.</p>
