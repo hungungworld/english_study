@@ -442,6 +442,25 @@ body :is(#editor,#member-editor,#member-picker,#tv-overlay) :is(button,.tv-out){
 }
 #member-drawer h2{font-size:18px;margin:0}
 #member-drawer nav{display:grid;gap:5px}
+#open-members{display:none}
+.study-mode #open-members{
+  position:fixed;
+  display:block;
+  left:0;
+  top:42%;
+  z-index:3;
+  padding:10px 11px;
+  border:0;
+  border-radius:0 12px 12px 0;
+  background:#7e302d;
+  color:#fff6e9;
+  box-shadow:0 3px 12px #34201725;
+}
+.study-mode .shell{padding-left:max(64px,4vw)}
+@media(max-width:700px){
+  .study-mode #open-members{top:auto;bottom:22px}
+  .study-mode .shell{padding-left:15px}
+}
 .media-mode .tv-grid{gap:clamp(16px,2.1vw,34px)}
 .media-mode .tv-card:hover,.media-mode .tv-card:focus-visible{box-shadow:0 0 12px #abc4ff42}
 @media(max-width:760px){
