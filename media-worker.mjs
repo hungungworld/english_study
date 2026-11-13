@@ -91,11 +91,20 @@ async function videos(env, cursor) {
   }
   if (!playlist) throw new Error("Playlist unavailable");
   const result = await youtube("playlistItems",{part:"snippet,contentDetails",maxResults:"24",playlistId:playlist,...(cursor ? {pageToken:cursor} : {})});
+  // View counts are cumulative totals (YouTube has no per-day figure); one extra call per page.
+  const views = new Map();
+  const ids = (result.items ?? []).map(entry => entry.contentDetails?.videoId).filter(Boolean);
+  if (ids.length) {
+    try {
+      const stats = await youtube("videos",{part:"statistics",id:ids.join(",")});
+      for (const entry of stats.items ?? []) views.set(entry.id,Number(entry.statistics?.viewCount) || 0);
+    } catch { /* view counts are optional */ }
+  }
   const items = (result.items ?? []).flatMap(({snippet:s,contentDetails:d}) => {
     if (!s?.thumbnails || !/^[\w-]{11}$/.test(d?.videoId ?? "")) return [];
     return [{id:d.videoId,type:"video",title:s.title,source:s.videoOwnerChannelTitle || s.channelTitle,
       date:d.videoPublishedAt || s.publishedAt, image:https((s.thumbnails.high ?? s.thumbnails.medium ?? s.thumbnails.default)?.url),
-      topics:topicsFor(s.title + " " + (s.description ?? "").slice(0,400)),
+      views:views.get(d.videoId),topics:topicsFor(s.title + " " + (s.description ?? "").slice(0,400)),
       url:"https://www.youtube.com/watch?v=" + d.videoId}];
   });
   return {items,next:result.nextPageToken ?? null,configured:true};

@@ -9,9 +9,9 @@ const escape = value => String(value ?? "").replace(/[&<>"']/g,char => ({"&":"&a
 const byDate = (a,b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0);
 let timer = 0;
 let pool = [];
-let cursor = 0;
-let turn = 0;
 let lastCtx = null;
+const DAY = 86400000;
+const compact = new Intl.NumberFormat("ko-KR",{notation:"compact"}).format;
 
 function screenHtml(screen,index) {
   const clip = screen.poly.map(([x,y]) => `${x}% ${y}%`).join(",");
@@ -66,18 +66,26 @@ async function show(screen,item) {
   screen.setAttribute("aria-label",`${item.title} 열기`);
   screen.dataset.item = item.id;
   screen.dataset.kind = item.type;
-  screen.title = item.title;
+  screen.title = item.title + (item.views ? ` · 조회 ${compact(item.views)}` : "");
   screen.querySelector(".ps-img").style.backgroundImage = url ? `url("${url}")` : "";
-  screen.querySelector(".ps-cap").innerHTML = `<small>${escape(item.type === "video" ? "영어 영상" : "BBC 뉴스")}</small>${escape(item.title)}`;
+  screen.querySelector(".ps-cap").innerHTML = `<small>${escape(item.type === "video" ? "영어 영상" : "BBC 뉴스")}${item.views ? ` · 조회 ${escape(compact(item.views))}` : ""}</small>${escape(item.title)}`;
   setTimeout(() => screen.classList.remove("is-static"),260);
 }
-function nextItem(root) {
-  const shown = new Set([...root.querySelectorAll(".pile-screen")].map(screen => screen.dataset.item));
-  for (let i = 0; i < pool.length; i++) {
-    const item = pool[cursor++ % pool.length];
-    if (!shown.has(item.id)) return item;
+// The four TVs: newest news, most-viewed recent video, second news, second video.
+// "Recent" = uploaded within the last two days; YouTube only reports lifetime views.
+function pickScreens(news,videos) {
+  const byViews = (x,y) => (y.views ?? 0) - (x.views ?? 0);
+  const newest = [...news].sort(byDate);
+  const topVideos = videos.filter(video => Date.now() - Date.parse(video.date) <= 2 * DAY).sort(byViews);
+  for (const video of [...videos].sort(byDate)) {
+    if (topVideos.length < 2 && !topVideos.includes(video)) topVideos.push(video);
   }
-  return null;
+  const order = [newest[0],topVideos[0],newest[1],topVideos[1]].filter(Boolean);
+  for (const item of interleave(news,videos)) {
+    if (order.length >= 4) break;
+    if (!order.includes(item)) order.push(item);
+  }
+  return order;
 }
 function upgrade(url) {
   return (url || "").replace("/standard/240/","/standard/624/");
@@ -142,22 +150,12 @@ export function renderHome(root,ctx) {
   fillPoster(root,ctx);
   homeItems().then(({news,videos}) => {
     if (!root.isConnected || !root.querySelector(".home-scene")) return;
-    pool = interleave(news,videos);
-    cursor = 0;
+    const picks = pickScreens(news,videos);
+    pool = [...picks,...interleave(news.filter(item => !picks.includes(item)),videos.filter(item => !picks.includes(item)))];
     fillPoster(root,lastCtx);
-    const screens = [...root.querySelectorAll(".pile-screen")];
-    if (!pool.length) {
-      screens.forEach(screen => { screen.querySelector(".ps-cap").textContent = "신호 없음"; });
-      return;
-    }
-    screens.forEach((screen,index) => show(screen,pool[index % pool.length]));
-    cursor = screens.length;
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches || pool.length <= screens.length) return;
-    timer = setInterval(() => {
-      if (!root.isConnected || !root.querySelector(".home-scene")) return leaveHome();
-      if (document.hidden) return;
-      const item = nextItem(root);
-      if (item) show(screens[turn++ % screens.length],item);
-    },5200);
+    root.querySelectorAll(".pile-screen").forEach((screen,index) => {
+      if (picks[index]) show(screen,picks[index]);
+      else screen.querySelector(".ps-cap").textContent = "신호 없음";
+    });
   });
 }
