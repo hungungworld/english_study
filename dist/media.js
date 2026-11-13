@@ -330,7 +330,7 @@ overlay.addEventListener("close",() => {
 // scrolling never reaches an end. Items repeat when there are fewer than slots.
 const DEG = Math.PI/180;
 const CAP = Math.cos(66*DEG);
-const DRIFT = 1.5; // degrees per second of idle rotation (slow on purpose)
+const DRIFT = 0; // idle rotation is off; the globe only moves when dragged, scrolled or flicked
 const globe = {stage:null,world:null,slots:[],live:new Map(),list:[],offLon:0,offLat:0,velLon:0,velLat:0,
   last:0,raf:0,hover:false,drag:null,speed:1,R:0,w:0,h:0,stepC:1,stepR:1,latPeriod:360,dirty:false};
 let globePages = 0;
@@ -370,7 +370,7 @@ function buildGlobe() {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       slots.push({id:slots.length,col:c,row:r,
-        lat:(r - rows/2)*rowStep,lon:(c + (r & 1 ? .5 : 0))/cols*360});
+        lat:(r - rows/2)*rowStep,lon:c/cols*360});
     }
   }
   globe.slots = slots;
