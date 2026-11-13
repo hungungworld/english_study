@@ -112,7 +112,7 @@ textarea{resize:vertical;min-height:130px}
 .study-links a:hover{border-color:var(--purple)}
 .media-mode{background:#050506}
 .media-mode .top{display:none}
-.media-mode .shell{max-width:1700px;padding:0 15px 105px}
+.media-mode .shell{max-width:none;padding:0 15px 105px;overflow-x:clip}
 .media-mode .tv-intro{position:fixed;z-index:2;top:16px;left:50%;transform:translateX(-50%);margin:0;pointer-events:none}
 .media-mode .tv-intro h1{font-size:15px;letter-spacing:0;background:#19171cd9;border:1px solid #ffffff32;border-radius:50px;padding:8px 14px;color:#fff;margin:0}
 .media-mode .tv-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(5px,1.3vw,21px);padding-top:48px}
@@ -121,11 +121,37 @@ textarea{resize:vertical;min-height:130px}
 .media-mode .tv-card{animation:tv-reveal .48s ease-out both}
 @keyframes tv-reveal{from{opacity:0;scale:.94}to{opacity:1;scale:1}}
 .media-mode .tv-card .tv-screen{position:absolute;inset:0;aspect-ratio:auto;border:0;border-radius:inherit}
-.media-mode .tv-card .tv-screen::after{background:linear-gradient(0deg,#000e,transparent 60%),repeating-linear-gradient(transparent 0 3px,#0606192a 4px 5px);box-shadow:inset 0 0 16px #b6c9ff66,inset 3px 0 5px #ff765360,inset -3px 0 5px #74aeff75}
+.media-mode .tv-card .tv-screen::after{
+  background:radial-gradient(ellipse at 49% 43%,transparent 47%,#100e2666 84%,#030306a6),
+    linear-gradient(0deg,#000d,transparent 44%),
+    repeating-linear-gradient(transparent 0 3px,#06061924 4px 5px);
+  box-shadow:inset 0 2px 5px #f4f9ffc0,inset 3px 0 8px #ff765395,inset -3px 0 8px #74aeffaa;
+}
+.media-mode .tv-card .tv-screen::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:radial-gradient(ellipse at 31% -13%,#fff9,transparent 56%);
+}
 .media-mode .tv-card .tv-label,.media-mode .tv-card .tv-title{position:absolute;left:9%;right:9%;z-index:1;margin:0;text-shadow:0 2px 7px #000}
 .media-mode .tv-card .tv-title{bottom:16%;font-size:clamp(11px,2vw,29px);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .media-mode .tv-card .tv-label{bottom:8%;font-size:clamp(8px,1vw,13px);color:#f8ead4}
 .media-mode .tv-card .news-screen strong{display:none}
+@media(min-width:701px){
+  .media-mode .tv-grid{
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    width:144%;
+    margin-inline:-22%;
+    gap:clamp(6px,1vw,16px);
+    padding-top:0;
+    margin-top:clamp(-70px,-5vw,-30px);
+  }
+  .media-mode .tv-card{aspect-ratio:1.62;perspective:680px}
+  .media-mode .tv-card .tv-title{font-size:clamp(13px,1.7vw,25px)}
+  .media-mode .tv-card .tv-label{font-size:clamp(9px,.9vw,12px)}
+}
 .study-home .shell{display:block;max-width:1120px}
 .study-home aside{display:none}
 .study-home .tv-intro h1{font-size:clamp(27px,4vw,42px)}

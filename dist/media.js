@@ -51,9 +51,9 @@ function bendWall() {
       const x = (position.x - width / 2) / (width / 2);
       const y = (position.y - window.scrollY - height / 2) / (height / 2);
       const tilt = Math.max(-1,Math.min(1,y));
-      card.style.setProperty("--curve-x", tilt * -13 + "deg");
-      card.style.setProperty("--curve-y", x * -25 + "deg");
-      card.style.setProperty("--curve-scale", 1 - Math.abs(x) * .075);
+      card.style.setProperty("--curve-x", tilt * -20 + "deg");
+      card.style.setProperty("--curve-y", x * -32 + "deg");
+      card.style.setProperty("--curve-scale", 1 - Math.min(Math.abs(x),1.5) * .09);
     }
   });
 }
