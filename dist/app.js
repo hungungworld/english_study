@@ -1,4 +1,5 @@
 import {members} from "./config.js";
+import {renderMedia,leaveMedia,mediaClick} from "./media.js";
 import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost} from "./data.js";
 
 const main = document.querySelector("#main");
@@ -76,15 +77,24 @@ function wordSelection() {
   return inPeriod(board.words,period).filter(word => !wordMember || word.author === wordMember);
 }
 function render() {
-  const [page = "feed", key] = location.hash.slice(1).split("/");
+  const [page, key] = (location.hash.slice(1) || "home").split("/");
+  const media = page === "home" || page === "tv";
+  document.body.classList.toggle("media-mode",media);
   const member = page === "member" ? Number(key) : 0;
   document.querySelector("#members").innerHTML = members.map((name,index) =>
     `<a class="member" href="#member/${index + 1}" ${member === index + 1 ? 'aria-current="page"' : ""}><span class="avatar" aria-hidden="true" style="--avatar:${colors[index]}">${index + 1}</span>${e(name)}</a>`).join("");
   document.querySelectorAll("#nav a").forEach(link => {
-    const active = link.hash === (["words","quiz"].includes(page) ? "#words" : "#feed");
+    const active = link.hash === (media ? "#home" : ["words","quiz"].includes(page) ? "#words" : "#feed");
     if (active) link.setAttribute("aria-current","page");
     else link.removeAttribute("aria-current");
   });
+  if (media) {
+    let mediaKey;
+    try { mediaKey = key && decodeURIComponent(key); } catch { mediaKey = key; }
+    renderMedia(main,mediaKey);
+    return;
+  }
+  leaveMedia();
   let content;
   if (loading) content = empty("스터디 기록을 불러오는 중이에요.");
   else if (loadError) content = `<div class="card empty"><p>${e(loadError)}</p><button data-refresh>다시 불러오기</button></div>`;
@@ -248,6 +258,10 @@ main.addEventListener("change",event => {
 main.addEventListener("click",async event => {
   const button = event.target.closest("button");
   if (!button) return;
+  if (document.body.classList.contains("media-mode")) {
+    mediaClick(button);
+    return;
+  }
   const id = location.hash.split("/")[1];
   const data = button.dataset;
   if (data.period) {

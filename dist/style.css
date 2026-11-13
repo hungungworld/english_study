@@ -64,5 +64,44 @@ textarea{resize:vertical;min-height:130px}
 .form-error{color:#982344;margin:0;font-size:14px}
 #notice{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);max-width:calc(100% - 30px);background:#292137;color:white;padding:10px 17px;border-radius:10px;z-index:2}
 #notice:empty{display:none}
+.media-mode{background:#16151b;color:#f8f3e8;min-height:100vh}
+.media-mode .top{background:#1d1b23;border-color:#39343d}
+.media-mode .top-inner{max-width:1320px}
+.media-mode .top nav{color:#ded6e1}
+.media-mode .top nav a[aria-current]{color:#eac67f}
+.media-mode .shell{display:block;max-width:1320px;padding-top:46px}
+.media-mode aside{display:none}
+.tv-intro{margin-bottom:25px}
+.tv-intro h1{font-size:clamp(37px,7vw,80px);letter-spacing:-.07em;line-height:1;margin:0 0 13px}
+.tv-intro p{margin:0;color:#d0c8d3}
+.tv-filters{display:flex;gap:8px;margin:0 0 23px}
+.tv-filters button,.tv-footer button,.tv-message button{background:#29252f;color:#f8f3e8;border-color:#47404e}
+.tv-filters button[aria-pressed=true]{background:#f0cf91;color:#24202a;border-color:#f0cf91}
+.tv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:19px}
+.tv-card{display:grid;align-content:start;text-align:left;width:100%;min-width:0;color:#f8f3e8;background:#302a31;border:1px solid #655866;border-radius:20px;padding:12px;box-shadow:inset 0 2px 0 #ffffff18,0 7px 0 #101014;transition:transform .18s,border-color .18s}
+.tv-card:hover{transform:translateY(-3px);border-color:#eac67f}
+.tv-screen{position:relative;overflow:hidden;display:grid;aspect-ratio:16/10;border-radius:14px;background:#191721;border:4px solid #211c24;isolation:isolate}
+.tv-screen::after{content:"";pointer-events:none;position:absolute;inset:0;border-radius:inherit;background:repeating-linear-gradient(transparent 0 3px,#0002 3px 4px);box-shadow:inset 0 0 19px #0006}
+.video-screen img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.tv-play{place-self:center;z-index:1;display:grid;place-items:center;width:47px;height:47px;background:#18141bd9;color:white;border-radius:50%;padding-left:3px}
+.news-screen{align-content:center;gap:10px;padding:clamp(12px,2vw,26px);background:radial-gradient(ellipse at top left,#973b49,#482131 76%);color:#fff4dc}
+.tv-card:nth-child(3n+2) .news-screen{background:radial-gradient(ellipse at top left,#426c60,#1f3735 76%)}
+.tv-card:nth-child(3n+3) .news-screen{background:radial-gradient(ellipse at top left,#745699,#362c52 76%)}
+.news-screen span{font-size:10px;letter-spacing:.19em;font-weight:800}
+.news-screen strong{font-family:"Instrument Serif",Georgia,serif;font-size:clamp(22px,2.2vw,36px);font-weight:400;line-height:1.03;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.tv-label{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#eac67f;margin:12px 4px 4px}
+.tv-title{margin:4px;line-height:1.35;overflow-wrap:anywhere}
+.tv-message,.tv-footer{color:#ded4e1;padding:12px 0;font-size:14px}
+.tv-footer{text-align:center;padding:28px 0}
+.tv-detail{max-width:880px;margin:auto}
+.tv-detail .back{color:#eac67f}
+.tv-detail .news-screen{aspect-ratio:16/7}
+.tv-detail .news-screen strong{font-size:clamp(30px,6vw,70px)}
+.tv-detail-copy h1{font-size:clamp(27px,5vw,53px);line-height:1.13;margin:8px 0 20px}
+.tv-detail-copy .tv-label{margin-left:0}
+.tv-player{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:16px;background:#000}
+.tv-out{display:inline-block;background:#f0cf91;color:#24202a;font-weight:700;border-radius:9px;padding:10px 14px}
+@media(max-width:700px){.media-mode .shell{padding-top:24px}.media-mode .top-inner{flex-wrap:wrap;gap:8px 12px;padding-block:8px}.media-mode .top nav{order:3;flex:0 0 100%}.tv-grid{gap:14px}}
+@media(prefers-reduced-motion:reduce){.tv-card{transition:none}}
 @media(max-width:700px){.top-inner{padding:0 15px;gap:15px;min-height:63px}.top nav{gap:11px;font-size:13px}.logo{width:29px;height:29px;font-size:20px}.brand{gap:6px;font-size:14px}.top button{padding:7px 8px;font-size:13px}.shell{display:block;padding:15px 15px 42px}aside{margin-bottom:13px}aside h2{margin:0 0 5px}aside nav{display:flex;overflow-x:auto;gap:3px;padding:3px}.member{flex:none;padding:5px 7px}.avatar{width:26px;height:26px}.hero{padding:22px 17px;margin-bottom:17px;align-items:start;flex-direction:column}.card{padding:15px}.toolbar{gap:8px}}
 
