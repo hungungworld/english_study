@@ -154,8 +154,19 @@ html:has(#tv-overlay[open]){overflow:hidden;scrollbar-gutter:stable}
 #tv-overlay{width:min(790px,calc(100% - 24px));padding:0;border:1px solid #ffffff50;border-radius:clamp(17px,5vw,49px);background:#18151d;color:#f8f3e8;box-shadow:0 0 55px #8792e337}
 #tv-overlay::backdrop{background:#000b;backdrop-filter:blur(3px)}
 #tv-overlay .tv-detail{position:relative}
-#tv-overlay .tv-detail .tv-screen,#tv-overlay .tv-player{border:0;border-radius:0}
-#tv-overlay .tv-detail-copy{padding:10px clamp(15px,4vw,34px) 25px}
+#tv-overlay .tv-detail .tv-screen,#tv-overlay .tv-player{
+  border:0;
+  border-radius:0;
+  width:min(100%,max(0px,calc((100dvh - 236px) * 16 / 9)));
+  min-width:min(100%,200px);
+  margin-inline:auto;
+}
+#tv-overlay .news-thumbnail{object-fit:contain}
+#tv-overlay .tv-detail-copy{padding:8px clamp(15px,4vw,30px) 18px}
+#tv-overlay .tv-detail-copy h1{font-size:clamp(19px,3.8vh,36px);margin:6px 0 12px;overflow-wrap:anywhere}
+#tv-overlay .tv-detail-copy .tv-label{margin-block:4px}
+#tv-overlay .tv-detail-copy .row{gap:6px}
+#tv-overlay .tv-detail-copy .row > *{font-size:14px;padding:8px 11px}
 #tv-overlay .tv-close{position:absolute;z-index:2;right:12px;top:12px;color:white;background:#15121bd9;border-color:#fff7;border-radius:50%;width:38px;height:38px;padding:0}
 body:not(.media-mode) .tv-card{background:white;color:var(--ink);border-color:var(--line);box-shadow:none}
 body:not(.media-mode) .tv-card .tv-label,body:not(.media-mode) .tv-footer,body:not(.media-mode) .tv-message{color:var(--muted)}
