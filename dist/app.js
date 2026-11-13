@@ -83,10 +83,10 @@ function readNotes(body = "") {
   }
   return null;
 }
-function postCard(post) {
+function postCard(post, index) {
   const notes = readNotes(post.body);
   const preview = notes ? notes.summary || notes.reflection || notes.sentence : post.body;
-  return `<article class="card"><h2><a href="#post/${e(post.id)}">${e(post.title)}</a></h2>${meta(post)}<p class="snippet">${e(preview)}</p></article>`;
+  return `<article class="card post-preview" style="--post-delay:${Math.min(index,8)*45}ms"><h2><a href="#post/${e(post.id)}">${e(post.title)}</a></h2>${meta(post)}<p class="snippet">${e(preview)}</p></article>`;
 }
 function wordCard(word) {
   return `<article class="card"><h2>${e(word.term)}</h2><p>${e(word.meaning)}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}<div class="meta">${authorLink(word)}${word.post_id ? `<a href="#post/${e(word.post_id)}">관련 글 보기</a>` : ""}</div></article>`;
