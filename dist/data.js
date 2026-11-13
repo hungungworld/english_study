@@ -24,14 +24,23 @@ const sampleWords = [
 ];
 let demo = readLocal("demo", {posts:samplePosts, words:sampleWords});
 
-async function rpc(name, payload = {}) {
+async function rpc(name, payload = {}, token) {
   const response = await fetch(supabaseUrl.replace(/\/$/, "") + "/rest/v1/rpc/" + name, {
     method:"POST",
-    headers:{apikey:supabaseKey,"Content-Type":"application/json"},
+    headers:{apikey:supabaseKey,"Content-Type":"application/json",...(token ? {Authorization:"Bearer " + token} : {})},
     body:JSON.stringify(payload)
   });
   if (!response.ok) throw new Error("서버에 연결하거나 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
   return response.json();
+}
+export async function addMember(email,password,name) {
+  const response = await fetch(supabaseUrl.replace(/\/$/, "") + "/auth/v1/token?grant_type=password", {
+    method:"POST",headers:{apikey:supabaseKey,"Content-Type":"application/json"},
+    body:JSON.stringify({email,password})
+  });
+  if (!response.ok) throw new Error("관리자 이메일과 비밀번호를 확인해 주세요.");
+  const {access_token} = await response.json();
+  return rpc("study_add_member",{member_name:name},access_token);
 }
 export async function loadBoard() {
   return shared ? rpc("study_board") : demo;

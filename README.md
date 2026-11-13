@@ -6,7 +6,7 @@
 
 1. Supabase 프로젝트의 SQL Editor에서 `supabase/schema.sql` 전체를 실행합니다.
 2. `dist/config.js`에 프로젝트 URL과 publishable key를 입력합니다. 이전 프로젝트에서는 anon key도 사용할 수 있습니다. secret/service_role 키는 입력하지 않습니다.
-3. 같은 파일의 `members`에 공통으로 표시할 조원 이름을 등록 순서대로 입력합니다. 글은 배열 순서에 대응하는 숫자 ID를 저장하므로 실제 운영 이후에는 순서를 유지합니다. 게시판의 조원 관리에서 바꾼 이름과 추가한 조원은 해당 브라우저에 저장됩니다.
+3. Supabase의 Authentication → Users에서 관리자 계정을 만들고 UUID를 복사합니다. SQL Editor에서 `insert into public.study_admins (user_id) values ('관리자_UUID') on conflict do nothing;`을 실행합니다. 기본 조원 이름은 `study_members` 테이블에서 수정할 수 있습니다. 새 조원은 배포 사이트의 조원 관리에서 추가합니다.
 4. 사이트를 다시 배포합니다. 홈의 BBC RSS와 YouTube 목록은 Sites Worker가 제공합니다.
 
 공개 읽기와 등록은 Supabase 함수로 처리합니다. 게시글을 수정·삭제할 수 있는 편집 키는 글을 올린 브라우저에 저장되며, 연결된 단어도 글 수정 화면에서 편집할 수 있습니다. 단독 등록 단어는 운영자가 Supabase에서 관리합니다. 로그인 없이 조원 이름을 선택하므로 화면에 표시된 이름은 작성자가 선택한 이름입니다.

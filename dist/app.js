@@ -1,6 +1,6 @@
 import {members as defaultMembers} from "./config.js";
 import {renderMedia,leaveMedia,mediaClick} from "./media.js";
-import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost} from "./data.js";
+import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost, addMember} from "./data.js";
 
 const main = document.querySelector("#main");
 main.addEventListener("error",event => {
@@ -8,8 +8,9 @@ main.addEventListener("error",event => {
 },true);
 const editor = document.querySelector("#editor");
 const memberEditor = document.querySelector("#member-editor");
+const memberPicker = document.querySelector("#member-picker");
 const savedNames = readLocal("member-names",[]);
-const members = defaultMembers.map((name,index) => savedNames?.[index] || name)
+let members = shared ? [] : defaultMembers.map((name,index) => savedNames?.[index] || name)
   .concat(Array.isArray(savedNames) ? savedNames.slice(defaultMembers.length) : []);
 const notice = document.querySelector("#notice");
 const colors = ["#e3d6fb","#f9dfcc","#d4eadd","#f5dbea","#dce6fa"];
@@ -72,8 +73,20 @@ function hero(title, description, button = "") {
 function meta(item) {
   return `<div class="meta"><span>${authorLink(item)}</span><time datetime="${e(item.created_at)}">${dateFormat.format(new Date(item.created_at))}</time>${item.tag ? `<span class="tag">${e(item.tag)}</span>` : ""}</div>`;
 }
+const notesPrefix = "study-notes:v1\n";
+function readNotes(body = "") {
+  if (body.startsWith(notesPrefix)) {
+    try {
+      const notes = JSON.parse(body.slice(notesPrefix.length));
+      if ([notes?.summary,notes?.reflection,notes?.sentence].every(value => typeof value === "string")) return notes;
+    } catch { /* Display the saved text if it cannot be decoded. */ }
+  }
+  return null;
+}
 function postCard(post) {
-  return `<article class="card"><h2><a href="#post/${e(post.id)}">${e(post.title)}</a></h2>${meta(post)}<p class="snippet">${e(post.body)}</p></article>`;
+  const notes = readNotes(post.body);
+  const preview = notes ? notes.summary || notes.reflection || notes.sentence : post.body;
+  return `<article class="card"><h2><a href="#post/${e(post.id)}">${e(post.title)}</a></h2>${meta(post)}<p class="snippet">${e(preview)}</p></article>`;
 }
 function wordCard(word) {
   return `<article class="card"><h2>${e(word.term)}</h2><p>${e(word.meaning)}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}<div class="meta">${authorLink(word)}${word.post_id ? `<a href="#post/${e(word.post_id)}">관련 글 보기</a>` : ""}</div></article>`;
@@ -133,7 +146,13 @@ function renderPost(id) {
   if (!post) return '<a class="back" href="#feed">← 게시판</a>' + empty("글을 찾을 수 없어요.");
   const words = board.words.filter(word => word.post_id === id);
   const link = safeLink(post.link);
-  return `<a class="back" href="#feed">← 게시판</a><article class="card"><h1>${e(post.title)}</h1>${meta(post)}<div class="prose"><p>${e(post.body)}</p></div>
+  const notes = readNotes(post.body);
+  const body = notes ? `<div class="study-notes">
+    ${notes.summary ? `<section><h2>주제 요약</h2><p class="prose">${e(notes.summary)}</p></section>` : ""}
+    ${notes.reflection ? `<section><h2>내 생각 요약</h2><p class="prose">${e(notes.reflection)}</p></section>` : ""}
+    ${notes.sentence ? `<section><h2>핵심 문장 한 줄</h2><blockquote lang="en">${e(notes.sentence)}</blockquote></section>` : ""}
+  </div>` : `<div class="prose"><p>${e(post.body)}</p></div>`;
+  return `<a class="back" href="#feed">← 게시판</a><article class="card"><h1>${e(post.title)}</h1>${meta(post)}${body}
   ${link ? `<p><a class="back" href="${e(link)}" target="_blank" rel="noopener noreferrer">참고 링크 ↗</a></p>` : ""}
   ${own[id] ? '<div class="row"><button data-edit>수정</button><button data-delete>삭제</button></div>' : ""}</article>
   ${words.length ? `<h2 class="section-title">이 글의 단어</h2><div class="toolbar">${quizButton("post","이 글의 단어로 퀴즈",words)}</div><div class="stack">${words.map(wordCard).join("")}</div>` : ""}`;
@@ -176,15 +195,21 @@ function wordFields(word = {}, removable = true) {
   ${removable ? '<button type="button" data-remove-word>단어 빼기</button>' : ""}</fieldset>`;
 }
 function openEditor(standalone, post, source) {
-  const last = readLocal("author",{author:1,author_name:""});
-  const selected = post ?? last;
+  if (!post && !members[readLocal("active-member",0) - 1]) {
+    chooseMember(() => openEditor(standalone,post,source));
+    return;
+  }
+  const notes = readNotes(post?.body) ?? {summary:post?.body ?? "",reflection:"",sentence:""};
+  const selected = post ?? {author:readLocal("active-member",0),author_name:""};
   const words = post ? board.words.filter(word => word.post_id === post.id) : [];
   editorChanged = false;
   editor.innerHTML = `<div class="dialog-head"><h2 id="editor-title">${standalone ? "단어 추가" : post ? "글 수정" : "글쓰기"}</h2><button type="button" data-close aria-label="닫기">✕</button></div>
-  <form><label>작성자<select name="author">${members.map((name,index) => `<option value="${index+1}">${e(name)}</option>`).join("")}<option value="0">기타</option></select></label>
+  <form><label>작성자<select name="author" disabled>${members.map((name,index) => name ? `<option value="${index+1}">${e(name)}</option>` : "").join("")}${post?.author === 0 ? '<option value="0">기타</option>' : ""}</select></label>
   <label id="guest-label">표시 이름<input name="author_name" maxlength="40" value="${e(selected.author_name)}"></label>
   ${standalone ? "" : `<label>제목<input name="title" required maxlength="150" value="${e(post?.title ?? source?.title.slice(0,150))}"></label>
-  <label>본문<textarea name="body" required maxlength="12000">${e(post?.body)}</textarea></label>
+  <label>주제 요약<textarea name="summary" required maxlength="12000" rows="3" placeholder="무엇을 다루는 자료인지 핵심을 정리해 주세요.">${e(notes.summary)}</textarea></label>
+  <label>내 생각 요약<textarea name="reflection" maxlength="4000" rows="3" placeholder="새롭게 알게 된 점이나 내 의견을 적어 주세요.">${e(notes.reflection)}</textarea></label>
+  <label>핵심 문장 한 줄<input name="sentence" lang="en" maxlength="500" value="${e(notes.sentence)}" placeholder="기사나 영상에서 가장 중요하다고 생각한 영어 문장"></label>
   <label>참고 링크 (선택)<input type="url" name="link" value="${e(post?.link ?? source?.url)}" maxlength="2000" placeholder="https://"></label>
   <label>태그 (선택)<input name="tag" maxlength="30" value="${e(post?.tag ?? (source ? source.type === "video" ? "영상" : "기사" : ""))}" placeholder="기사, 토익, 회화 등"></label>`}
   <div class="stack" id="editor-words">${standalone ? wordFields({},false) : words.map(word => wordFields(word)).join("")}</div>
@@ -205,8 +230,13 @@ function openEditor(standalone, post, source) {
     event.preventDefault();
     const formData = new FormData(form);
     const get = key => String(formData.get(key) ?? "").trim();
-    const entry = {author:Number(get("author")),author_name:get("author") === "0" ? get("author_name") : "",
-      title:get("title"),body:get("body"),link:get("link"),tag:get("tag"),
+    const summary = get("summary");
+    const reflection = get("reflection");
+    const sentence = get("sentence");
+    const legacyUnchanged = post && !readNotes(post.body) && summary === post.body.trim() && !reflection && !sentence;
+    const body = standalone ? "" : legacyUnchanged ? post.body : notesPrefix + JSON.stringify({summary,reflection,sentence});
+    const entry = {author:selected.author,author_name:selected.author === 0 ? get("author_name") : "",
+      title:get("title"),body,link:get("link"),tag:get("tag"),
       words:[...form.querySelectorAll("fieldset")].map(field => ({
         id:field.dataset.wordId,term:field.querySelector('[name="term"]').value.trim(),
         meaning:field.querySelector('[name="meaning"]').value.trim(),example:field.querySelector('[name="example"]').value.trim()
@@ -214,7 +244,12 @@ function openEditor(standalone, post, source) {
     const error = form.querySelector(".form-error");
     const submit = form.querySelector('[type="submit"]');
     error.hidden = true;
-    if ((!standalone && (!entry.title || !entry.body)) || (!entry.author && !entry.author_name) ||
+    if ([...body].length > 12000) {
+      error.textContent = "저장할 수 있는 분량을 넘었어요. 요약을 조금 줄여 주세요.";
+      error.hidden = false;
+      return;
+    }
+    if ((!standalone && (!entry.title || !summary)) || (!entry.author && !entry.author_name) ||
         entry.words.some(word => !word.term || !word.meaning) || (entry.link && !safeLink(entry.link))) {
       error.textContent = "필수 항목과 참고 링크를 확인해 주세요.";
       error.hidden = false;
@@ -269,6 +304,10 @@ main.addEventListener("change",event => {
 main.addEventListener("click",async event => {
   const button = event.target.closest("button");
   if (!button) return;
+  if ("tvMember" in button.dataset) {
+    chooseMember();
+    return;
+  }
   if ("tvWrite" in button.dataset) {
     openEditor(false);
     return;
@@ -322,44 +361,74 @@ main.addEventListener("click",async event => {
 async function refresh() {
   try {
     board = await loadBoard();
+    if (shared) {
+      members = [];
+      for (const {id,name} of board.members) members[id - 1] = name;
+    }
     loadError = "";
   } catch (failure) { loadError = failure.message; }
   loading = false;
   render();
+  updateMemberLabel();
+  if (!loadError && members.length && !members[readLocal("active-member",0) - 1] && !memberPicker.open) chooseMember();
 }
 document.querySelector("#write").addEventListener("click",() => openEditor(false));
 document.querySelector("#tv-overlay").addEventListener("write-media",event => {
   openEditor(false,undefined,event.detail);
-  editor.querySelector("textarea").focus();
+  editor.querySelector("textarea")?.focus();
 });
-const memberField = (name,index) => `<label>조원 ${index + 1}<input required maxlength="24" value="${e(name)}"></label>`;
-document.querySelector("#rename-members").addEventListener("click",() => {
-  memberEditor.innerHTML = `<div class="dialog-head"><h2 id="member-editor-title">조원 관리</h2></div>
-    <p class="hint">조원 목록은 이 브라우저에 저장돼요.</p>
-    <form><div class="stack" id="member-fields">${members.map(memberField).join("")}</div>
-    <p class="form-error" role="alert" hidden>조원 이름을 모두 입력해 주세요.</p>
-    <div class="row"><button type="button" id="add-member">＋ 조원 추가</button><button class="primary" type="submit">저장</button><button type="button" id="cancel-rename">취소</button></div></form>`;
-  const fields = memberEditor.querySelector("#member-fields");
-  memberEditor.querySelector("#add-member").onclick = () => {
-    fields.insertAdjacentHTML("beforeend",memberField("",fields.children.length));
-    fields.lastElementChild.querySelector("input").focus();
-  };
-  memberEditor.querySelector("#cancel-rename").onclick = () => memberEditor.close();
-  memberEditor.querySelector("form").onsubmit = event => {
+function chooseMember(afterSelection) {
+  if (memberPicker.open) return;
+  if (!members.length) return flash("조원 목록을 불러온 뒤 다시 시도해 주세요.");
+  const active = readLocal("active-member",0);
+  memberPicker.innerHTML = `<div class="dialog-head"><h2 id="member-picker-title">내 이름 선택</h2></div>
+    <p class="hint">선택한 이름으로 글과 단어를 등록해요.</p>
+    <form method="dialog"><label>조원<select name="member" required>
+      <option value="">이름을 선택해 주세요</option>
+      ${members.map((name,index) => `<option value="${index+1}" ${active === index+1 ? "selected" : ""}>${e(name)}</option>`).join("")}
+    </select></label><button class="primary">계속</button></form>`;
+  memberPicker.querySelector("form").onsubmit = event => {
     event.preventDefault();
-    const names = [...memberEditor.querySelectorAll("input")].map(input => input.value.trim());
-    if (names.some(name => !name)) {
-      memberEditor.querySelector(".form-error").hidden = false;
-      return;
-    }
-    members.splice(0,members.length,...names);
-    writeLocal("member-names",members);
-    memberEditor.close();
-    render();
-    flash("조원 목록을 저장했어요.");
+    writeLocal("active-member",Number(event.currentTarget.elements.member.value));
+    memberPicker.close();
+    updateMemberLabel();
+    afterSelection?.();
+  };
+  memberPicker.showModal();
+}
+function updateMemberLabel() {
+  const name = members[readLocal("active-member",0) - 1];
+  document.querySelector("#choose-member").textContent = name ? name + " · 변경" : "내 이름 선택";
+}
+document.querySelector("#choose-member").onclick = () => chooseMember();
+document.querySelector("#rename-members").onclick = () => {
+  if (!shared) return flash("Supabase를 연결하면 관리자가 조원을 추가할 수 있어요.");
+  memberEditor.innerHTML = `<div class="dialog-head"><h2 id="member-editor-title">관리자 · 조원 추가</h2></div>
+    <form><label>관리자 이메일<input name="email" type="email" autocomplete="username" required></label>
+    <label>비밀번호<input name="password" type="password" autocomplete="current-password" required></label>
+    <label>새 조원 이름<input name="name" required maxlength="24"></label>
+    <p class="form-error" role="alert" hidden></p>
+    <div class="row"><button class="primary" type="submit">조원 추가</button><button type="button" id="cancel-rename">취소</button></div></form>`;
+  memberEditor.querySelector("#cancel-rename").onclick = () => memberEditor.close();
+  memberEditor.querySelector("form").onsubmit = async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const submit = form.querySelector("[type=submit]");
+    const error = form.querySelector(".form-error");
+    error.hidden = true;
+    submit.disabled = true;
+    try {
+      await addMember(form.elements.email.value.trim(),form.elements.password.value,form.elements.name.value.trim());
+      memberEditor.close();
+      await refresh();
+      flash("조원을 추가했어요.");
+    } catch (failure) {
+      error.textContent = failure.message;
+      error.hidden = false;
+    } finally { submit.disabled = false; }
   };
   memberEditor.showModal();
-});
+};
 window.addEventListener("hashchange",event => {
   const previous = new URL(event.oldURL).hash;
   const current = location.hash;

@@ -12,7 +12,7 @@
   <header class="top"><div class="top-inner">
     <a class="brand" href="#home"><span class="logo">Aa</span> 스터디 서클</a>
     <nav aria-label="주 메뉴" id="nav"><a href="#home">영어 TV</a><a href="#feed">게시판</a><a href="#words">단어장</a><a href="#news">기사</a><a href="#videos">영상</a><a href="#scraps">내 스크랩</a></nav>
-    <button class="primary" id="write" type="button">＋ 글쓰기</button>
+    <button id="choose-member" type="button">내 이름 선택</button><button class="primary" id="write" type="button">＋ 글쓰기</button>
   </div></header>
   <div class="shell">
     <aside><h2>조원별 게시판</h2><nav id="members" aria-label="조원별 게시판"></nav><button type="button" id="rename-members">조원 관리</button></aside>
@@ -20,6 +20,7 @@
   </div>
   <dialog id="editor"></dialog>
   <dialog id="member-editor" aria-labelledby="member-editor-title"></dialog>
+  <dialog id="member-picker" aria-labelledby="member-picker-title"></dialog>
   <dialog id="tv-overlay" aria-label="영어 TV 콘텐츠"></dialog>
   <div id="notice" role="status"></div>
 </body>

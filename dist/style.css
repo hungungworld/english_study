@@ -204,5 +204,11 @@ body:not(.media-mode) .tv-card .tv-label,body:not(.media-mode) .tv-footer,body:n
 #editor button.primary,#member-editor button.primary,.tv-out{background:#24231e;color:white;border-color:#24231e}
 #editor .hint,#member-editor .hint,#tv-overlay .tv-label{color:#625f56}
 #editor .form-error,#member-editor .form-error{color:#982344}
+.study-notes{display:grid;gap:16px;margin:20px 0}
+#member-picker{background:#fbfaf6;color:#22221e;border-color:#dedbd1;color-scheme:light;width:min(420px,calc(100% - 24px))}
+#member-picker .primary{background:#24231e;border-color:#24231e;color:white}
+.study-notes section + section{border-top:1px solid var(--line);padding-top:16px}
+.study-notes blockquote{margin:8px 0 0;padding:10px 14px;border-inline-start:2px solid var(--purple);background:#f4f1e8;line-height:1.6;overflow-wrap:anywhere}
+#editor textarea[name="summary"],#editor textarea[name="reflection"]{min-height:84px}
 @media(max-width:700px){.top-inner{padding:0 15px;gap:15px;min-height:63px}.top nav{gap:11px;font-size:13px}.logo{width:29px;height:29px;font-size:20px}.brand{gap:6px;font-size:14px}.top button{padding:7px 8px;font-size:13px}.shell{display:block;padding:15px 15px 42px}aside{margin-bottom:13px}aside h2{margin:0 0 5px}aside nav{display:flex;overflow-x:auto;gap:3px;padding:3px}.member{flex:none;padding:5px 7px}.avatar{width:26px;height:26px}.hero{padding:22px 17px;margin-bottom:17px;align-items:start;flex-direction:column}.card{padding:15px}.toolbar{gap:8px}}
 
