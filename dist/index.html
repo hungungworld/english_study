@@ -4,14 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="조원들의 영어 공부를 모아 보는 주간 게시판과 공유 단어장">
-  <title>스터디 서클</title>
+  <title>axciting</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="stylesheet" href="./style.css">
   <script type="module" src="./app.js"></script>
 </head>
 <body>
   <header class="top"><div class="top-inner">
-    <a class="brand" href="#home"><span class="logo">Aa</span> 스터디 서클</a>
-    <nav aria-label="주 메뉴" id="nav"><a href="#home">영어 TV</a><a href="#feed">게시판</a><a href="#words">단어장</a><a href="#news">기사</a><a href="#videos">영상</a><a href="#scraps">내 스크랩</a></nav>
+    <a class="brand" href="#study"><img class="logo" src="./favicon.svg" alt="">axciting</a>
+    <nav aria-label="주 메뉴" id="nav"><a href="#study">홈</a><a href="#home">학습 자료</a><a href="#feed">게시판</a><a href="#words">단어장</a></nav>
     <button id="choose-member" type="button">내 이름 선택</button><button class="primary" id="write" type="button">＋ 글쓰기</button>
   </div></header>
   <div class="shell">
@@ -26,7 +27,7 @@
   <dialog id="editor"></dialog>
   <dialog id="member-editor" aria-labelledby="member-editor-title"></dialog>
   <dialog id="member-picker" aria-labelledby="member-picker-title"></dialog>
-  <dialog id="tv-overlay" aria-label="영어 TV 콘텐츠"></dialog>
+  <dialog id="tv-overlay" aria-label="학습 자료 상세"></dialog>
   <div id="notice" role="status"></div>
 </body>
 </html>

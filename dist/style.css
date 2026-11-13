@@ -480,3 +480,9 @@ body :is(#editor,#member-editor,#member-picker,#tv-overlay) :is(button,.tv-out){
     to{opacity:1;translate:0 0}
   }
 }
+.resource-nav,.resource-filters{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.resource-nav{gap:8px;margin-bottom:20px}
+.resource-nav a{padding:8px 12px;border-radius:12px;font-size:14px}
+.resource-nav a:is(:hover,[aria-current]){background:#eee7db;color:#7e302d}
+.resource-filters{padding-inline-end:8px;margin-inline-end:4px;border-inline-end:1px solid #ffffff40}
+.brand .logo{object-fit:contain}

@@ -108,7 +108,7 @@ function render() {
   document.querySelector("#members").innerHTML = members.map((name,index) =>
     `<a class="member" href="#member/${index + 1}" ${member === index + 1 ? 'aria-current="page"' : ""}><span class="avatar" aria-hidden="true" style="--avatar:${colors[index % colors.length]}">${index + 1}</span>${e(name)}</a>`).join("");
   document.querySelectorAll("#nav a").forEach(link => {
-    const active = link.hash === (landing ? "#home" : media ? "#" + page : ["words","quiz"].includes(page) ? "#words" : "#feed");
+    const active = link.hash === (studyHome ? "#study" : media ? "#home" : ["words","quiz"].includes(page) ? "#words" : "#feed");
     if (active) link.setAttribute("aria-current","page");
     else link.removeAttribute("aria-current");
   });
@@ -118,7 +118,7 @@ function render() {
     if (studyHome) {
       if (!main.querySelector("#home-media")) main.innerHTML = `<section class="club-cover" aria-labelledby="club-title">
         <div class="club-photo"><img src="https://images.unsplash.com/photo-1613743575064-a645fae50d2e?fit=crop&amp;w=1400&amp;q=85" alt="" fetchpriority="high"></div>
-        <div class="club-cover-copy"><h1 id="club-title" lang="en">Study <em>Circle.</em></h1>
+        <div class="club-cover-copy"><h1 id="club-title" lang="en">axciting</h1>
         <p>영어 기사와 영상을 보고, 기억하고 싶은 문장을 남겨요.</p>
         <button type="button" class="primary" data-tv-write>＋ 공부 기록 쓰기</button></div>
       </section><div id="home-media"></div><div id="home-board"></div>`;
