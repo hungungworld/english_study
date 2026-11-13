@@ -171,6 +171,22 @@ body:not(.media-mode) .tv-card .tv-label,body:not(.media-mode) .tv-footer,body:n
 .study-mode .member[aria-current],.study-mode .member:hover{background:#ffffff1f;color:#f0cf91}
 .study-mode .tag{background:#433752;color:#ebd9ff}
 .study-mode .banner{background:#372c22;color:#f6deb3}
+.study-mode,.media-mode{--ink:#22221e;--muted:#625f56;--line:#dedbd1;--purple:#544433;background:#fbfaf6;color:var(--ink);color-scheme:light}
+.study-mode .top,.tv-dock{background:#fbfaf6f5;border:1px solid var(--line);box-shadow:none}
+.study-mode .top nav a[aria-current],.study-mode .top nav a:hover{background:#eeebe1;color:#27251e}
+.study-mode .hero{background:linear-gradient(125deg,#f7e9d7,#f6f1df 55%,#e5e9db);border-color:#dfd7c8;box-shadow:none;padding:clamp(26px,5vw,62px)}
+.study-mode .hero::before,.study-mode .hero::after{display:none}
+.study-mode .card,.study-mode:not(.media-mode) .tv-card{background:#fffefa;border-color:var(--line);box-shadow:none}
+.study-mode button,.study-mode .tabs{background:#f4f1e8;color:var(--ink);border-color:var(--line)}
+.study-mode .tabs button[aria-pressed=true],.study-mode .primary,.tv-dock [data-tv-write]{background:#24231e;color:white;border-color:#24231e}
+.study-mode .member[aria-current],.study-mode .member:hover,.study-mode .tag,.study-mode .banner{background:#efebe0;color:#544433}
+.media-mode .tv-intro h1{background:#fbfaf6ed;border-color:var(--line);color:var(--ink)}
+.media-mode .tv-card{border:0;box-shadow:none;transform:none}
+.media-mode .tv-card:hover,.media-mode .tv-card:focus-visible{box-shadow:none}
+.media-mode .tv-card .tv-screen::after{background:linear-gradient(0deg,#000e,transparent 65%);box-shadow:none}
+.tv-dock button,.tv-dock a,.media-mode .tv-message,.media-mode .tv-footer{color:var(--ink)}
+.tv-dock button[aria-pressed=true],.tv-dock a:hover,.tv-dock button:hover{background:#ece8dd;color:#24231e}
+.tv-dock [data-tv-write]:hover{background:#454238;color:white}
 #rename-members{margin:12px 0 0;font-size:12px}
 #editor,#member-editor{background:#211b29;color:#f8f3e8;border-color:#ffffff35;color-scheme:dark}
 #editor button,#member-editor button{background:#302837;color:#f8f3e8;border-color:#ffffff35}
@@ -178,5 +194,15 @@ body:not(.media-mode) .tv-card .tv-label,body:not(.media-mode) .tv-footer,body:n
 #editor input,#editor textarea,#editor select,#member-editor input,.study-mode select{background:#18141d;color:#f8f3e8;border-color:#ffffff40}
 #editor .hint,#member-editor .hint{color:#c4bacc}
 #editor .form-error,#member-editor .form-error{color:#ffacc0}
+.study-mode .top,.study-mode .top nav a,.study-mode .top #write,.study-mode .top .logo,
+.tv-dock,.tv-dock button,.tv-dock a,.media-mode .tv-card,.media-mode .tv-intro h1,
+#tv-overlay,#tv-overlay .tv-close,button,input,select,textarea,.hero,.card,.member,.avatar,
+.tabs,.tag,.banner,.tv-screen,.tv-out,.tv-card,.tv-player,.tv-play,dialog,.word-fields{border-radius:2px}
+#editor,#member-editor,#tv-overlay{background:#fbfaf6;color:#22221e;border-color:#dedbd1;color-scheme:light;box-shadow:none}
+#editor input,#editor textarea,#editor select,#member-editor input,.study-mode select,
+#editor button,#member-editor button,#tv-overlay .tv-action,#tv-overlay .tv-close{background:#fffefa;color:#22221e;border-color:#dedbd1}
+#editor button.primary,#member-editor button.primary,.tv-out{background:#24231e;color:white;border-color:#24231e}
+#editor .hint,#member-editor .hint,#tv-overlay .tv-label{color:#625f56}
+#editor .form-error,#member-editor .form-error{color:#982344}
 @media(max-width:700px){.top-inner{padding:0 15px;gap:15px;min-height:63px}.top nav{gap:11px;font-size:13px}.logo{width:29px;height:29px;font-size:20px}.brand{gap:6px;font-size:14px}.top button{padding:7px 8px;font-size:13px}.shell{display:block;padding:15px 15px 42px}aside{margin-bottom:13px}aside h2{margin:0 0 5px}aside nav{display:flex;overflow-x:auto;gap:3px;padding:3px}.member{flex:none;padding:5px 7px}.avatar{width:26px;height:26px}.hero{padding:22px 17px;margin-bottom:17px;align-items:start;flex-direction:column}.card{padding:15px}.toolbar{gap:8px}}
 
