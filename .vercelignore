@@ -1,0 +1,7 @@
+.env
+.env.*
+dist/server
+.git
+.openai
+supabase
+*.tar.gz
