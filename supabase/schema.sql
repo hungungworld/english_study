@@ -50,6 +50,7 @@ create table if not exists public.study_words (
   created_at timestamptz not null default now()
 );
 
+alter table public.study_posts add column if not exists board text not null default 'study' check (board in ('study','chat'));
 alter table public.study_posts drop constraint if exists study_posts_author_check,
   alter column author type integer, add constraint study_posts_author_check check (author >= 0);
 alter table public.study_words drop constraint if exists study_words_author_check,
@@ -79,6 +80,7 @@ declare
   display_name text := case when member_no = 0 then trim(entry->>'author_name') else '' end;
   token_digest text := encode(sha256(convert_to(edit_token, 'UTF8')), 'hex');
   words jsonb := entry->'words';
+  post_board text := coalesce(nullif(entry->>'board', ''), 'study');
   word jsonb;
   saved_word uuid;
   keep_words uuid[] := array[]::uuid[];
@@ -86,6 +88,7 @@ begin
   if member_no is null or member_no < 0
      or (member_no > 0 and not exists (select 1 from public.study_members where id = member_no))
      or (member_no = 0 and coalesce(length(display_name), 0) not between 1 and 40)
+     or post_board not in ('study', 'chat')
      or coalesce(length(edit_token), 0) not between 40 and 128
      or jsonb_typeof(words) is distinct from 'array' or jsonb_array_length(words) > 20 then
     raise exception 'Invalid input';
@@ -98,8 +101,8 @@ begin
       where id = post_key and token_hash = token_digest;
     if not found then raise exception 'Invalid edit token'; end if;
   elsif coalesce(entry->>'title', '') <> '' then
-    insert into public.study_posts(author, author_name, title, body, tag, link, token_hash)
-      values(member_no, display_name, entry->>'title', entry->>'body', entry->>'tag', entry->>'link', token_digest)
+    insert into public.study_posts(author, author_name, title, body, tag, link, board, token_hash)
+      values(member_no, display_name, entry->>'title', entry->>'body', entry->>'tag', entry->>'link', post_board, token_digest)
       returning id into post_id_to_save;
   elsif jsonb_array_length(words) <> 1 then
     raise exception 'Expected one standalone word';

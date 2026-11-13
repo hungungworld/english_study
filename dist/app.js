@@ -52,6 +52,8 @@ function weekLabel(value) {
   const start = weekStart() - (value === "last" ? 7 * day : 0);
   return dateFormat.format(start) + "–" + dateFormat.format(start + 6 * day);
 }
+const boardKind = post => post.board === "chat" ? "chat" : "study";
+const boardTabs = current => `<div class="tabs" aria-label="게시판 종류"><button type="button" data-board="study" aria-pressed="${current === "study"}">공부 기록</button><button type="button" data-board="chat" aria-pressed="${current === "chat"}">사담·응원</button></div>`;
 function sorted(items) {
   return [...items].sort((a,b) => Date.parse(b.created_at) - Date.parse(a.created_at));
 }
@@ -129,17 +131,30 @@ function groupedWords(words) {
     ${list.map(word => `<div class="word-row"><strong lang="en">${e(word.term)}</strong><span>${e(word.meaning)}</span>${word.example ? `<em lang="en">${e(word.example)}</em>` : ""}</div>`).join("")}
   </section>`).join("")}</div>${shown.nav}`;
 }
+function chatCard(post) {
+  return `<article class="card chat-post"><p class="chat-body">${e(post.body)}</p>
+    <div class="meta"><span>${e(author(post))}</span><time datetime="${e(post.created_at)}">${dateFormat.format(new Date(post.created_at))}</time></div>
+    ${own[post.id] ? `<div class="row"><button type="button" data-edit-id="${e(post.id)}">수정</button><button type="button" data-delete-id="${e(post.id)}">삭제</button></div>` : ""}</article>`;
+}
+function renderChat() {
+  const posts = sorted(board.posts.filter(post => boardKind(post) === "chat"));
+  const shown = paged("feed",posts);
+  return hero("게시판","서로 안부를 묻고 응원하는 이야기",'<button type="button" data-new-chat>＋ 한마디 남기기</button>') +
+    `<div class="toolbar filters-row">${boardTabs("chat")}<span class="count">글 ${posts.length}개</span></div>
+    <div class="stack">${shown.items.map(chatCard).join("") || empty("아직 올라온 이야기가 없어요. 첫 응원을 남겨 보세요.")}</div>${shown.nav}`;
+}
 function wordSelection() {
   return inPeriod(board.words,period).filter(word => !wordMember || word.author === wordMember);
 }
 function homeContext() {
+  const studyPosts = board.posts.filter(post => boardKind(post) === "study");
   const start = weekStart();
   const fmt = ms => { const date = new Date(ms + kst); return `${date.getUTCDate()}.${date.getUTCMonth() + 1}.`; };
   const weekWords = inPeriod(board.words,"week");
   return {loading,error:loadError,shared,memberCount:members.filter(Boolean).length,
     today:{label:fmt(Date.now()),year:new Date(Date.now() + kst).getUTCFullYear()},
-    postCount:inPeriod(board.posts,"week").length,wordCount:weekWords.length,
-    posts:sorted(board.posts).slice(0,2).map(post => ({id:post.id,title:post.title,by:author(post),date:dateFormat.format(new Date(post.created_at))})),
+    postCount:inPeriod(studyPosts,"week").length,wordCount:weekWords.length,
+    posts:sorted(studyPosts).slice(0,2).map(post => ({id:post.id,title:post.title,by:author(post),date:dateFormat.format(new Date(post.created_at))})),
     words:sorted(weekWords.length ? weekWords : board.words).slice(0,3).map(word => ({term:word.term,meaning:word.meaning}))};
 }
 function render() {
@@ -204,13 +219,15 @@ function render() {
         <span class="count">단어 ${words.length}개</span>${quizButton("words","이 단어로 퀴즈",words)}</div>
         ${wordView === "group" ? groupedWords(words) : wordList(words)}`;
     }
+  } else if (page === "feed" && key === "chat") {
+    content = renderChat();
   } else {
     const personal = members[member - 1];
-    const posts = sorted(inPeriod(board.posts,boardPeriod).filter(post => !personal || post.author === member));
+    const posts = sorted(inPeriod(board.posts.filter(post => boardKind(post) === "study"),boardPeriod).filter(post => !personal || post.author === member));
     const shown = paged("feed",posts);
     const description = boardPeriod === "all" ? "조원들의 영어 공부 기록" : weekLabel(boardPeriod);
     content = hero("게시판",description,quizButton("week","이번 주 단어 퀴즈",inPeriod(board.words,"week"))) +
-      `<div class="toolbar">${periodTabs(boardPeriod)}<div class="row"><button type="button" data-board-author aria-haspopup="dialog">${e(personal || "모든 조원")} ▾</button><span class="count">게시글 ${posts.length}개</span></div></div>
+      `<div class="toolbar filters-row">${boardTabs("study")}${periodTabs(boardPeriod)}<div class="row"><button type="button" data-board-author aria-haspopup="dialog">${e(personal || "모든 조원")} ▾</button><span class="count">게시글 ${posts.length}개</span></div></div>
       <div class="stack">${shown.items.map(postCard).join("") || empty("아직 올라온 글이 없어요.")}</div>${shown.nav}`;
   }
   main.innerHTML = (!shared ? '<div class="banner">미리보기 · 예시 글이 표시되며 새 기록은 이 브라우저에만 저장돼요.</div>' : "") + content;
@@ -226,7 +243,8 @@ function renderPost(id) {
     ${notes.reflection ? `<section><h2>내 생각 요약</h2><p class="prose">${e(notes.reflection)}</p></section>` : ""}
     ${notes.sentence ? `<section><h2>핵심 문장 한 줄</h2><blockquote lang="en">${e(notes.sentence)}</blockquote></section>` : ""}
   </div>` : `<div class="prose"><p>${e(post.body)}</p></div>`;
-  return `<a class="back" href="#feed">← 게시판</a><article class="card"><h1>${e(post.title)}</h1>${meta(post)}${body}
+  const chatPost = boardKind(post) === "chat";
+  return `<a class="back" href="${chatPost ? "#feed/chat" : "#feed"}">← 게시판</a><article class="card">${chatPost ? "" : `<h1>${e(post.title)}</h1>`}${meta(post)}${body}
   ${link ? `<p><a class="back" href="${e(link)}" target="_blank" rel="noopener noreferrer">참고 링크 ↗</a></p>` : ""}
   ${own[id] ? '<div class="row"><button data-edit>수정</button><button data-delete>삭제</button></div>' : ""}</article>
   ${words.length ? `<h2 class="section-title">이 글의 단어</h2><div class="toolbar">${quizButton("post","이 글의 단어로 퀴즈",words)}</div><div class="stack">${words.map(wordCard).join("")}</div>` : ""}`;
@@ -277,11 +295,65 @@ function wordFields(word = {}, removable = true) {
   <label>예문 (선택)<input name="example" maxlength="600" value="${e(word.example)}"></label>
   ${removable ? '<button type="button" data-remove-word>단어 빼기</button>' : ""}</fieldset>`;
 }
-function openEditor(standalone, post, source, host) {
+// 사담·응원: a short plain message with no title, words or link.
+function openChatEditor(post) {
+  const selected = post ?? {author:readLocal("active-member",0),author_name:""};
+  editorChanged = false;
+  editor.innerHTML = `<div class="dialog-head"><h2 id="editor-title">${post ? "한마디 수정" : "한마디 남기기"}</h2><button type="button" data-close aria-label="닫기">✕</button></div>
+  <form><label>작성자<select name="author" disabled>${members.map((name,index) => name ? `<option value="${index+1}">${e(name)}</option>` : "").join("")}${post?.author === 0 ? '<option value="0">기타</option>' : ""}</select></label>
+  <label id="guest-label">표시 이름<input name="author_name" maxlength="40" value="${e(selected.author_name)}"></label>
+  <label>내용<textarea name="body" required maxlength="1000" rows="6" placeholder="오늘의 한마디, 응원, 수다 무엇이든 좋아요.">${e(post?.body ?? "")}</textarea></label>
+  <div class="row"><button class="primary" type="submit">${post ? "수정 저장" : "남기기"}</button></div>
+  <p class="form-error" role="alert" hidden></p></form>`;
+  editor.setAttribute("aria-labelledby","editor-title");
+  const form = editor.querySelector("form");
+  form.elements.author.value = selected.author;
+  const setGuest = () => {
+    const guest = form.elements.author.value === "0";
+    form.querySelector("#guest-label").hidden = !guest;
+    form.elements.author_name.required = guest;
+  };
+  setGuest();
+  form.oninput = () => { editorChanged = true; };
+  form.onsubmit = async event => {
+    event.preventDefault();
+    const text = String(form.elements.body.value).trim();
+    const error = form.querySelector(".form-error");
+    const submit = form.querySelector('[type="submit"]');
+    error.hidden = true;
+    const entry = {author:selected.author,author_name:selected.author === 0 ? String(form.elements.author_name.value).trim() : "",
+      title:[...text.replace(/\s+/g," ")].slice(0,40).join(""),body:text,link:"",tag:"",board:"chat",words:[]};
+    if (!text || (!entry.author && !entry.author_name)) {
+      error.textContent = "내용을 입력해 주세요.";
+      error.hidden = false;
+      return;
+    }
+    submit.disabled = true;
+    try {
+      const token = post ? own[post.id] : crypto.randomUUID() + crypto.randomUUID();
+      const id = await saveEntry(entry,token,post?.id);
+      if (id) {
+        own[id] = token;
+        writeLocal("own",own);
+      }
+      editorChanged = false;
+      editor.close();
+      await refresh();
+      location.hash = "feed/chat";
+      flash("남겼어요.");
+    } catch (failure) {
+      error.textContent = failure.message;
+      error.hidden = false;
+    } finally { submit.disabled = false; }
+  };
+  editor.showModal();
+}
+function openEditor(standalone, post, source, host, kind) {
   if (!post && !members[readLocal("active-member",0) - 1]) {
-    chooseMember(() => openEditor(standalone,post,source,host));
+    chooseMember(() => openEditor(standalone,post,source,host,kind));
     return;
   }
+  if ((post?.board ?? kind) === "chat") return openChatEditor(post);
   const notes = readNotes(post?.body) ?? {summary:post?.body ?? "",reflection:"",sentence:""};
   const selected = post ?? {author:readLocal("active-member",0),author_name:""};
   const words = post ? board.words.filter(word => word.post_id === post.id) : [];
@@ -445,6 +517,31 @@ main.addEventListener("click",async event => {
   }
   const id = location.hash.split("/")[1];
   const data = button.dataset;
+  if (data.board) {
+    location.hash = data.board === "chat" ? "feed/chat" : "feed";
+    return;
+  }
+  if ("newChat" in data) {
+    openEditor(false,undefined,undefined,undefined,"chat");
+    return;
+  }
+  if (data.editId) {
+    const target = board.posts.find(post => post.id === data.editId);
+    if (target) openEditor(false,target);
+    return;
+  }
+  if (data.deleteId) {
+    if (!confirm("이 글을 삭제할까요?")) return;
+    button.disabled = true;
+    try {
+      await removePost(data.deleteId,own[data.deleteId]);
+      delete own[data.deleteId];
+      writeLocal("own",own);
+      await refresh();
+      flash("글을 삭제했어요.");
+    } catch (failure) { flash(failure.message); button.disabled = false; }
+    return;
+  }
   if (data.pageKey) {
     pages[data.pageKey] = Number(data.page);
     render();
@@ -527,7 +624,7 @@ async function refresh() {
   updateMemberLabel();
   if (!loadError && members.length && !members[readLocal("active-member",0) - 1] && !memberPicker.open) chooseMember();
 }
-document.querySelector("#write").addEventListener("click",() => openEditor(false));
+document.querySelector("#write").addEventListener("click",() => location.hash === "#feed/chat" ? openEditor(false,undefined,undefined,undefined,"chat") : openEditor(false));
 overlayEl.addEventListener("write-media",event => {
   const {item,host} = event.detail;
   writerSource = item;

@@ -801,3 +801,16 @@ body.study-mode select,body.study-mode input,body.study-mode textarea{border:1px
 
 #tv-overlay .tv-writer .dialog-head h2{font-size:22px;line-height:1.2;color:#111;margin:0}
 #tv-overlay .tv-writer p{color:#111}
+
+/* ---- 내 스크랩: filters ---- */
+.scrap-filters{display:grid;gap:10px;margin:0 0 20px}
+.scrap-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
+.scrap-row input[type=search]{flex:1 1 220px;max-width:340px;padding:8px 12px;border:1px solid var(--ds-ink);border-radius:2px;background:#fff;color:var(--ds-ink)}
+.scrap-row .count{margin-left:auto}
+.scrap-topics{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+body.study-mode .scrap-topics button.chip:not(.tv-card){flex:none;padding:4px 10px;font-size:13px;white-space:nowrap}
+body.study-mode .scrap-topics button.chip[aria-pressed=true]:not(.tv-card){background:var(--ds-ink);color:var(--ds-paper)}
+.scrap-topics .chip small{margin-left:5px;opacity:.7;font-size:11px}
+/* ---- 게시판: 사담·응원 ---- */
+.chat-body{white-space:pre-wrap;margin:0 0 8px;font-size:16px;line-height:1.65;overflow-wrap:anywhere}
+.chat-post{padding-block:14px;border-top:1px solid var(--ds-line)}

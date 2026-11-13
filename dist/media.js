@@ -31,11 +31,51 @@ const overlay = document.querySelector("#tv-overlay");
 let selectedItem;
 let scraps = readLocal("media-scraps",[]);
 let scrapPage = 1;
-function scrapSlice() {
-  scrapPage = Math.min(Math.max(1,scrapPage),pageCount(scraps.length));
-  const start = (scrapPage - 1) * PER_PAGE;
-  return scraps.slice(start,start + PER_PAGE);
+let scrapQuery = "";
+let scrapType = "all";
+const scrapTopics = new Set();
+function scrapFiltered() {
+  const terms = String(scrapQuery).toLowerCase().split(/\s+/).filter(Boolean);
+  return scraps.filter(item => (scrapType === "all" || item.type === scrapType) &&
+    terms.every(term => String(item.title).toLowerCase().includes(term)) &&
+    (!scrapTopics.size || (item.topics ?? []).some(topic => scrapTopics.has(topic))));
 }
+function scrapSlice() {
+  const list = scrapFiltered();
+  scrapPage = Math.min(Math.max(1,scrapPage),pageCount(list.length));
+  const start = (scrapPage - 1) * PER_PAGE;
+  return list.slice(start,start + PER_PAGE);
+}
+function scrapFilterHtml() {
+  const counts = TOPICS.map(topic => [topic,scraps.filter(item => (item.topics ?? []).includes(topic)).length]).filter(([,count]) => count);
+  return `<div class="scrap-filters"><div class="scrap-row"><input id="scrap-q" type="search" placeholder="스크랩 검색" aria-label="스크랩 검색" autocomplete="off" maxlength="60">
+    <div class="tabs" aria-label="유형">${[["all","전체"],["news","뉴스"],["video","영상"]].map(([id,label]) =>
+      `<button type="button" data-scrap-type="${id}" aria-pressed="${scrapType === id}">${label}</button>`).join("")}</div>
+    <span class="count" data-scrap-count>${scrapFiltered().length}개</span><button type="button" data-scrap-reset>초기화</button></div>
+    ${counts.length ? `<div class="scrap-topics" role="group" aria-label="주제">${counts.map(([topic,count]) =>
+      `<button type="button" class="chip" data-scrap-topic="${topic}" aria-pressed="${scrapTopics.has(topic)}">${topic}<small>${count}</small></button>`).join("")}</div>` : ""}</div>`;
+}
+// Re-draws the cards, pager and counts only, so typing in the search box keeps its focus.
+function refreshScraps() {
+  const home = feed?.querySelector(".tv-home");
+  if (!home || section !== "scraps") return;
+  visible = scrapSlice();
+  const total = scrapFiltered().length;
+  home.querySelector(".tv-grid").innerHTML = visible.map(card).join("");
+  home.querySelectorAll(".tv-message").forEach(note => note.remove());
+  if (!visible.length) home.querySelector(".tv-grid").insertAdjacentHTML("afterend",
+    `<p class="tv-message">${scraps.length ? "조건에 맞는 스크랩이 없어요." : "스크랩한 자료가 없어요."}</p>`);
+  home.querySelector("[data-scrap-count]").textContent = total + "개";
+  home.querySelectorAll("[data-scrap-type]").forEach(button => button.setAttribute("aria-pressed",button.dataset.scrapType === scrapType));
+  home.querySelectorAll("[data-scrap-topic]").forEach(button => button.setAttribute("aria-pressed",scrapTopics.has(button.dataset.scrapTopic)));
+  home.querySelector(".tv-footer").innerHTML = pagerHtml("scrap",scrapPage,pageCount(total));
+}
+document.addEventListener("input",event => {
+  if (event.target.id !== "scrap-q") return;
+  scrapQuery = event.target.value;
+  scrapPage = 1;
+  refreshScraps();
+});
 
 function scrapKey(item) {
   if (item.type === "video") return item.id;
@@ -235,7 +275,7 @@ function paintFooter() {
   if (!section) return;
   const foot = feed.querySelector(".tv-footer");
   if (section === "scraps") {
-    foot.innerHTML = pagerHtml("scrap",scrapPage,pageCount(scraps.length));
+    foot.innerHTML = pagerHtml("scrap",scrapPage,pageCount(scrapFiltered().length));
     return;
   }
   if (section === "home") {
@@ -271,7 +311,7 @@ function paint() {
   feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "영상·기사" : filters[section] ?? "둘러보기"}</h1></div>
     ${section === "home" ? `<nav class="tv-filters home-tv-tabs" aria-label="영상 및 기사">${controls}</nav>` : ""}
     ${!section ? `<div class="tv-summary" data-summary role="status" aria-live="polite">${summaryHtml()}</div>` : ""}
-    ${section === "scraps" ? '<a class="back" href="#explore">← 둘러보기</a>' : ""}
+    ${section === "scraps" ? `<a class="back" href="#explore">← 둘러보기</a>${scrapFilterHtml()}` : ""}
     ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
     ${section ? `<div class="tv-grid">${visible.map(card).join("")}</div>` : `<div class="tv-view" data-view data-mode="${resultsActive() ? "results" : "globe"}">${viewInner()}</div>`}
     ${(ready || section === "scraps") && !visible.length && !messages.length && (section || !resultsActive()) ? '<p class="tv-message">표시할 콘텐츠가 없어요.</p>' : ""}
@@ -279,6 +319,10 @@ function paint() {
     <div class="tv-footer" role="status"></div></section>`;
   paintFooter();
   bendWall();
+  if (section === "scraps") {
+    const search = feed.querySelector("#scrap-q");
+    if (search) search.value = scrapQuery;
+  }
   if (!section) {
     mountGlobe();
     const input = feed.querySelector("#tv-q");
@@ -779,6 +823,9 @@ export function renderMedia(root, key, view = "") {
   if (feed !== root || section !== view) {
     wallOffset = 0;
     scrapPage = 1;
+    scrapQuery = "";
+    scrapType = "all";
+    scrapTopics.clear();
     section = view;
     filter = view === "home" ? homeFilter : view || landingFilter;
     visible = [];
@@ -820,6 +867,24 @@ export function mediaClick(button) {
     paint();
     window.scrollTo({top:0});
     return;
+  }
+  if (data.scrapType) {
+    scrapType = data.scrapType;
+    scrapPage = 1;
+    refreshScraps();
+  }
+  if (data.scrapTopic) {
+    if (scrapTopics.has(data.scrapTopic)) scrapTopics.delete(data.scrapTopic);
+    else scrapTopics.add(data.scrapTopic);
+    scrapPage = 1;
+    refreshScraps();
+  }
+  if ("scrapReset" in data) {
+    scrapQuery = "";
+    scrapType = "all";
+    scrapTopics.clear();
+    scrapPage = 1;
+    paint();
   }
   if (data.tvFilter) {
     filter = data.tvFilter;
