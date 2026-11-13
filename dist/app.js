@@ -3,6 +3,9 @@ import {renderMedia,leaveMedia,mediaClick} from "./media.js";
 import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost} from "./data.js";
 
 const main = document.querySelector("#main");
+main.addEventListener("error",event => {
+  if (event.target.matches?.(".news-thumbnail")) event.target.remove();
+},true);
 const editor = document.querySelector("#editor");
 const notice = document.querySelector("#notice");
 const colors = ["#e3d6fb","#f9dfcc","#d4eadd","#f5dbea","#dce6fa"];

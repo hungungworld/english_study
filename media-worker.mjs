@@ -21,7 +21,12 @@ export function parseNews(xml) {
     const url = https(read("link"));
     const title = read("title");
     if (!url || !title) return [];
-    return [{id:url,type:"news",title,url,source:"BBC News",date:read("pubDate")}];
+    const thumbnails = [...item.matchAll(/<media:thumbnail\b([^>]*)>/gi)];
+    const image = thumbnails.map(([,attributes]) => {
+      const value = attributes.match(/\burl\s*=\s*(["'])(.*?)\1/i)?.[2];
+      return https(plain(value));
+    }).find(Boolean) ?? "";
+    return [{id:url,type:"news",title,url,image,source:"BBC News",date:read("pubDate")}];
   });
 }
 async function upstream(url) {
@@ -54,6 +59,7 @@ async function videos(env, cursor) {
 async function media(request, env, context, path, cursor) {
   const cacheUrl = new URL(request.url);
   cacheUrl.search = cursor ? new URLSearchParams({cursor}) : "";
+  if (path === "/api/news") cacheUrl.searchParams.set("format","thumbnail");
   const cacheKey = new Request(cacheUrl);
   const cache = globalThis.caches?.default;
   const cached = await cache?.match(cacheKey).catch(() => undefined);
