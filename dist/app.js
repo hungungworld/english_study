@@ -1,4 +1,4 @@
-import {members} from "./config.js";
+import {members as defaultMembers} from "./config.js";
 import {renderMedia,leaveMedia,mediaClick} from "./media.js";
 import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost} from "./data.js";
 
@@ -7,6 +7,9 @@ main.addEventListener("error",event => {
   if (event.target.matches?.(".news-thumbnail")) event.target.remove();
 },true);
 const editor = document.querySelector("#editor");
+const memberEditor = document.querySelector("#member-editor");
+const savedNames = readLocal("member-names",[]);
+const members = defaultMembers.map((name,index) => savedNames?.[index] || name);
 const notice = document.querySelector("#notice");
 const colors = ["#e3d6fb","#f9dfcc","#d4eadd","#f5dbea","#dce6fa"];
 const day = 86400000;
@@ -84,6 +87,7 @@ function render() {
   const landing = page === "home" || page === "tv";
   const media = landing || page === "news" || page === "videos";
   document.body.classList.toggle("media-mode",landing);
+  document.body.classList.toggle("study-mode",!landing);
   const member = page === "member" ? Number(key) : 0;
   document.querySelector("#members").innerHTML = members.map((name,index) =>
     `<a class="member" href="#member/${index + 1}" ${member === index + 1 ? 'aria-current="page"' : ""}><span class="avatar" aria-hidden="true" style="--avatar:${colors[index]}">${index + 1}</span>${e(name)}</a>`).join("");
@@ -264,6 +268,10 @@ main.addEventListener("change",event => {
 main.addEventListener("click",async event => {
   const button = event.target.closest("button");
   if (!button) return;
+  if ("tvWrite" in button.dataset) {
+    openEditor(false);
+    return;
+  }
   if (main.querySelector(".tv-home")) {
     mediaClick(button);
     return;
@@ -319,6 +327,28 @@ async function refresh() {
   render();
 }
 document.querySelector("#write").addEventListener("click",() => openEditor(false));
+document.querySelector("#rename-members").addEventListener("click",() => {
+  memberEditor.innerHTML = `<div class="dialog-head"><h2 id="member-editor-title">조원 이름 변경</h2></div>
+    <p class="hint">변경한 이름은 이 브라우저에 저장돼요.</p>
+    <form>${members.map((name,index) => `<label>조원 ${index + 1}<input required maxlength="24" value="${e(name)}"></label>`).join("")}
+    <p class="form-error" role="alert" hidden>조원 이름을 모두 입력해 주세요.</p>
+    <div class="row"><button class="primary" type="submit">저장</button><button type="button" id="cancel-rename">취소</button></div></form>`;
+  memberEditor.querySelector("#cancel-rename").onclick = () => memberEditor.close();
+  memberEditor.querySelector("form").onsubmit = event => {
+    event.preventDefault();
+    const names = [...memberEditor.querySelectorAll("input")].map(input => input.value.trim());
+    if (names.some(name => !name)) {
+      memberEditor.querySelector(".form-error").hidden = false;
+      return;
+    }
+    members.splice(0,members.length,...names);
+    writeLocal("member-names",members);
+    memberEditor.close();
+    render();
+    flash("조원 이름을 저장했어요.");
+  };
+  memberEditor.showModal();
+});
 window.addEventListener("hashchange",event => {
   const previous = new URL(event.oldURL).hash;
   const current = location.hash;

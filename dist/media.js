@@ -147,7 +147,7 @@ function paint() {
   ].filter(Boolean);
   const controls = Object.entries(filters).map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
   feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section ? filters[section] : "영어 TV"}</h1></div>
-    ${section ? "" : `<nav class="tv-dock" aria-label="영어 TV 메뉴">${controls}<a href="#feed">▤ 게시물</a><a href="#study">스터디 홈 ↗</a></nav>`}
+    ${section ? "" : `<nav class="tv-dock" aria-label="영어 TV 메뉴">${controls}<a href="#feed">▤ 게시물</a><a href="#study">스터디 홈 ↗</a><button type="button" data-tv-write>＋ 글쓰기</button></nav>`}
     ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
     <div class="tv-grid">${visible.map(card).join("")}</div>
     ${ready && !visible.length && !messages.length ? '<p class="tv-message">표시할 콘텐츠가 없어요.</p>' : ""}
