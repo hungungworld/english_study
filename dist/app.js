@@ -71,10 +71,6 @@ function safeLink(value) {
 function authorLink(item) {
   return item.author ? `<a href="#member/${item.author}">${e(author(item))}</a>` : e(author(item));
 }
-function periodTabs(value) {
-  return `<div class="tabs" aria-label="기간">${[["week","이번 주"],["last","지난주"],["all","전체"]].map(([id,label]) =>
-    `<button type="button" data-period="${id}" aria-pressed="${id === value}">${label}</button>`).join("")}</div>`;
-}
 function hero(title, description, button = "") {
   return `<section class="hero"><div><h1>${e(title)}</h1><p>${e(description)}</p></div>${button}</section>`;
 }
@@ -251,7 +247,7 @@ function render() {
     const shown = paged("feed",posts);
     const description = boardPeriod === "all" ? "조원들의 영어 공부 노트" : weekLabel(boardPeriod);
     content = hero("게시판",description,quizButton("week","이번 주 단어 퀴즈 풀기",inPeriod(board.words,"week"))) +
-      `<div class="toolbar filters-row">${boardTabs("study")}${periodTabs(boardPeriod)}<div class="row"><button type="button" data-board-author aria-haspopup="dialog">${e(personal || "모든 조원")} ▾</button><span class="count">노트 ${posts.length}개</span></div></div>
+      `<div class="toolbar filters-row">${boardTabs("study")}<div class="row"><button type="button" data-board-author aria-haspopup="dialog">${e(personal || "모든 조원")} ▾</button><span class="count">노트 ${posts.length}개</span></div></div>
       <div class="stack">${shown.items.map(postCard).join("") || emptyAction("아직 올라온 노트가 없어요. 첫 노트를 남겨 보세요.",'<button type="button" data-new-note>＋ 노트 쓰기</button>')}</div>${shown.nav}`;
   }
   main.innerHTML = (!shared ? '<div class="banner">체험 모드 · 예시 노트가 보이고, 쓴 내용은 이 브라우저에만 저장돼요.</div>' : "") + content;
