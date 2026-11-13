@@ -1,5 +1,6 @@
 import {members as defaultMembers} from "./config.js";
 import {renderMedia,leaveMedia,mediaClick,setLandingFilter} from "./media.js";
+import {renderHome,leaveHome} from "./home.js";
 import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost, addMember} from "./data.js";
 
 const main = document.querySelector("#main");
@@ -100,27 +101,35 @@ function wordSelection() {
 function render() {
   const [page, key] = (location.hash.slice(1) || "home").split("/");
   // Old addresses keep working: 홈 -> 게시판, 퀴즈 -> 단어장 > 퀴즈, 뉴스/영상 -> 둘러보기 filters.
-  const legacy = {study:"feed",quiz:"words/quiz",news:"home",videos:"home"};
+  const legacy = {study:"home",quiz:"words/quiz",news:"explore",videos:"explore"};
   if (legacy[page]) {
     if (page === "news") setLandingFilter("news");
     if (page === "videos") setLandingFilter("video");
     location.replace("#" + legacy[page]);
     return;
   }
-  const landing = page === "home" || page === "tv";
+  const homePage = page === "home";
+  const landing = page === "explore" || page === "tv";
   const media = landing || page === "scraps";
-  document.body.classList.toggle("media-mode",landing);
-  document.body.classList.toggle("study-mode",!landing);
+  if (!homePage) leaveHome();
+  document.body.classList.toggle("media-mode",landing || homePage);
+  document.body.classList.toggle("home-mode",homePage);
+  document.body.classList.toggle("study-mode",!(landing || homePage));
   const member = page === "member" ? Number(key) : 0;
   document.body.classList.toggle("board-view",page === "feed" || page === "member");
   document.querySelector("#members").innerHTML = '<a class="member" href="#feed">모든 조원</a>' + members.map((name,index) =>
     `<a class="member" href="#member/${index + 1}" ${member === index + 1 ? 'aria-current="page"' : ""}><span class="avatar" aria-hidden="true" style="--avatar:${colors[index % colors.length]}">${index + 1}</span>${e(name)}</a>`).join("");
   document.querySelectorAll("#nav a").forEach(link => {
-    const current = landing ? "#home" : page === "scraps" ? "#scraps" : page === "words" ? "#words" : "#feed";
+    const current = homePage ? "#home" : landing ? "#explore" : page === "scraps" ? "#scraps" : page === "words" ? "#words" : "#feed";
     const active = link.hash === current;
     if (active) link.setAttribute("aria-current","page");
     else link.removeAttribute("aria-current");
   });
+  if (homePage) {
+    leaveMedia();
+    renderHome(main);
+    return;
+  }
   if (media) {
     let mediaKey;
     try { mediaKey = key && decodeURIComponent(key); } catch { mediaKey = key; }
@@ -472,7 +481,7 @@ document.querySelector("#rename-members").onclick = () => {
 window.addEventListener("hashchange",event => {
   const previous = new URL(event.oldURL).hash;
   const current = location.hash;
-  const inLanding = hash => !hash || hash === "#home" || hash.startsWith("#tv/");
+  const inLanding = hash => !hash || hash === "#home" || hash === "#explore" || hash.startsWith("#tv/");
   if (!inLanding(previous) || !inLanding(current)) window.scrollTo(0,0);
   render();
 });

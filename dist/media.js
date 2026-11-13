@@ -259,7 +259,7 @@ function paint() {
   feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "영상·기사" : filters[section] ?? "둘러보기"}</h1></div>
     ${section === "home" ? `<nav class="tv-filters home-tv-tabs" aria-label="영상 및 기사">${controls}</nav>` : ""}
     ${!section ? `<div class="tv-summary" data-summary role="status" aria-live="polite">${summaryHtml()}</div>` : ""}
-    ${section === "scraps" ? '<a class="back" href="#home">← 둘러보기</a>' : ""}
+    ${section === "scraps" ? '<a class="back" href="#explore">← 둘러보기</a>' : ""}
     ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
     ${section ? `<div class="tv-grid">${visible.map(card).join("")}</div>` : `<div class="tv-view" data-view data-mode="${resultsActive() ? "results" : "globe"}">${viewInner()}</div>`}
     ${(ready || section === "scraps") && !visible.length && !messages.length && (section || !resultsActive()) ? '<p class="tv-message">표시할 콘텐츠가 없어요.</p>' : ""}
@@ -325,7 +325,7 @@ overlay.addEventListener("error",event => {
 overlay.addEventListener("close",() => {
   selectedItem = undefined;
   overlay.replaceChildren();
-  if (location.hash.startsWith("#tv/")) location.replace("#home");
+  if (location.hash.startsWith("#tv/")) location.replace("#explore");
   if (lastFocus) {
     [...(feed?.querySelectorAll("[data-media]") ?? [])].find(button => button.dataset.media === lastFocus)?.focus({preventScroll:true});
     lastFocus = "";
@@ -387,7 +387,7 @@ function typeControls() {
 }
 function dockHtml() {
   const count = filterCount();
-  return `<nav class="tv-dock" aria-label="둘러보기 메뉴"><button type="button" class="tv-explore" data-sheet-toggle aria-expanded="${sheetOpen}" aria-controls="tv-sheet">탐색${count ? `<span class="badge" aria-label="적용된 필터 ${count}개">${count}</span>` : ""}</button><a href="#scraps">내 스크랩</a><a href="#feed">게시판</a><a href="#words">단어장</a><button type="button" data-tv-write>＋ 글쓰기</button></nav>`;
+  return `<nav class="tv-dock" aria-label="둘러보기 메뉴"><button type="button" class="tv-explore" data-sheet-toggle aria-expanded="${sheetOpen}" aria-controls="tv-sheet">탐색${count ? `<span class="badge" aria-label="적용된 필터 ${count}개">${count}</span>` : ""}</button><a href="#home">홈</a><a href="#scraps">내 스크랩</a><a href="#feed">게시판</a><a href="#words">단어장</a><button type="button" data-tv-write>＋ 글쓰기</button></nav>`;
 }
 function sheetHtml() {
   const counts = topicCounts();
@@ -770,6 +770,10 @@ export function renderMedia(root, key, view = "") {
 }
 export function setLandingFilter(value) {
   landingFilter = value;
+}
+export async function homeItems() {
+  if (!ready) await loadFirst();
+  return {news,videos};
 }
 export function leaveMedia() {
   observer?.disconnect();

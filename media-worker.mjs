@@ -137,6 +137,7 @@ export function handler(assets) {
     }
     const asset = assets[url.pathname === "/" ? "/index.html" : url.pathname];
     if (!asset) return new Response(null,{status:404});
-    return new Response(request.method === "HEAD" ? null : asset.body,{headers:{"Content-Type":asset.type,"X-Content-Type-Options":"nosniff"}});
+    const body = asset.base64 ? Uint8Array.from(atob(asset.body),char => char.charCodeAt(0)) : asset.body;
+    return new Response(request.method === "HEAD" ? null : body,{headers:{"Content-Type":asset.type,"X-Content-Type-Options":"nosniff"}});
   }};
 }
