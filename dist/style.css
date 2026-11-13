@@ -382,3 +382,45 @@ body :is(#editor,#member-editor,#member-picker,#tv-overlay) :is(button,.tv-out){
   border-radius:10px;
   background:#efebe0;
 }
+.bookmark-icon{
+  position:relative;
+  display:block;
+  width:16px;
+  height:21px;
+  background:currentColor;
+  clip-path:polygon(0 0,100% 0,100% 100%,50% 73%,0 100%);
+}
+[data-scrap] .bookmark-icon::after{
+  content:"";
+  position:absolute;
+  inset:2px 2px 3px;
+  background:var(--bookmark-background);
+  clip-path:inherit;
+}
+[data-scrap][aria-pressed=true] .bookmark-icon::after{display:none}
+#tv-overlay [data-scrap]{
+  display:inline-grid;
+  place-items:center;
+  min-width:44px;
+  min-height:40px;
+  background:var(--bookmark-background);
+  --bookmark-background:#302837;
+}
+.study-mode #tv-overlay [data-scrap]{--bookmark-background:#fffefa}
+#tv-overlay [data-scrap]:is(:hover,[aria-pressed=true]){
+  --bookmark-background:#f0cf91;
+  color:#24202a;
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  :is(button:not(.tv-card),.tv-out,.tv-dock a,.home-member-tabs a){
+    transition:translate .18s ease,box-shadow .18s ease;
+  }
+  :is(button:not(.tv-card):enabled,.tv-out,.tv-dock a,.home-member-tabs a):hover{
+    translate:0 -2px;
+    box-shadow:0 5px 12px #241b1826;
+  }
+  :is(button:not(.tv-card):enabled,.tv-out,.tv-dock a,.home-member-tabs a):active{
+    translate:0 0;
+    box-shadow:none;
+  }
+}

@@ -234,7 +234,7 @@ function detail(item) {
     <h1 lang="en">${escape(item.title)}</h1>
     <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "YouTube에서 열기" : "BBC 원문 읽기"} ↗</a>
     <button type="button" class="tv-action" data-write-source>＋ 글쓰기</button>
-    <button type="button" class="tv-action" data-scrap aria-pressed="${saved}">${saved ? "스크랩 해제" : "스크랩"}</button></div></div></section>`;
+    <button type="button" class="tv-action" data-scrap aria-label="스크랩" aria-pressed="${saved}" title="${saved ? "스크랩 해제" : "스크랩"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div></section>`;
 }
 function showDetail(item, origin) {
   selectedItem = item;
@@ -261,7 +261,7 @@ overlay.addEventListener("click",event => {
     scraps = saved ? scraps.filter(item => scrapKey(item) !== key) : [selectedItem,...scraps];
     writeLocal("media-scraps",scraps);
     scrapButton.setAttribute("aria-pressed",String(!saved));
-    scrapButton.textContent = saved ? "스크랩" : "스크랩 해제";
+    scrapButton.title = saved ? "스크랩" : "스크랩 해제";
     if (section === "scraps") {
       visible = scraps.slice(0,Math.max(visible.length,LIMIT));
       paint();
