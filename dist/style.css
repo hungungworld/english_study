@@ -349,3 +349,36 @@ body :is(#editor,#member-editor,#member-picker,#tv-overlay) :is(button,.tv-out){
       rotateX(var(--curve-x,0deg)) rotateY(var(--curve-y,0deg)) scale(var(--curve-scale,1));
   }
 }
+.study-mode :is(.top,.hero,.card,.tv-grid,.tv-card,.tv-screen,.home-section,.home-member-tabs a,.tabs){
+  border:0;
+  box-shadow:none;
+}
+.study-mode .top{
+  background:#fbfaf6f5;
+  border-radius:24px;
+}
+.study-mode :is(.hero,.card,.banner,.tabs){background:transparent}
+.study-mode .hero{padding:18px 0}
+.study-mode .card{padding-inline:0}
+.study-mode .empty{text-align:left}
+.study-mode .banner{padding-inline:0}
+.study-mode .top .logo,.study-mode .avatar{border-radius:50%}
+.study-mode .top .logo{background:#e8dac7}
+.study-mode :is(.member,.top nav a,.home-member-tabs a){border:0;border-radius:16px}
+.study-mode .member[aria-current],.study-mode .top nav a[aria-current]{
+  background:transparent;
+  color:var(--purple);
+  font-weight:800;
+}
+.study-mode :is(#choose-member,#rename-members){background:transparent;color:var(--purple)}
+.study-mode .tabs button[aria-pressed=true]{box-shadow:none}
+.study-mode.study-home .home-section .card,.study-mode.study-home .home-member-tabs a{background:transparent}
+.study-mode.study-home .tv-grid .tv-card:nth-child(n){border:0}
+.study-mode.study-home .tv-card .tv-screen{border:0;border-radius:14px}
+.study-mode:not(.media-mode) .tv-card{border:0;background:transparent}
+.study-mode :is(#editor,#member-editor,#member-picker,#tv-overlay){border:0;border-radius:18px}
+.study-mode :is(#editor,#member-editor,#member-picker) :is(input,textarea,select,.word-fields){
+  border:0;
+  border-radius:10px;
+  background:#efebe0;
+}
