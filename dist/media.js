@@ -324,13 +324,15 @@ overlay.addEventListener("close",() => {
 });
 // ---- Landing globe -------------------------------------------------------
 // Cards sit on a huge sphere seen from outside, so the front keeps the convex
-// "bulging screen" look. The sphere spins forever and wraps on its own, so the
-// material can never run out. Only cards near the front hemisphere are in the
-// DOM; items are repeated across the sphere when there are fewer than slots.
+// "bulging screen" look. Both axes wrap around 360 degrees: horizontally the
+// columns close into a ring, vertically the rows are shifted modulo a period
+// that is larger than the visible cap, so the seam is never on screen and
+// scrolling never reaches an end. Items repeat when there are fewer than slots.
 const DEG = Math.PI/180;
 const CAP = Math.cos(66*DEG);
-const globe = {stage:null,world:null,slots:[],live:new Map(),list:[],rotY:0,tilt:-6,velY:0,velX:0,
-  last:0,raf:0,hover:false,drag:null,speed:1,R:0,w:0,h:0,stepC:1,stepR:1,dirty:false};
+const DRIFT = 1.5; // degrees per second of idle rotation (slow on purpose)
+const globe = {stage:null,world:null,slots:[],live:new Map(),list:[],offLon:0,offLat:0,velLon:0,velLat:0,
+  last:0,raf:0,hover:false,drag:null,speed:1,R:0,w:0,h:0,stepC:1,stepR:1,latPeriod:360,dirty:false};
 let globePages = 0;
 
 function coprime(n,seed) {
@@ -338,6 +340,9 @@ function coprime(n,seed) {
   let step = Math.max(1,Math.round(n*seed));
   while (gcd(step,n) !== 1) step++;
   return step;
+}
+function wrap(value,period) {
+  return ((value + period/2) % period + period) % period - period/2;
 }
 function pickItem(slot) {
   const n = globe.list.length;
@@ -350,23 +355,22 @@ function buildGlobe() {
   const narrow = width < 700;
   const w = Math.round(width*(narrow ? .46 : .27));
   const h = Math.round(w/1.62);
-  const gap = Math.round(w*.045);
+  const gap = Math.round(w*.06);
   const R = Math.round(width);
   Object.assign(globe,{w,h,R});
   stage.style.perspective = Math.round(R*1.2) + "px";
+  world.style.transform = `translateZ(${-R}px)`;
   world.replaceChildren();
   globe.live.clear();
-  const rowStep = (h+gap)/R;
-  const K = Math.floor(64*DEG/rowStep);
+  const rowStep = (h+gap)/R/DEG;
+  const rows = Math.max(8,Math.round(150/rowStep/2)*2);
+  const cols = Math.max(6,Math.floor(2*Math.PI*R/(w+gap)));
+  globe.latPeriod = rows*rowStep;
   const slots = [];
-  for (let k = -K; k <= K; k++) {
-    const lat = k*rowStep;
-    const n = Math.floor(2*Math.PI*R*Math.cos(lat)/(w+gap));
-    if (n < 5) continue;
-    for (let j = 0; j < n; j++) {
-      const lon = (j + (k & 1 ? .5 : 0))/n*2*Math.PI;
-      slots.push({id:slots.length,col:j,row:k+K,lat:lat/DEG,lon:lon/DEG,
-        sx:Math.cos(lat)*Math.sin(lon),sy:-Math.sin(lat),sz:Math.cos(lat)*Math.cos(lon)});
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      slots.push({id:slots.length,col:c,row:r,
+        lat:(r - rows/2)*rowStep,lon:(c + (r & 1 ? .5 : 0))/cols*360});
     }
   }
   globe.slots = slots;
@@ -423,18 +427,18 @@ function bindGlobe(stage) {
     }
     const now = performance.now();
     const dt = Math.max(.001,(now-d.t)/1000);
-    const dx = event.clientX-d.lx, dy = event.clientY-d.ly;
-    globe.rotY += dx/globe.R;
-    globe.tilt = Math.max(-50,Math.min(50,globe.tilt - dy/globe.R/DEG));
-    globe.velY = dx/globe.R/dt;
-    globe.velX = -dy/globe.R/dt/DEG;
+    const dx = (event.clientX-d.lx)/globe.R/DEG, dy = (event.clientY-d.ly)/globe.R/DEG;
+    globe.offLon += dx;
+    globe.offLat -= dy;
+    globe.velLon = dx/dt;
+    globe.velLat = -dy/dt;
     Object.assign(d,{lx:event.clientX,ly:event.clientY,t:now});
   });
   const end = event => {
     const d = globe.drag;
     if (!d || event.pointerId !== d.id) return;
     suppressClick = d.active;
-    if (performance.now()-d.t > 90) globe.velY = globe.velX = 0;
+    if (performance.now()-d.t > 90) globe.velLon = globe.velLat = 0;
     globe.drag = null;
     stage.classList.remove("is-dragging");
   };
@@ -443,8 +447,8 @@ function bindGlobe(stage) {
   stage.addEventListener("pointerleave",() => { globe.hover = false; });
   stage.addEventListener("wheel",event => {
     event.preventDefault();
-    globe.velY -= event.deltaX/globe.R*4;
-    globe.velX -= event.deltaY/globe.R/DEG*4;
+    globe.velLon -= event.deltaX/globe.R/DEG*4;
+    globe.velLat += event.deltaY/globe.R/DEG*4;
   },{passive:false});
 }
 function tickGlobe(now) {
@@ -458,32 +462,33 @@ function tickGlobe(now) {
   if (!globe.drag) {
     const target = globe.hover || still || overlay.open ? 0 : 1;
     globe.speed += (target-globe.speed)*Math.min(1,dt*3);
-    globe.rotY += globe.velY*dt - 7*DEG*dt*globe.speed;
-    globe.tilt = Math.max(-50,Math.min(50,globe.tilt + globe.velX*dt));
+    globe.offLon += globe.velLon*dt - DRIFT*dt*globe.speed;
+    globe.offLat += globe.velLat*dt;
     const damp = Math.exp(-2.6*dt);
-    globe.velY *= damp;
-    globe.velX *= damp;
-    if (!globe.hover && !still) globe.tilt += (-6-globe.tilt)*Math.min(1,dt*.25);
+    globe.velLon *= damp;
+    globe.velLat *= damp;
   }
-  world.style.transform = `translateZ(${-globe.R}px) rotateX(${globe.tilt}deg) rotateY(${globe.rotY/DEG}deg)`;
-  const cy = Math.cos(globe.rotY), sy = Math.sin(globe.rotY);
-  const ct = Math.cos(globe.tilt*DEG), st = Math.sin(globe.tilt*DEG);
+  globe.offLon = wrap(globe.offLon,360);
+  globe.offLat = wrap(globe.offLat,globe.latPeriod);
   if (globe.dirty) { world.replaceChildren(); globe.live.clear(); globe.dirty = false; }
   const fragment = document.createDocumentFragment();
   for (const slot of globe.slots) {
-    const z1 = -slot.sx*sy + slot.sz*cy;
-    const front = slot.sy*st + z1*ct > CAP;
-    const el = globe.live.get(slot.id);
-    if (front && !el && globe.list.length) {
-      const holder = document.createElement("template");
-      holder.innerHTML = card(pickItem(slot));
-      const node = holder.content.firstElementChild;
-      node.classList.add("globe-card");
-      node.style.cssText = `width:${globe.w}px;height:${globe.h}px;left:${-globe.w/2}px;top:${-globe.h/2}px;` +
-        `transform:rotateY(${slot.lon}deg) rotateX(${slot.lat}deg) translateZ(${globe.R}px)`;
-      globe.live.set(slot.id,node);
-      fragment.append(node);
-    } else if (!front && el) {
+    const lon = wrap(slot.lon + globe.offLon,360);
+    const lat = wrap(slot.lat + globe.offLat,globe.latPeriod);
+    const front = Math.cos(lon*DEG)*Math.cos(lat*DEG) > CAP;
+    let el = globe.live.get(slot.id);
+    if (front && globe.list.length) {
+      if (!el) {
+        const holder = document.createElement("template");
+        holder.innerHTML = card(pickItem(slot));
+        el = holder.content.firstElementChild;
+        el.classList.add("globe-card");
+        el.style.cssText = `width:${globe.w}px;height:${globe.h}px;left:${-globe.w/2}px;top:${-globe.h/2}px`;
+        globe.live.set(slot.id,el);
+        fragment.append(el);
+      }
+      el.style.transform = `rotateY(${lon}deg) rotateX(${lat}deg) translateZ(${globe.R}px) scale(${Math.max(.6,Math.cos(lat*DEG))})`;
+    } else if (el) {
       el.remove();
       globe.live.delete(slot.id);
     }
