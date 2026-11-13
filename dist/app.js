@@ -1,5 +1,5 @@
 import {members as defaultMembers} from "./config.js";
-import {renderMedia,leaveMedia,mediaClick} from "./media.js";
+import {renderMedia,leaveMedia,mediaClick,setLandingFilter} from "./media.js";
 import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost, addMember} from "./data.js";
 
 const main = document.querySelector("#main");
@@ -99,61 +99,57 @@ function wordSelection() {
 }
 function render() {
   const [page, key] = (location.hash.slice(1) || "home").split("/");
+  // Old addresses keep working: 홈 -> 게시판, 퀴즈 -> 단어장 > 퀴즈, 뉴스/영상 -> 둘러보기 filters.
+  const legacy = {study:"feed",quiz:"words/quiz",news:"home",videos:"home"};
+  if (legacy[page]) {
+    if (page === "news") setLandingFilter("news");
+    if (page === "videos") setLandingFilter("video");
+    location.replace("#" + legacy[page]);
+    return;
+  }
   const landing = page === "home" || page === "tv";
-  const studyHome = page === "study";
-  const media = landing || studyHome || ["news","videos","scraps"].includes(page);
+  const media = landing || page === "scraps";
   document.body.classList.toggle("media-mode",landing);
   document.body.classList.toggle("study-mode",!landing);
-  document.body.classList.toggle("study-home",studyHome);
   const member = page === "member" ? Number(key) : 0;
   document.body.classList.toggle("board-view",page === "feed" || page === "member");
   document.querySelector("#members").innerHTML = '<a class="member" href="#feed">모든 조원</a>' + members.map((name,index) =>
     `<a class="member" href="#member/${index + 1}" ${member === index + 1 ? 'aria-current="page"' : ""}><span class="avatar" aria-hidden="true" style="--avatar:${colors[index % colors.length]}">${index + 1}</span>${e(name)}</a>`).join("");
   document.querySelectorAll("#nav a").forEach(link => {
-    const active = link.hash === (studyHome ? "#study" : media ? "#home" : ["words","quiz"].includes(page) ? "#words" : "#feed");
+    const current = landing ? "#home" : page === "scraps" ? "#scraps" : page === "words" ? "#words" : "#feed";
+    const active = link.hash === current;
     if (active) link.setAttribute("aria-current","page");
     else link.removeAttribute("aria-current");
   });
   if (media) {
     let mediaKey;
     try { mediaKey = key && decodeURIComponent(key); } catch { mediaKey = key; }
-    if (studyHome) {
-      if (!main.querySelector("#home-media")) main.innerHTML = `<section class="club-cover" aria-labelledby="club-title">
-        <div class="club-photo"><img src="https://images.unsplash.com/photo-1613743575064-a645fae50d2e?fit=crop&amp;w=1400&amp;q=85" alt="" fetchpriority="high"></div>
-        <div class="club-cover-copy"><h1 id="club-title" lang="en">axciting</h1>
-        <p>영어 기사와 영상을 보고, 기억하고 싶은 문장을 남겨요.</p>
-        <button type="button" class="primary" data-tv-write>＋ 공부 기록 쓰기</button></div>
-      </section><div id="home-media"></div><div id="home-board"></div>`;
-      const posts = sorted(board.posts);
-      main.querySelector("#home-board").innerHTML = `<section class="home-section" aria-labelledby="home-board-title">
-        <div class="home-section-head"><h2 id="home-board-title">최근 공부 기록</h2><a href="#feed" data-all-posts>게시판 열기 ↗</a></div>
-        ${!shared ? '<p class="home-board-status">미리보기 · 새 글은 이 브라우저에 저장돼요.</p>' : ""}
-        <div class="stack">${loading ? empty("게시글을 불러오는 중이에요.") : loadError ? empty(loadError) : posts.slice(0,5).map(postCard).join("") || empty("아직 올라온 글이 없어요.")}</div>
-      </section>`;
-      renderMedia(main.querySelector("#home-media"),mediaKey,"home");
-    } else {
-      if (main.querySelector("#home-media")) main.replaceChildren();
-      renderMedia(main,mediaKey,{news:"news",videos:"video",scraps:"scraps"}[page] ?? "");
-    }
+    renderMedia(main,mediaKey,page === "scraps" ? "scraps" : "");
     return;
   }
   leaveMedia();
   let content;
   if (loading) content = empty("스터디 기록을 불러오는 중이에요.");
   else if (loadError) content = `<div class="card empty"><p>${e(loadError)}</p><button data-refresh>다시 불러오기</button></div>`;
-  else if (page === "quiz") content = renderQuiz();
   else if (page === "post") content = renderPost(key);
   else if (page === "words") {
-    const words = sorted(wordSelection());
-    content = hero("공유 단어장","함께 모은 영어 단어와 표현",'<button type="button" data-new-word>＋ 단어 추가</button>') +
-      `<div class="toolbar">${periodTabs(period)}<label><span class="hint">등록자</span><select id="word-member"><option value="0">모든 조원</option>${members.map((name,index) => `<option value="${index+1}" ${wordMember === index+1 ? "selected" : ""}>${e(name)}</option>`).join("")}</select></label></div>
-      <div class="toolbar"><span class="count">단어 ${words.length}개</span>${quizButton("words","선택한 단어로 퀴즈",words)}${quizButton("review","다시 볼 단어",reviewWords())}</div>
-      <div class="stack">${words.map(wordCard).join("") || empty("이 조건에 해당하는 단어가 없어요.")}</div>`;
+    const quizView = key === "quiz";
+    const views = `<div class="tabs" aria-label="단어장 보기">${[["list","단어 목록"],["quiz","퀴즈"]].map(([id,label]) =>
+      `<button type="button" data-view="${id}" aria-pressed="${(id === "quiz") === quizView}">${label}</button>`).join("")}</div>`;
+    if (quizView) content = hero("단어장","함께 모은 단어로 퀴즈를 풀어요") + `<div class="toolbar">${views}</div>` + renderQuiz();
+    else {
+      const words = sorted(wordSelection());
+      content = hero("단어장","함께 모은 영어 단어와 표현",'<button type="button" data-new-word>＋ 단어 추가</button>') +
+        `<div class="toolbar">${views}</div>
+        <div class="toolbar">${periodTabs(period)}<label><span class="hint">등록자</span><select id="word-member"><option value="0">모든 조원</option>${members.map((name,index) => `<option value="${index+1}" ${wordMember === index+1 ? "selected" : ""}>${e(name)}</option>`).join("")}</select></label></div>
+        <div class="toolbar"><span class="count">단어 ${words.length}개</span>${quizButton("words","선택한 단어로 퀴즈",words)}${quizButton("review","다시 볼 단어",reviewWords())}</div>
+        <div class="stack">${words.map(wordCard).join("") || empty("이 조건에 해당하는 단어가 없어요.")}</div>`;
+    }
   } else {
     const personal = members[member - 1];
     const posts = sorted(inPeriod(board.posts,boardPeriod).filter(post => !personal || post.author === member));
     const description = boardPeriod === "all" ? "조원들의 영어 공부 기록" : weekLabel(boardPeriod);
-    content = hero("공부 게시판",description,quizButton("week","이번 주 단어 퀴즈",inPeriod(board.words,"week"))) +
+    content = hero("게시판",description,quizButton("week","이번 주 단어 퀴즈",inPeriod(board.words,"week"))) +
       `<div class="toolbar">${periodTabs(boardPeriod)}<div class="row"><button type="button" data-board-author aria-haspopup="dialog">${e(personal || "모든 조원")} ▾</button><span class="count">게시글 ${posts.length}개</span></div></div>
       <div class="stack">${posts.map(postCard).join("") || empty("아직 올라온 글이 없어요.")}</div>`;
   }
@@ -187,19 +183,24 @@ function beginQuiz(words) {
     [shuffled[i],shuffled[j]] = [shuffled[j],shuffled[i]];
   }
   quiz = {words:shuffled.slice(0,10),index:0,revealed:false,missed:[]};
-  if (location.hash === "#quiz") render();
-  else location.hash = "quiz";
+  if (location.hash === "#words/quiz") render();
+  else location.hash = "words/quiz";
 }
 function renderQuiz() {
-  const back = '<a class="back" href="#words">← 단어장</a>';
-  if (!quiz) return back + empty("단어장에서 풀고 싶은 퀴즈를 골라 주세요.");
+  if (!quiz) {
+    const options = [quizButton("week","이번 주 단어",inPeriod(board.words,"week")),quizButton("all","전체 단어",board.words),
+      quizButton("review","다시 볼 단어",reviewWords())].join("");
+    return `<section class="card quiz"><h1>퀴즈 범위 고르기</h1>${options
+      ? `<p>범위를 고르면 최대 10문제가 나와요.</p><div class="row">${options}</div>`
+      : "<p>아직 퀴즈로 풀 단어가 없어요. 글을 쓰면서 단어를 추가해 보세요.</p>"}</section>`;
+  }
   const total = quiz.words.length;
   const word = quiz.words[quiz.index];
   if (!word) {
-    return back + `<section class="card quiz"><h1>퀴즈 완료</h1><p>${total}개 중 ${total - quiz.missed.length}개를 맞혔어요.</p>
-    ${quiz.missed.length ? '<div class="row"><button class="primary" data-quiz="retry">다시 볼 단어만 풀기</button></div>' : ""}</section>`;
+    return `<section class="card quiz"><h1>퀴즈 완료</h1><p>${total}개 중 ${total - quiz.missed.length}개를 맞혔어요.</p>
+    <div class="row">${quiz.missed.length ? '<button class="primary" data-quiz="retry">다시 볼 단어만 풀기</button>' : ""}<button data-quiz="reset">다른 범위 고르기</button></div></section>`;
   }
-  return back + `<section class="card quiz"><h1>단어 퀴즈</h1><p class="hint">${quiz.index + 1} / ${total}</p>
+  return `<section class="card quiz"><h1>단어 퀴즈</h1><p class="hint">${quiz.index + 1} / ${total}</p>
   <progress value="${quiz.index}" max="${total}" aria-label="퀴즈 진행률"></progress><h2 lang="en">${e(word.term)}</h2>
   ${quiz.revealed ? `<p>${e(word.meaning)}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}
     <div class="row"><button class="primary" data-answer="correct">맞혔어요</button><button data-answer="missed">다시 볼래요</button></div>` :
@@ -337,6 +338,15 @@ main.addEventListener("click",async event => {
   }
   const id = location.hash.split("/")[1];
   const data = button.dataset;
+  if (data.view) {
+    location.hash = data.view === "quiz" ? "words/quiz" : "words";
+    return;
+  }
+  if (data.quiz === "reset") {
+    quiz = null;
+    render();
+    return;
+  }
   if ("boardAuthor" in data) {
     memberDrawer.showModal();
     return;
@@ -361,7 +371,7 @@ main.addEventListener("click",async event => {
     } catch (failure) { flash(failure.message); button.disabled = false; }
   }
   if (data.quiz) {
-    const choices = {week:inPeriod(board.words,"week"),words:wordSelection(),post:board.words.filter(word => word.post_id === id),retry:quiz?.missed,review:reviewWords()};
+    const choices = {week:inPeriod(board.words,"week"),all:board.words,words:wordSelection(),post:board.words.filter(word => word.post_id === id),retry:quiz?.missed,review:reviewWords()};
     beginQuiz(choices[data.quiz] ?? []);
   }
   if ("reveal" in data && quiz) {

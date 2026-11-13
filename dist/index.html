@@ -11,8 +11,8 @@
 </head>
 <body>
   <header class="top"><div class="top-inner">
-    <a class="brand" href="#study"><img class="logo" src="./favicon.svg" alt="">axciting</a>
-    <nav aria-label="주 메뉴" id="nav"><a href="#study">홈</a><a href="#home">학습 자료</a><a href="#feed">게시판</a><a href="#words">단어장</a></nav>
+    <a class="brand" href="#home"><img class="logo" src="./favicon.svg" alt="">axciting</a>
+    <nav aria-label="주 메뉴" id="nav"><a href="#home">둘러보기</a><a href="#feed">게시판</a><a href="#words">단어장</a><a class="aux" href="#scraps">내 스크랩</a></nav>
     <button id="choose-member" type="button">내 이름 선택</button><button class="primary" id="write" type="button">＋ 글쓰기</button>
   </div></header>
   <div class="shell">
@@ -20,7 +20,7 @@
   </div>
   <button id="open-members" type="button" aria-haspopup="dialog" aria-controls="member-drawer">조원 ›</button>
   <dialog id="member-drawer" aria-labelledby="member-drawer-title">
-    <div class="dialog-head"><h2 id="member-drawer-title">작성자 선택</h2><form method="dialog"><button aria-label="조원 목록 닫기">✕</button></form></div>
+    <div class="dialog-head"><h2 id="member-drawer-title">조원</h2><form method="dialog"><button aria-label="조원 목록 닫기">✕</button></form></div>
     <nav id="members" aria-label="조원별 게시판"></nav>
     <button type="button" id="rename-members">조원 관리</button>
   </dialog>

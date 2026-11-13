@@ -252,15 +252,12 @@ function paint() {
     ready && filter === "video" && !videoConfigured && !videoError ? "영어 영상 목록을 아직 불러올 수 없어요." : ""
   ].filter(Boolean);
   const controls = Object.entries(filters).filter(([id]) => id !== "scraps").map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
-  const resourceLinks = [["#home","전체",""],["#news","BBC 뉴스","news"],["#videos","영어 영상","video"],["#scraps","내 스크랩","scraps"]];
-  const resourceNav = resourceLinks.map(([href,label,view]) =>
-    `<a href="${href}" ${section === view ? 'aria-current="page"' : ""}>${label}</a>`).join("");
   const keepSearchFocus = document.activeElement?.id === "tv-q";
   feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "영상·기사" : filters[section] ?? "학습 자료"}</h1></div>
     ${section === "home" ? `<nav class="tv-filters home-tv-tabs" aria-label="영상 및 기사">${controls}</nav>` : ""}
-    ${!section ? `<nav class="tv-dock" aria-label="학습 자료 메뉴"><div class="resource-filters">${controls}<a href="#scraps">내 스크랩</a></div><a href="#study">홈 ↗</a><button type="button" data-tv-write>＋ 글쓰기</button></nav>` : ""}
+    ${!section ? `<nav class="tv-dock" aria-label="학습 자료 메뉴"><div class="resource-filters">${controls}<a href="#scraps">내 스크랩</a></div><a href="#feed">게시판 ↗</a><a href="#words">단어장 ↗</a><button type="button" data-tv-write>＋ 글쓰기</button></nav>` : ""}
     ${!section ? searchForm() : ""}
-    ${section && section !== "home" ? `<nav class="resource-nav" aria-label="학습 자료 분류">${resourceNav}</nav>` : ""}
+    ${section === "scraps" ? '<a class="back" href="#home">← 둘러보기</a>' : ""}
     ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
     ${section ? `<div class="tv-grid">${visible.map(card).join("")}</div>` : '<div class="globe-stage" aria-label="학습 자료 지구본"><div class="globe-world"></div></div>'}
     ${(ready || section === "scraps") && !visible.length && !messages.length ? '<p class="tv-message">표시할 콘텐츠가 없어요.</p>' : ""}
@@ -601,6 +598,9 @@ export function renderMedia(root, key, view = "") {
     });
     else feed.querySelector(".tv-home").insertAdjacentHTML("afterbegin",'<p class="tv-message">이 콘텐츠를 찾을 수 없어요.</p>');
   }
+}
+export function setLandingFilter(value) {
+  landingFilter = value;
 }
 export function leaveMedia() {
   observer?.disconnect();
