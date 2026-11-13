@@ -60,8 +60,8 @@ function bendWall() {
       card.style.setProperty("--curve-x", tilt * -20 + "deg");
       card.style.setProperty("--curve-y", x * -32 + "deg");
       const depth = Math.max(0,1 - .72 * x * x - .48 * y * y);
-      card.style.setProperty("--curve-depth", depth * 185 + "px");
-      card.style.setProperty("--curve-scale", .91 + depth * .025);
+      card.style.setProperty("--curve-depth", depth * 48 + "px");
+      card.style.setProperty("--curve-scale", .86 + depth * .055);
     }
   });
 }

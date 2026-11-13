@@ -421,7 +421,13 @@ function updateMemberLabel() {
   document.querySelector("#choose-member").textContent = name ? name + " · 변경" : "내 이름 선택";
 }
 document.querySelector("#choose-member").onclick = () => chooseMember();
+const memberDrawer = document.querySelector("#member-drawer");
+document.querySelector("#open-members").onclick = () => memberDrawer.showModal();
+memberDrawer.addEventListener("click",event => {
+  if (event.target === memberDrawer || event.target.closest("#members a")) memberDrawer.close();
+});
 document.querySelector("#rename-members").onclick = () => {
+  memberDrawer.close();
   if (!shared) return flash("Supabase를 연결하면 관리자가 조원을 추가할 수 있어요.");
   memberEditor.innerHTML = `<div class="dialog-head"><h2 id="member-editor-title">관리자 · 조원 추가</h2></div>
     <form><label>관리자 이메일<input name="email" type="email" autocomplete="username" required></label>
