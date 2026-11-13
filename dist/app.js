@@ -99,9 +99,11 @@ function wordSelection() {
 function render() {
   const [page, key] = (location.hash.slice(1) || "home").split("/");
   const landing = page === "home" || page === "tv";
-  const media = landing || ["news","videos","scraps"].includes(page);
+  const studyHome = page === "study";
+  const media = landing || studyHome || ["news","videos","scraps"].includes(page);
   document.body.classList.toggle("media-mode",landing);
   document.body.classList.toggle("study-mode",!landing);
+  document.body.classList.toggle("study-home",studyHome);
   const member = page === "member" ? Number(key) : 0;
   document.querySelector("#members").innerHTML = members.map((name,index) =>
     `<a class="member" href="#member/${index + 1}" ${member === index + 1 ? 'aria-current="page"' : ""}><span class="avatar" aria-hidden="true" style="--avatar:${colors[index % colors.length]}">${index + 1}</span>${e(name)}</a>`).join("");
@@ -113,7 +115,7 @@ function render() {
   if (media) {
     let mediaKey;
     try { mediaKey = key && decodeURIComponent(key); } catch { mediaKey = key; }
-    if (landing) {
+    if (studyHome) {
       if (!main.querySelector("#home-media")) main.innerHTML = '<div id="home-media"></div><div id="home-board"></div>';
       const posts = sorted(board.posts);
       const memberTabs = members.map((name,index) => `<a href="#member/${index+1}">${e(name)}</a>`).join("");
@@ -126,15 +128,13 @@ function render() {
       renderMedia(main.querySelector("#home-media"),mediaKey,"home");
     } else {
       if (main.querySelector("#home-media")) main.replaceChildren();
-      renderMedia(main,mediaKey,{news:"news",videos:"video",scraps:"scraps"}[page]);
+      renderMedia(main,mediaKey,{news:"news",videos:"video",scraps:"scraps"}[page] ?? "");
     }
     return;
   }
   leaveMedia();
   let content;
-  if (page === "study") content = hero("스터디 서클","영어 공부 기록을 나누고, 함께 복습해요.") +
-    '<nav class="study-links" aria-label="스터디 홈"><a class="card" href="#feed">주간 게시판</a><a class="card" href="#words">공유 단어장</a><a class="card" href="#news">BBC 기사</a><a class="card" href="#videos">영어 영상</a></nav>';
-  else if (loading) content = empty("스터디 기록을 불러오는 중이에요.");
+  if (loading) content = empty("스터디 기록을 불러오는 중이에요.");
   else if (loadError) content = `<div class="card empty"><p>${e(loadError)}</p><button data-refresh>다시 불러오기</button></div>`;
   else if (page === "quiz") content = renderQuiz();
   else if (page === "post") content = renderPost(key);
