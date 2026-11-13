@@ -136,12 +136,12 @@ function finishDrag(event) {
 document.addEventListener("pointerup",finishDrag);
 document.addEventListener("pointercancel",finishDrag);
 document.addEventListener("dragstart",event => {
-  if (event.target.closest(".media-mode .tv-grid")) event.preventDefault();
+  if (event.target.closest(".media-mode :is(.tv-grid,.globe-stage)")) event.preventDefault();
 });
 document.addEventListener("click",event => {
   if (!suppressClick) return;
   suppressClick = false;
-  if (event.detail && event.target.closest(".media-mode .tv-grid")) event.stopPropagation();
+  if (event.detail && event.target.closest(".media-mode :is(.tv-grid,.globe-stage)")) event.stopPropagation();
 },true);
 
 function items() {
@@ -260,11 +260,12 @@ function paint() {
     ${!section ? `<nav class="tv-dock" aria-label="학습 자료 메뉴"><div class="resource-filters">${controls}<a href="#scraps">내 스크랩</a></div><a href="#study">홈 ↗</a><button type="button" data-tv-write>＋ 글쓰기</button></nav>` : ""}
     ${section && section !== "home" ? `<nav class="resource-nav" aria-label="학습 자료 분류">${resourceNav}</nav>` : ""}
     ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
-    <div class="tv-grid">${visible.map(card).join("")}</div>
+    ${section ? `<div class="tv-grid">${visible.map(card).join("")}</div>` : '<div class="globe-stage" aria-label="학습 자료 지구본"><div class="globe-world"></div></div>'}
     ${(ready || section === "scraps") && !visible.length && !messages.length ? '<p class="tv-message">표시할 콘텐츠가 없어요.</p>' : ""}
     <div class="tv-footer" role="status"></div></section>`;
   paintFooter();
   bendWall();
+  if (!section) mountGlobe();
 }
 function detail(item) {
   const saved = scraps.some(entry => scrapKey(entry) === scrapKey(item));
@@ -321,6 +322,176 @@ overlay.addEventListener("close",() => {
     lastFocus = "";
   }
 });
+// ---- Landing globe -------------------------------------------------------
+// Cards sit on a huge sphere seen from outside, so the front keeps the convex
+// "bulging screen" look. The sphere spins forever and wraps on its own, so the
+// material can never run out. Only cards near the front hemisphere are in the
+// DOM; items are repeated across the sphere when there are fewer than slots.
+const DEG = Math.PI/180;
+const CAP = Math.cos(66*DEG);
+const globe = {stage:null,world:null,slots:[],live:new Map(),list:[],rotY:0,tilt:-6,velY:0,velX:0,
+  last:0,raf:0,hover:false,drag:null,speed:1,R:0,w:0,h:0,stepC:1,stepR:1,dirty:false};
+let globePages = 0;
+
+function coprime(n,seed) {
+  const gcd = (a,b) => b ? gcd(b,a%b) : a;
+  let step = Math.max(1,Math.round(n*seed));
+  while (gcd(step,n) !== 1) step++;
+  return step;
+}
+function pickItem(slot) {
+  const n = globe.list.length;
+  return n ? globe.list[(slot.col*globe.stepC + slot.row*globe.stepR) % n] : null;
+}
+function buildGlobe() {
+  const {stage,world} = globe;
+  if (!stage?.isConnected) return;
+  const width = stage.clientWidth || innerWidth;
+  const narrow = width < 700;
+  const w = Math.round(width*(narrow ? .46 : .27));
+  const h = Math.round(w/1.62);
+  const gap = Math.round(w*.045);
+  const R = Math.round(width);
+  Object.assign(globe,{w,h,R});
+  stage.style.perspective = Math.round(R*1.2) + "px";
+  world.replaceChildren();
+  globe.live.clear();
+  const rowStep = (h+gap)/R;
+  const K = Math.floor(64*DEG/rowStep);
+  const slots = [];
+  for (let k = -K; k <= K; k++) {
+    const lat = k*rowStep;
+    const n = Math.floor(2*Math.PI*R*Math.cos(lat)/(w+gap));
+    if (n < 5) continue;
+    for (let j = 0; j < n; j++) {
+      const lon = (j + (k & 1 ? .5 : 0))/n*2*Math.PI;
+      slots.push({id:slots.length,col:j,row:k+K,lat:lat/DEG,lon:lon/DEG,
+        sx:Math.cos(lat)*Math.sin(lon),sy:-Math.sin(lat),sz:Math.cos(lat)*Math.cos(lon)});
+    }
+  }
+  globe.slots = slots;
+  globe.dirty = true;
+}
+function setGlobeList() {
+  globe.list = items();
+  globe.stepC = coprime(globe.list.length || 1,.618);
+  globe.stepR = coprime(globe.list.length || 1,.382);
+}
+function mountGlobe() {
+  const stage = feed?.querySelector(".globe-stage");
+  if (!stage) return;
+  globe.stage = stage;
+  globe.world = stage.querySelector(".globe-world");
+  setGlobeList();
+  buildGlobe();
+  bindGlobe(stage);
+  if (!globe.raf) globe.raf = requestAnimationFrame(tickGlobe);
+  if (ready) globeMore();
+}
+function refreshGlobe() {
+  setGlobeList();
+  globe.dirty = true;
+}
+// Keep pulling later video pages in the background so the sphere has more to show.
+function globeMore() {
+  if (pending || !next || globePages >= 4 || filter === "news") return;
+  globePages++;
+  const token = next;
+  pending = get("/api/videos?cursor=" + encodeURIComponent(token)).then(result => {
+    videos = merge(videos,result.items);
+    next = result.next === token ? null : result.next;
+  }).catch(() => {}).finally(() => {
+    pending = undefined;
+    if (feed?.isConnected && !section) { refreshGlobe(); globeMore(); }
+  });
+}
+function bindGlobe(stage) {
+  stage.addEventListener("pointerdown",event => {
+    if (event.button !== 0 || overlay.open) return;
+    suppressClick = false;
+    globe.drag = {id:event.pointerId,x:event.clientX,y:event.clientY,lx:event.clientX,ly:event.clientY,t:performance.now(),active:false};
+  });
+  stage.addEventListener("pointermove",event => {
+    const d = globe.drag;
+    if (!d) { globe.hover = event.pointerType === "mouse" && !!event.target.closest(".tv-card"); return; }
+    if (event.pointerId !== d.id) return;
+    if (!d.active) {
+      if (Math.hypot(event.clientX-d.x,event.clientY-d.y) < 6) return;
+      d.active = true;
+      stage.setPointerCapture(event.pointerId);
+      stage.classList.add("is-dragging");
+    }
+    const now = performance.now();
+    const dt = Math.max(.001,(now-d.t)/1000);
+    const dx = event.clientX-d.lx, dy = event.clientY-d.ly;
+    globe.rotY += dx/globe.R;
+    globe.tilt = Math.max(-50,Math.min(50,globe.tilt - dy/globe.R/DEG));
+    globe.velY = dx/globe.R/dt;
+    globe.velX = -dy/globe.R/dt/DEG;
+    Object.assign(d,{lx:event.clientX,ly:event.clientY,t:now});
+  });
+  const end = event => {
+    const d = globe.drag;
+    if (!d || event.pointerId !== d.id) return;
+    suppressClick = d.active;
+    if (performance.now()-d.t > 90) globe.velY = globe.velX = 0;
+    globe.drag = null;
+    stage.classList.remove("is-dragging");
+  };
+  stage.addEventListener("pointerup",end);
+  stage.addEventListener("pointercancel",end);
+  stage.addEventListener("pointerleave",() => { globe.hover = false; });
+  stage.addEventListener("wheel",event => {
+    event.preventDefault();
+    globe.velY -= event.deltaX/globe.R*4;
+    globe.velX -= event.deltaY/globe.R/DEG*4;
+  },{passive:false});
+}
+function tickGlobe(now) {
+  globe.raf = 0;
+  const {stage,world} = globe;
+  if (!stage?.isConnected || !feed?.isConnected || section) return;
+  globe.raf = requestAnimationFrame(tickGlobe);
+  const dt = Math.min(.05,(now-globe.last)/1000 || .016);
+  globe.last = now;
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches || document.hidden;
+  if (!globe.drag) {
+    const target = globe.hover || still || overlay.open ? 0 : 1;
+    globe.speed += (target-globe.speed)*Math.min(1,dt*3);
+    globe.rotY += globe.velY*dt - 7*DEG*dt*globe.speed;
+    globe.tilt = Math.max(-50,Math.min(50,globe.tilt + globe.velX*dt));
+    const damp = Math.exp(-2.6*dt);
+    globe.velY *= damp;
+    globe.velX *= damp;
+    if (!globe.hover && !still) globe.tilt += (-6-globe.tilt)*Math.min(1,dt*.25);
+  }
+  world.style.transform = `translateZ(${-globe.R}px) rotateX(${globe.tilt}deg) rotateY(${globe.rotY/DEG}deg)`;
+  const cy = Math.cos(globe.rotY), sy = Math.sin(globe.rotY);
+  const ct = Math.cos(globe.tilt*DEG), st = Math.sin(globe.tilt*DEG);
+  if (globe.dirty) { world.replaceChildren(); globe.live.clear(); globe.dirty = false; }
+  const fragment = document.createDocumentFragment();
+  for (const slot of globe.slots) {
+    const z1 = -slot.sx*sy + slot.sz*cy;
+    const front = slot.sy*st + z1*ct > CAP;
+    const el = globe.live.get(slot.id);
+    if (front && !el && globe.list.length) {
+      const holder = document.createElement("template");
+      holder.innerHTML = card(pickItem(slot));
+      const node = holder.content.firstElementChild;
+      node.classList.add("globe-card");
+      node.style.cssText = `width:${globe.w}px;height:${globe.h}px;left:${-globe.w/2}px;top:${-globe.h/2}px;` +
+        `transform:rotateY(${slot.lon}deg) rotateX(${slot.lat}deg) translateZ(${globe.R}px)`;
+      globe.live.set(slot.id,node);
+      fragment.append(node);
+    } else if (!front && el) {
+      el.remove();
+      globe.live.delete(slot.id);
+    }
+  }
+  if (fragment.childNodes.length) world.append(fragment);
+}
+window.addEventListener("resize",() => { if (globe.stage?.isConnected) buildGlobe(); });
+
 export function renderMedia(root, key, view = "") {
   observer?.disconnect();
   if (feed !== root || section !== view) {
