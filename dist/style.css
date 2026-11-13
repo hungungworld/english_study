@@ -589,3 +589,17 @@ body :is(#editor,#member-editor,#member-picker,#tv-overlay) :is(button,.tv-out){
   .tv-pile{height:56svh;max-width:78vw;left:0}
 }
 @media(prefers-reduced-motion:reduce){.pile-screen .ps-img,.pile-screen .ps-static{animation:none}}
+
+/* 홈: TV pile = one cell of an 8-part grid (4 columns x 2 rows), bottom-left */
+.home-scene{grid-template-columns:minmax(0,1fr);justify-items:center;align-items:center;background:radial-gradient(ellipse 48% 60% at 12% 92%,#2b1d13 0%,#14100c 55%,#0b0907 100%)}
+.home-copy{grid-column:1 / -1;text-align:center;padding:0 24px 8svh}
+.home-actions,.home-links{justify-content:center}
+.tv-pile{left:clamp(0px,1vw,16px);height:min(50svh,33vw);max-width:none}
+.pile-screen .ps-cap{opacity:0;transition:opacity .15s;left:6%;right:6%;bottom:6%;font-size:9px;-webkit-line-clamp:3}
+.pile-screen .ps-cap small{display:none}
+.pile-screen:hover .ps-cap,.pile-screen:focus-visible .ps-cap{opacity:1}
+@media(max-width:800px){
+  .home-scene{align-items:start}
+  .home-copy{padding:14svh 24px 0}
+  .tv-pile{height:min(38svh,62vw);max-width:none}
+}

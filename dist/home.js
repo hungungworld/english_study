@@ -64,6 +64,7 @@ async function show(screen,item) {
   screen.setAttribute("aria-label",`${item.title} 열기`);
   screen.dataset.item = item.id;
   screen.dataset.kind = item.type;
+  screen.title = item.title;
   screen.querySelector(".ps-img").style.backgroundImage = url ? `url("${url}")` : "";
   screen.querySelector(".ps-cap").innerHTML = `<small>${escape(item.type === "video" ? "영어 영상" : "BBC 뉴스")}</small>${escape(item.title)}`;
   setTimeout(() => screen.classList.remove("is-static"),260);
