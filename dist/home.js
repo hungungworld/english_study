@@ -102,7 +102,7 @@ function fillPoster(root,ctx) {
     <div class="pp-rail">
       <p><span class="pp-k">이번 주 기록</span>조원 ${ctx.memberCount}명<br>글 ${ctx.postCount}개<br>단어 ${ctx.wordCount}개</p>
       <p><span class="pp-k">출처</span>BBC News<br>BBC Learning English</p>
-      <div class="pp-dates">${escape(ctx.range.from)}<span>—</span>${escape(ctx.range.to)}<span>${ctx.range.year}</span></div>
+      <div class="pp-dates">${escape(ctx.today.label)}<span>${ctx.today.year}</span></div>
       ${ctx.shared ? "" : '<p class="pp-note">미리보기<br>예시 데이터예요.</p>'}
     </div>
     <div class="pp-main">

@@ -25,7 +25,7 @@ const own = readLocal("own", {});
 let board = {posts:[],words:[]};
 let loading = true;
 let loadError = "";
-let period = "week";
+let period = "all";
 let boardPeriod = "all";
 let wordMember = 0;
 let wordView = "all";
@@ -137,7 +137,7 @@ function homeContext() {
   const fmt = ms => { const date = new Date(ms + kst); return `${date.getUTCDate()}.${date.getUTCMonth() + 1}.`; };
   const weekWords = inPeriod(board.words,"week");
   return {loading,error:loadError,shared,memberCount:members.filter(Boolean).length,
-    range:{from:fmt(start),to:fmt(start + 6 * day),year:new Date(start + kst).getUTCFullYear()},
+    today:{label:fmt(Date.now()),year:new Date(Date.now() + kst).getUTCFullYear()},
     postCount:inPeriod(board.posts,"week").length,wordCount:weekWords.length,
     posts:sorted(board.posts).slice(0,2).map(post => ({id:post.id,title:post.title,by:author(post),date:dateFormat.format(new Date(post.created_at))})),
     words:sorted(weekWords.length ? weekWords : board.words).slice(0,3).map(word => ({term:word.term,meaning:word.meaning}))};
@@ -199,7 +199,7 @@ function render() {
       const words = sorted(wordSelection());
       content = hero("단어장","함께 모은 영어 단어와 표현",'<button type="button" data-new-word>＋ 단어 추가</button>') +
         `<div class="toolbar">${views}</div>
-        <div class="toolbar">${periodTabs(period)}<label><span class="hint">등록자</span><select id="word-member"><option value="0">모든 조원</option>${members.map((name,index) => `<option value="${index+1}" ${wordMember === index+1 ? "selected" : ""}>${e(name)}</option>`).join("")}</select></label></div>
+        <div class="toolbar"><label><span class="hint">등록자</span><select id="word-member"><option value="0">모든 조원</option>${members.map((name,index) => `<option value="${index+1}" ${wordMember === index+1 ? "selected" : ""}>${e(name)}</option>`).join("")}</select></label></div>
         <div class="toolbar"><div class="tabs" aria-label="단어 보기"><button type="button" data-wview="all" aria-pressed="${wordView === "all"}">단어별</button><button type="button" data-wview="group" aria-pressed="${wordView === "group"}">글별 묶음</button></div><span class="count">단어 ${words.length}개</span>${quizButton("words","선택한 단어로 퀴즈",words)}${quizButton("review","다시 볼 단어",reviewWords())}</div>
         ${wordView === "group" ? groupedWords(words) : wordList(words)}`;
     }
@@ -348,7 +348,7 @@ function openEditor(standalone, post, source) {
       writeLocal("author",{author:entry.author,author_name:entry.author_name});
       editorChanged = false;
       editor.close();
-      if (standalone) { period = "week"; wordMember = 0; }
+      if (standalone) { period = "all"; wordMember = 0; }
       await refresh();
       location.hash = standalone ? "words" : "post/" + id;
       flash("저장했어요.");
