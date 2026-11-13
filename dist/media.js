@@ -290,16 +290,18 @@ function paint() {
 }
 function detail(item) {
   const saved = scraps.some(entry => scrapKey(entry) === scrapKey(item));
-  return `<section class="tv-detail"><button type="button" class="tv-close" aria-label="닫기">✕</button>
+  return `<div class="tv-stage"><section class="tv-detail"><button type="button" class="tv-close" aria-label="닫기">✕</button>
     ${item.type === "video" ? `<iframe class="tv-player" title="${escape(item.title)}" src="https://www.youtube-nocookie.com/embed/${escape(item.id)}" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>` : screen(item,true)}
     <div class="tv-detail-copy"><p class="tv-label">${escape(item.source)} · ${date(item)}</p>
     <h1 lang="en">${escape(item.title)}</h1>
+    ${item.summary ? `<p class="tv-summary" lang="en">${escape(item.summary)}</p>` : ""}
     <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "YouTube에서 열기" : "BBC 원문 읽기"} ↗</a>
     <button type="button" class="tv-action" data-write-source>＋ 글쓰기</button>
-    <button type="button" class="tv-action" data-scrap aria-label="스크랩" aria-pressed="${saved}" title="${saved ? "스크랩 해제" : "스크랩"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div></section>`;
+    <button type="button" class="tv-action" data-scrap aria-label="스크랩" aria-pressed="${saved}" title="${saved ? "스크랩 해제" : "스크랩"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div></section><aside class="tv-writer" aria-label="글쓰기" hidden></aside></div>`;
 }
 function showDetail(item, origin) {
   selectedItem = item;
+  overlay.classList.remove("is-writing");
   overlay.innerHTML = detail(item);
   overlay.showModal();
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -311,10 +313,26 @@ function showDetail(item, origin) {
       {transform:"none",opacity:1}],{duration:460,easing:"cubic-bezier(.2,.8,.2,1)"});
   }
 }
+// BBC forbids embedding its pages, so while writing the article opens in its own window,
+// placed over the left part of the screen and leaving the writing panel visible.
+function openSideWindow(url) {
+  const panel = Math.min(480,Math.max(340,innerWidth * .34));
+  const width = Math.max(480,screen.availWidth - panel - 24);
+  const features = `popup=yes,noopener,noreferrer,width=${Math.round(width)},height=${Math.round(screen.availHeight)},left=${screen.availLeft ?? 0},top=${screen.availTop ?? 0}`;
+  window.open(url,"article-window",features);
+}
 overlay.addEventListener("click",event => {
   if (selectedItem && event.target.closest("[data-write-source]")) {
-    overlay.close();
-    overlay.dispatchEvent(new CustomEvent("write-media",{detail:selectedItem}));
+    // Keep the detail window (and the playing video) open and show the form beside it.
+    const host = overlay.querySelector(".tv-writer");
+    overlay.classList.add("is-writing");
+    host.hidden = false;
+    overlay.dispatchEvent(new CustomEvent("write-media",{detail:{item:selectedItem,host}}));
+  }
+  const articleLink = event.target.closest(".tv-out");
+  if (articleLink && selectedItem?.type === "news" && overlay.classList.contains("is-writing")) {
+    event.preventDefault();
+    openSideWindow(articleLink.href);
   }
   const scrapButton = event.target.closest("[data-scrap]");
   if (selectedItem && scrapButton) {
@@ -336,6 +354,7 @@ overlay.addEventListener("error",event => {
 },true);
 overlay.addEventListener("close",() => {
   selectedItem = undefined;
+  overlay.classList.remove("is-writing");
   overlay.replaceChildren();
   if (location.hash.startsWith("#tv/")) location.replace("#explore");
   if (lastFocus) {

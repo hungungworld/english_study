@@ -48,7 +48,7 @@ export function parseNews(xml, withSummary = false, hint = []) {
     }).find(Boolean) ?? "";
     const summary = read("description");
     return [{id:url,type:"news",title,url,image,source:"BBC News",date:read("pubDate"),
-      topics:topicsFor(title + " " + summary,hint),...(withSummary ? {summary} : {})}];
+      summary,topics:topicsFor(title + " " + summary,hint)}];
   });
 }
 async function upstream(url) {
@@ -74,7 +74,7 @@ async function search(query, wanted = []) {
     .filter(({title,summary,topics}) => terms.every(term => (title + " " + summary).toLowerCase().includes(term)) &&
       (!wanted.length || topics.some(topic => wanted.includes(topic))))
     .sort((a,b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0))
-    .slice(0,60).map(({summary,...item}) => item);
+    .slice(0,60);
   return Response.json({items,scanned:unique.size},{headers:{"Cache-Control":"public, max-age=60, s-maxage=300"}});
 }
 async function videos(env, cursor) {

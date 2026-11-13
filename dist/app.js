@@ -198,9 +198,10 @@ function render() {
     else {
       const words = sorted(wordSelection());
       content = hero("단어장","함께 모은 영어 단어와 표현",'<button type="button" data-new-word>＋ 단어 추가</button>') +
-        `<div class="toolbar">${views}</div>
-        <div class="toolbar"><label><span class="hint">등록자</span><select id="word-member"><option value="0">모든 조원</option>${members.map((name,index) => `<option value="${index+1}" ${wordMember === index+1 ? "selected" : ""}>${e(name)}</option>`).join("")}</select></label></div>
-        <div class="toolbar"><div class="tabs" aria-label="단어 보기"><button type="button" data-wview="all" aria-pressed="${wordView === "all"}">단어별</button><button type="button" data-wview="group" aria-pressed="${wordView === "group"}">글별 묶음</button></div><span class="count">단어 ${words.length}개</span>${quizButton("words","선택한 단어로 퀴즈",words)}${quizButton("review","다시 볼 단어",reviewWords())}</div>
+        `<div class="toolbar filters-row">${views}
+        <select id="word-member" aria-label="등록자"><option value="0">모든 조원</option>${members.map((name,index) => `<option value="${index+1}" ${wordMember === index+1 ? "selected" : ""}>${e(name)}</option>`).join("")}</select>
+        <div class="tabs" aria-label="단어 보기"><button type="button" data-wview="all" aria-pressed="${wordView === "all"}">단어별</button><button type="button" data-wview="group" aria-pressed="${wordView === "group"}">글별 묶음</button></div>
+        <span class="count">단어 ${words.length}개</span>${quizButton("words","이 단어로 퀴즈",words)}</div>
         ${wordView === "group" ? groupedWords(words) : wordList(words)}`;
     }
   } else {
@@ -276,16 +277,17 @@ function wordFields(word = {}, removable = true) {
   <label>예문 (선택)<input name="example" maxlength="600" value="${e(word.example)}"></label>
   ${removable ? '<button type="button" data-remove-word>단어 빼기</button>' : ""}</fieldset>`;
 }
-function openEditor(standalone, post, source) {
+function openEditor(standalone, post, source, host) {
   if (!post && !members[readLocal("active-member",0) - 1]) {
-    chooseMember(() => openEditor(standalone,post,source));
+    chooseMember(() => openEditor(standalone,post,source,host));
     return;
   }
   const notes = readNotes(post?.body) ?? {summary:post?.body ?? "",reflection:"",sentence:""};
   const selected = post ?? {author:readLocal("active-member",0),author_name:""};
   const words = post ? board.words.filter(word => word.post_id === post.id) : [];
   editorChanged = false;
-  editor.innerHTML = `<div class="dialog-head"><h2 id="editor-title">${standalone ? "단어 추가" : post ? "글 수정" : "글쓰기"}</h2><button type="button" data-close aria-label="닫기">✕</button></div>
+  const target = host ?? editor;
+  target.innerHTML = `<div class="dialog-head"><h2 id="editor-title">${standalone ? "단어 추가" : post ? "글 수정" : "글쓰기"}</h2><button type="button" data-close aria-label="닫기">✕</button></div>
   <form><label>작성자<select name="author" disabled>${members.map((name,index) => name ? `<option value="${index+1}">${e(name)}</option>` : "").join("")}${post?.author === 0 ? '<option value="0">기타</option>' : ""}</select></label>
   <label id="guest-label">표시 이름<input name="author_name" maxlength="40" value="${e(selected.author_name)}"></label>
   ${standalone ? "" : `<label>제목<input name="title" required maxlength="150" value="${e(post?.title ?? source?.title.slice(0,150))}"></label>
@@ -297,8 +299,8 @@ function openEditor(standalone, post, source) {
   <div class="stack" id="editor-words">${standalone ? wordFields({},false) : words.map(word => wordFields(word)).join("")}</div>
   <div class="row">${standalone ? "" : '<button type="button" data-add-word>＋ 단어 추가</button>'}<button class="primary" type="submit">${post ? "수정 저장" : "등록하기"}</button></div>
   <p class="form-error" role="alert" hidden></p></form>`;
-  editor.setAttribute("aria-labelledby","editor-title");
-  const form = editor.querySelector("form");
+  if (!host) editor.setAttribute("aria-labelledby","editor-title");
+  const form = target.querySelector("form");
   form.elements.author.value = selected.author;
   const setGuest = () => {
     const guest = form.elements.author.value === "0";
@@ -347,6 +349,15 @@ function openEditor(standalone, post, source) {
       }
       writeLocal("author",{author:entry.author,author_name:entry.author_name});
       editorChanged = false;
+      if (host) {
+        // Written beside a video/article: stay on the page so the video keeps playing.
+        await refresh();
+        host.innerHTML = `<div class="dialog-head"><h2 id="editor-title">저장했어요</h2><button type="button" data-close aria-label="닫기">✕</button></div>
+          <p>글을 올렸어요. 영상·기사는 그대로 볼 수 있어요.</p>
+          <div class="row"><a class="writer-link" href="#post/${e(id)}">올린 글 보기</a><button type="button" data-write-again>다른 글 쓰기</button></div>`;
+        flash("저장했어요.");
+        return;
+      }
       editor.close();
       if (standalone) { period = "all"; wordMember = 0; }
       await refresh();
@@ -357,17 +368,17 @@ function openEditor(standalone, post, source) {
       error.hidden = false;
     } finally { submit.disabled = false; }
   };
-  editor.showModal();
+  if (!host) editor.showModal();
 }
 function closeEditor() {
   if (editor.querySelector('[type="submit"]')?.disabled) return;
   if (!editorChanged || confirm("작성 중인 내용을 닫을까요?")) editor.close();
 }
 editor.addEventListener("cancel",event => { event.preventDefault(); closeEditor(); });
-editor.addEventListener("click",event => {
-  if (event.target.closest("[data-close]")) closeEditor();
+function formClick(event, container, close) {
+  if (event.target.closest("[data-close]")) close();
   if (event.target.closest("[data-add-word]")) {
-    const fields = editor.querySelector("#editor-words");
+    const fields = container.querySelector("#editor-words");
     if (fields.children.length >= 20) return flash("글 하나에 단어를 최대 20개 추가할 수 있어요.");
     fields.insertAdjacentHTML("beforeend",wordFields());
     fields.lastElementChild.querySelector("input").focus();
@@ -375,7 +386,39 @@ editor.addEventListener("click",event => {
   }
   const remove = event.target.closest("[data-remove-word]");
   if (remove) { remove.closest("fieldset").remove(); editorChanged = true; }
+}
+editor.addEventListener("click",event => formClick(event,editor,closeEditor));
+
+// Writing beside a video or article: the form lives in a side panel inside the detail window.
+const overlayEl = document.querySelector("#tv-overlay");
+let writerSource;
+function closeWriter(host) {
+  if (!host || host.querySelector('[type="submit"]')?.disabled) return;
+  if (editorChanged && host.querySelector("form") && !confirm("작성 중인 내용을 닫을까요?")) return;
+  editorChanged = false;
+  host.replaceChildren();
+  host.hidden = true;
+  overlayEl.classList.remove("is-writing");
+}
+overlayEl.addEventListener("click",event => {
+  const host = event.target.closest(".tv-writer");
+  if (!host) return;
+  formClick(event,host,() => closeWriter(host));
+  if (event.target.closest("[data-write-again]")) {
+    openEditor(false,undefined,writerSource,host);
+    host.querySelector("textarea")?.focus();
+  }
 });
+overlayEl.addEventListener("click",event => {
+  if (event.target.closest(".tv-close") && overlayEl.classList.contains("is-writing") && editorChanged &&
+      overlayEl.querySelector(".tv-writer form") && !confirm("작성 중인 내용을 닫을까요?")) event.stopImmediatePropagation();
+},true);
+overlayEl.addEventListener("cancel",event => {
+  if (!overlayEl.classList.contains("is-writing")) return;
+  event.preventDefault();
+  closeWriter(overlayEl.querySelector(".tv-writer"));
+});
+overlayEl.addEventListener("close",() => { editorChanged = false; });
 main.addEventListener("change",event => {
   if (event.target.id === "word-member") {
     wordMember = Number(event.target.value);
@@ -485,9 +528,11 @@ async function refresh() {
   if (!loadError && members.length && !members[readLocal("active-member",0) - 1] && !memberPicker.open) chooseMember();
 }
 document.querySelector("#write").addEventListener("click",() => openEditor(false));
-document.querySelector("#tv-overlay").addEventListener("write-media",event => {
-  openEditor(false,undefined,event.detail);
-  editor.querySelector("textarea")?.focus();
+overlayEl.addEventListener("write-media",event => {
+  const {item,host} = event.detail;
+  writerSource = item;
+  openEditor(false,undefined,item,host);
+  host.querySelector("textarea")?.focus();
 });
 function chooseMember(afterSelection) {
   if (memberPicker.open) return;
