@@ -255,9 +255,11 @@ function paint() {
   const resourceLinks = [["#home","전체",""],["#news","BBC 뉴스","news"],["#videos","영어 영상","video"],["#scraps","내 스크랩","scraps"]];
   const resourceNav = resourceLinks.map(([href,label,view]) =>
     `<a href="${href}" ${section === view ? 'aria-current="page"' : ""}>${label}</a>`).join("");
+  const keepSearchFocus = document.activeElement?.id === "tv-q";
   feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "영상·기사" : filters[section] ?? "학습 자료"}</h1></div>
     ${section === "home" ? `<nav class="tv-filters home-tv-tabs" aria-label="영상 및 기사">${controls}</nav>` : ""}
     ${!section ? `<nav class="tv-dock" aria-label="학습 자료 메뉴"><div class="resource-filters">${controls}<a href="#scraps">내 스크랩</a></div><a href="#study">홈 ↗</a><button type="button" data-tv-write>＋ 글쓰기</button></nav>` : ""}
+    ${!section ? searchForm() : ""}
     ${section && section !== "home" ? `<nav class="resource-nav" aria-label="학습 자료 분류">${resourceNav}</nav>` : ""}
     ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
     ${section ? `<div class="tv-grid">${visible.map(card).join("")}</div>` : '<div class="globe-stage" aria-label="학습 자료 지구본"><div class="globe-world"></div></div>'}
@@ -265,7 +267,15 @@ function paint() {
     <div class="tv-footer" role="status"></div></section>`;
   paintFooter();
   bendWall();
-  if (!section) mountGlobe();
+  if (!section) {
+    mountGlobe();
+    const input = feed.querySelector("#tv-q");
+    if (input) {
+      input.value = searchQuery;
+      updateSearchStatus();
+      if (keepSearchFocus) { input.focus(); input.setSelectionRange(input.value.length,input.value.length); }
+    }
+  }
 }
 function detail(item) {
   const saved = scraps.some(entry => scrapKey(entry) === scrapKey(item));
@@ -322,6 +332,76 @@ overlay.addEventListener("close",() => {
     lastFocus = "";
   }
 });
+// ---- Search ----------------------------------------------------------------
+// A: filter what is already loaded (news + videos) as you type.
+// B: ask /api/search, which reads BBC's public section feeds, for more news.
+let searchQuery = "";
+let searchNews = [];
+let searchState = "";
+let searchTimer = 0;
+let searchSeq = 0;
+const norm = value => String(value ?? "").toLowerCase();
+function searchTerms() {
+  return norm(searchQuery).split(/\s+/).filter(Boolean);
+}
+function searchResults() {
+  const terms = searchTerms();
+  const all = merge([...news,...videos].filter(item => terms.every(term => norm(item.title).includes(term))),searchNews);
+  const pool = filter === "news" ? all.filter(item => item.type === "news")
+    : filter === "video" ? all.filter(item => item.type === "video") : all;
+  return pool.sort((a,b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0));
+}
+function searchForm() {
+  return `<form class="tv-search" role="search" data-tv-search><input id="tv-q" type="search" name="q" placeholder="뉴스·영상 검색" autocomplete="off" enterkeyhint="search" aria-label="뉴스와 영상 검색" maxlength="60"><span class="tv-search-status" role="status" aria-live="polite"></span></form>`;
+}
+function updateSearchStatus() {
+  const status = feed?.querySelector(".tv-search-status");
+  if (!status) return;
+  if (!searchTerms().length) { status.textContent = ""; return; }
+  const count = searchResults().length;
+  status.textContent = searchState === "loading" ? `${count}개 · BBC 기사 찾는 중…`
+    : searchState === "error" ? `${count}개 · BBC 검색을 불러오지 못했어요`
+    : count ? `${count}개` : "결과가 없어요";
+}
+async function runSearch() {
+  const query = searchQuery.trim();
+  const seq = ++searchSeq;
+  if (query.length < 2) { searchNews = []; searchState = ""; return; }
+  searchState = "loading";
+  try {
+    const result = await get("/api/search?q=" + encodeURIComponent(query));
+    if (seq !== searchSeq) return;
+    searchNews = result.items;
+    searchState = "";
+  } catch {
+    if (seq !== searchSeq) return;
+    searchNews = [];
+    searchState = "error";
+  }
+  if (feed?.isConnected && !section) { refreshGlobe(); updateSearchStatus(); }
+}
+function onSearchInput(value) {
+  searchQuery = value;
+  clearTimeout(searchTimer);
+  searchNews = [];
+  searchState = searchQuery.trim().length >= 2 ? "loading" : "";
+  if (feed?.isConnected && !section) { refreshGlobe(); updateSearchStatus(); }
+  if (searchState === "loading") searchTimer = setTimeout(runSearch,350);
+  else searchSeq++;
+}
+document.addEventListener("input",event => {
+  if (event.target.id === "tv-q") onSearchInput(event.target.value);
+});
+document.addEventListener("submit",event => {
+  if (event.target.matches?.("[data-tv-search]")) event.preventDefault();
+});
+document.addEventListener("keydown",event => {
+  if (event.key === "Escape" && event.target.id === "tv-q" && event.target.value) {
+    event.target.value = "";
+    onSearchInput("");
+  }
+});
+
 // ---- Landing globe -------------------------------------------------------
 // Cards sit on a huge sphere seen from outside, so the front keeps the convex
 // "bulging screen" look. Both axes wrap around 360 degrees: horizontally the
@@ -377,7 +457,7 @@ function buildGlobe() {
   globe.dirty = true;
 }
 function setGlobeList() {
-  globe.list = items();
+  globe.list = searchTerms().length ? searchResults() : items();
   globe.stepC = coprime(globe.list.length || 1,.618);
   globe.stepR = coprime(globe.list.length || 1,.382);
 }
@@ -511,7 +591,7 @@ export function renderMedia(root, key, view = "") {
   paint();
   if (!ready && section !== "scraps") loadFirst();
   if (key) {
-    const item = [...news,...videos].find(item => item.id === key);
+    const item = [...news,...videos,...globe.list].find(item => item.id === key);
     if (item) {
       if (!overlay.open) showDetail(item);
       return;
@@ -541,7 +621,7 @@ export function mediaClick(button) {
   }
   if (data.media) {
     lastFocus = data.media;
-    const item = items().find(item => item.id === data.media);
+    const item = [...items(),...globe.list].find(item => item.id === data.media);
     if (item) showDetail(item,button.querySelector(".tv-screen").getBoundingClientRect());
   }
   if ("more" in data) more();
