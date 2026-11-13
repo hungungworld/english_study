@@ -38,7 +38,7 @@ function bendWall() {
   if (frame) return;
   frame = requestAnimationFrame(() => {
     frame = 0;
-    if (!feed?.isConnected || section) return;
+    if (!feed?.isConnected || section !== "home") return;
     const width = document.documentElement.clientWidth;
     const height = window.innerHeight;
     const cards = [...feed.querySelectorAll(".tv-card")];
@@ -140,6 +140,10 @@ function paintFooter() {
   if (!feed?.isConnected) return;
   observer?.disconnect();
   const foot = feed.querySelector(".tv-footer");
+  if (section === "home") {
+    foot.innerHTML = pending ? "불러오는 중…" : '<a href="#videos">영상 더 보기 ↗</a><a href="#news">기사 더 보기 ↗</a>';
+    return;
+  }
   const moreAvailable = items().length > visible.length || (["all","video"].includes(filter) && next);
   foot.innerHTML = pending ? "불러오는 중…" : notice ? `${notice} <button data-more>다시 시도</button>` :
     moreAvailable ? '<button data-more>더 보기</button>' : visible.length ? "현재 가져올 수 있는 콘텐츠를 모두 봤어요." : "";
@@ -152,15 +156,19 @@ function paintFooter() {
 }
 function paint() {
   if (!feed?.isConnected) return;
-  if (!visible.length) visible = items().slice(0,LIMIT);
+  if (!visible.length) {
+    visible = section === "home" && filter === "all"
+      ? [...videos.slice(0,3),...news.slice(0,3)]
+      : items().slice(0,section === "home" ? 6 : LIMIT);
+  }
   const messages = section === "scraps" ? [] : [
     filter !== "video" && newsError ? "BBC 뉴스를 불러오지 못했어요." : "",
     filter !== "news" && videoError ? "영어 영상을 불러오지 못했어요." : "",
     ready && filter === "video" && !videoConfigured && !videoError ? "영어 영상 목록을 아직 불러올 수 없어요." : ""
   ].filter(Boolean);
   const controls = Object.entries(filters).filter(([id]) => id !== "scraps").map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
-  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section ? filters[section] : "영어 TV"}</h1></div>
-    ${section ? "" : `<nav class="tv-dock" aria-label="영어 TV 메뉴">${controls}<a href="#scraps">내 스크랩</a><a href="#feed">▤ 게시물</a><a href="#study">스터디 홈 ↗</a><button type="button" data-tv-member>이름 선택</button><button type="button" data-tv-write>＋ 글쓰기</button></nav>`}
+  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "영어 TV" : filters[section]}</h1></div>
+    ${section === "home" ? `<nav class="tv-filters home-tv-tabs" aria-label="영상 및 기사">${controls}</nav><nav class="tv-dock" aria-label="스터디 메뉴"><a href="#scraps">내 스크랩</a><a href="#feed">▤ 게시물</a><a href="#study">스터디 홈 ↗</a><button type="button" data-tv-member>이름 선택</button><button type="button" data-tv-write>＋ 글쓰기</button></nav>` : ""}
     ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
     <div class="tv-grid">${visible.map(card).join("")}</div>
     ${(ready || section === "scraps") && !visible.length && !messages.length ? '<p class="tv-message">표시할 콘텐츠가 없어요.</p>' : ""}
@@ -227,7 +235,7 @@ export function renderMedia(root, key, view = "") {
   observer?.disconnect();
   if (feed !== root || section !== view) {
     section = view;
-    filter = view || landingFilter;
+    filter = view === "home" ? landingFilter : view;
     visible = [];
     notice = "";
     generation++;

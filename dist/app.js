@@ -113,7 +113,21 @@ function render() {
   if (media) {
     let mediaKey;
     try { mediaKey = key && decodeURIComponent(key); } catch { mediaKey = key; }
-    renderMedia(main,mediaKey,{news:"news",videos:"video",scraps:"scraps"}[page] ?? "");
+    if (landing) {
+      if (!main.querySelector("#home-media")) main.innerHTML = '<div id="home-media"></div><div id="home-board"></div>';
+      const posts = sorted(board.posts);
+      const memberTabs = members.map((name,index) => `<a href="#member/${index+1}">${e(name)}</a>`).join("");
+      main.querySelector("#home-board").innerHTML = `<section class="home-section" aria-labelledby="home-board-title">
+        <div class="home-section-head"><h2 id="home-board-title">전체 게시판</h2><a href="#feed" data-all-posts>전체 글 보기 ↗</a></div>
+        ${!shared ? '<p class="home-board-status">미리보기 · 새 글은 이 브라우저에 저장돼요.</p>' : ""}
+        <div class="stack">${loading ? empty("게시글을 불러오는 중이에요.") : loadError ? empty(loadError) : posts.slice(0,5).map(postCard).join("") || empty("아직 올라온 글이 없어요.")}</div>
+      </section><section class="home-section" aria-labelledby="home-members-title"><h2 id="home-members-title">조원별 게시판</h2>
+        <nav class="home-member-tabs" aria-label="조원 이름">${memberTabs}</nav></section>`;
+      renderMedia(main.querySelector("#home-media"),mediaKey,"home");
+    } else {
+      if (main.querySelector("#home-media")) main.replaceChildren();
+      renderMedia(main,mediaKey,{news:"news",videos:"video",scraps:"scraps"}[page]);
+    }
     return;
   }
   leaveMedia();
@@ -302,6 +316,7 @@ main.addEventListener("change",event => {
   }
 });
 main.addEventListener("click",async event => {
+  if (event.target.closest("[data-all-posts]")) period = "all";
   const button = event.target.closest("button");
   if (!button) return;
   if ("tvMember" in button.dataset) {
