@@ -116,7 +116,12 @@ function render() {
     let mediaKey;
     try { mediaKey = key && decodeURIComponent(key); } catch { mediaKey = key; }
     if (studyHome) {
-      if (!main.querySelector("#home-media")) main.innerHTML = '<div id="home-media"></div><div id="home-board"></div>';
+      if (!main.querySelector("#home-media")) main.innerHTML = `<section class="club-cover" aria-labelledby="club-title">
+        <div class="club-photo"><img src="https://images.unsplash.com/photo-1613743575064-a645fae50d2e?fit=crop&amp;w=1400&amp;q=85" alt="" fetchpriority="high"></div>
+        <div class="club-cover-copy"><h1 id="club-title" lang="en">Study <em>Circle.</em></h1>
+        <p>영어 기사와 영상을 보고, 기억하고 싶은 문장을 남겨요.</p>
+        <button type="button" class="primary" data-tv-write>＋ 공부 기록 쓰기</button></div>
+      </section><div id="home-media"></div><div id="home-board"></div>`;
       const posts = sorted(board.posts);
       const memberTabs = members.map((name,index) => `<a href="#member/${index+1}">${e(name)}</a>`).join("");
       main.querySelector("#home-board").innerHTML = `<section class="home-section" aria-labelledby="home-board-title">

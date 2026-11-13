@@ -220,5 +220,33 @@ body:not(.media-mode) .tv-card .tv-label,body:not(.media-mode) .tv-footer,body:n
 .study-notes section + section{border-top:1px solid var(--line);padding-top:16px}
 .study-notes blockquote{margin:8px 0 0;padding:10px 14px;border-inline-start:2px solid var(--purple);background:#f4f1e8;line-height:1.6;overflow-wrap:anywhere}
 #editor textarea[name="summary"],#editor textarea[name="reflection"]{min-height:84px}
+.study-mode.study-home{--ink:#28231e;--muted:#62584d;--line:#b9ad9a;--purple:#7e302d;background:#eee8da}
+.study-home .top{background:#f6f1e7f5;border-color:var(--line)}
+.study-home .club-cover{display:grid;grid-template-columns:55% 45%;min-height:340px;background:#302822;color:#f6f1e7;margin-bottom:48px}
+.club-photo{position:relative;min-height:230px;overflow:hidden}
+.club-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:sepia(.35) saturate(.75)}
+.club-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 58%,#302822),radial-gradient(at bottom left,#b75d4277,transparent 48%)}
+.club-cover-copy{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:clamp(24px,5vw,65px)}
+.club-cover-copy h1{font-family:"Courier Prime","Courier New",monospace;font-size:clamp(35px,6vw,86px);font-weight:400;letter-spacing:-.09em;line-height:1;margin:0}
+.club-cover-copy em{font-family:"Instrument Serif",Georgia,serif;color:#e2ab8c;font-weight:400}
+.club-cover-copy p{color:#e3d7c8;line-height:1.7;margin:20px 0}
+.study-home .club-cover-copy .primary,.study-home .home-tv-tabs button[aria-pressed=true]{background:#7e302d;color:#fff6e9;border-color:#7e302d}
+.study-home #home-media{padding-bottom:16px}
+.study-home .tv-grid{gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.study-home.study-mode .tv-card{background:transparent;border:0;border-right:1px solid var(--line);border-radius:0;padding:clamp(10px,2vw,24px);transform:none}
+.study-home .tv-card .tv-screen{border-radius:0;border:0}
+.study-home .tv-card img{filter:sepia(.28) saturate(.8)}
+.study-home .tv-title{font-family:"Instrument Serif",Georgia,serif;font-size:clamp(16px,2.1vw,27px);font-weight:400}
+.study-home .tv-label{font-size:11px}
+.study-home .home-section{padding:32px 0}
+.study-home .home-section .card{background:#f6f1e7;border-color:var(--line)}
+.study-home .home-member-tabs a{background:#f6f1e7}
+.study-home .home-member-tabs a:hover{background:#e2d5c1}
+@media(min-width:651px){.study-home.study-mode .tv-card:nth-child(3n){border-right:0}}
+@media(max-width:650px){
+  .study-home .club-cover{grid-template-columns:1fr;margin-bottom:30px}
+  .club-photo::after{background:linear-gradient(180deg,transparent 55%,#302822)}
+  .study-home.study-mode .tv-card:nth-child(2n){border-right:0}
+}
 @media(max-width:700px){.top-inner{padding:0 15px;gap:15px;min-height:63px}.top nav{gap:11px;font-size:13px}.logo{width:29px;height:29px;font-size:20px}.brand{gap:6px;font-size:14px}.top button{padding:7px 8px;font-size:13px}.shell{display:block;padding:15px 15px 42px}aside{margin-bottom:13px}aside h2{margin:0 0 5px}aside nav{display:flex;overflow-x:auto;gap:3px;padding:3px}.member{flex:none;padding:5px 7px}.avatar{width:26px;height:26px}.hero{padding:22px 17px;margin-bottom:17px;align-items:start;flex-direction:column}.card{padding:15px}.toolbar{gap:8px}}
 
