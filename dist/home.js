@@ -26,7 +26,7 @@ function template() {
       <p>영어 기사와 영상을 보고,<br>기억하고 싶은 문장을 남겨요.</p>
       <div class="home-actions">
         <a class="home-primary" href="#explore">둘러보기 →</a>
-        <button type="button" class="home-ghost" data-tv-write>＋ 공부 기록 쓰기</button>
+        <button type="button" class="home-ghost" data-tv-write>＋ 노트 쓰기</button>
       </div>
       <nav class="home-links" aria-label="바로 가기"><a href="#feed">게시판</a><a href="#words">단어장</a><a href="#scraps">내 스크랩</a></nav>
     </div>
@@ -101,26 +101,26 @@ function fillPoster(root,ctx) {
   const link = item => `#tv/${encodeURIComponent(item.id)}`;
   const posts = ctx.loading ? '<p>불러오는 중이에요.</p>' : ctx.error ? `<p>${escape(ctx.error)}</p>` :
     ctx.posts.length ? ctx.posts.map(post => `<p><a href="#post/${escape(post.id)}">${escape(post.title)}</a><br>${escape(post.by)} · ${escape(post.date)}</p>`).join("") :
-    '<p>아직 올라온 글이 없어요.</p>';
+    '<p>아직 올라온 노트가 없어요.</p>';
   const newsHtml = news.length ? news.map(item => `<p><a href="${link(item)}">${escape(item.title)}</a></p>`).join("") : '<p>자료를 불러오는 중이에요.</p>';
   const words = ctx.loading ? '<div><span>…</span></div>' : ctx.words.length ?
     ctx.words.map(word => `<div><span lang="en">${escape(word.term)}</span><small>${escape(word.meaning)}</small></div>`).join("") :
     '<div><span>—</span><small>아직 단어가 없어요</small></div>';
   paper.innerHTML = `
     <div class="pp-rail">
-      <p><span class="pp-k">이번 주 기록</span>조원 ${ctx.memberCount}명<br>글 ${ctx.postCount}개<br>단어 ${ctx.wordCount}개</p>
+      <p><span class="pp-k">이번 주 노트</span>조원 ${ctx.memberCount}명<br>노트 ${ctx.postCount}개<br>단어 ${ctx.wordCount}개</p>
       <p><span class="pp-k">출처</span>BBC News<br>BBC Learning English</p>
       <div class="pp-dates">${escape(ctx.today.label)}<span>${ctx.today.year}</span></div>
-      ${ctx.shared ? "" : '<p class="pp-note">미리보기<br>예시 데이터예요.</p>'}
+      ${ctx.shared ? "" : '<p class="pp-note">체험 모드<br>예시 데이터예요.</p>'}
     </div>
     <div class="pp-main">
-      <h2 id="paper-title" class="pp-title">이번 주<br>영어 공부:<br>기록</h2>
+      <h2 id="paper-title" class="pp-title">이번 주<br>영어 공부</h2>
       <p class="pp-sub">기사와 영상을 보고, 기억하고 싶은 문장을 한 줄씩 남겨요.</p>
       <div class="pp-cols">
-        <div><h3>게시판</h3>${posts}<a class="pp-more" href="#feed">전체 보기 ↗</a></div>
-        <div><h3>둘러보기</h3>${newsHtml}<a class="pp-more" href="#explore">전체 보기 ↗</a></div>
+        <div><h3>최근 노트</h3>${posts}<a class="pp-more" href="#feed">노트 더 보기 ↗</a></div>
+        <div><h3>새로 올라온 뉴스</h3>${newsHtml}<a class="pp-more" href="#explore">뉴스 더 보기 ↗</a></div>
       </div>
-      <div class="pp-words"><h3>이번 주 단어</h3>${words}<a class="pp-more" href="#words">단어장 ↗</a></div>
+      <div class="pp-words"><h3>이번 주 단어</h3>${words}<a class="pp-more" href="#words">단어장 열기 ↗</a></div>
     </div>
     <nav class="pp-vert" aria-label="메뉴"><a href="#feed">게시판</a><a href="#words">단어장</a><a href="#explore">둘러보기</a><a href="#scraps">내 스크랩</a></nav>
     <div class="pp-strip" aria-label="이번 주 뉴스와 영상">${picks.map(item =>

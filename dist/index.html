@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="조원들의 영어 공부를 모아 보는 주간 게시판과 공유 단어장">
+  <meta name="description" content="조원들과 영어 뉴스·영상을 보고 노트와 단어를 함께 모아요.">
   <title>axciting</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,15 +13,16 @@
   <script type="module" src="./app.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
   <header class="top"><div class="top-inner">
     <a class="brand" href="#home"><img class="logo" src="./favicon.svg" alt="">axciting</a>
     <nav aria-label="주 메뉴" id="nav"><a href="#home">홈</a><a href="#explore">둘러보기</a><a href="#feed">게시판</a><a href="#words">단어장</a><a class="aux" href="#scraps">내 스크랩</a></nav>
-    <button id="choose-member" type="button">내 이름 선택</button><button class="primary" id="write" type="button">＋ 글쓰기</button>
+    <button id="choose-member" type="button">내 이름 선택</button><button class="primary" id="write" type="button">＋ 노트 쓰기</button>
   </div></header>
   <div class="shell">
-    <main id="main"></main>
+    <main id="main" tabindex="-1"></main>
   </div>
-  <button id="open-members" type="button" aria-haspopup="dialog" aria-controls="member-drawer">조원 ›</button>
+  <button id="open-members" type="button" aria-haspopup="dialog" aria-controls="member-drawer">조원별 보기 ›</button>
   <dialog id="member-drawer" aria-labelledby="member-drawer-title">
     <div class="dialog-head"><h2 id="member-drawer-title">조원</h2><form method="dialog"><button aria-label="조원 목록 닫기">✕</button></form></div>
     <nav id="members" aria-label="조원별 게시판"></nav>
@@ -30,7 +31,8 @@
   <dialog id="editor"></dialog>
   <dialog id="member-editor" aria-labelledby="member-editor-title"></dialog>
   <dialog id="member-picker" aria-labelledby="member-picker-title"></dialog>
-  <dialog id="tv-overlay" aria-label="학습 자료 상세"></dialog>
+  <dialog id="tv-overlay" aria-label="자료 상세"></dialog>
   <div id="notice" role="status"></div>
+  <div id="route-announcer" class="sr-only" role="status" aria-live="polite"></div>
 </body>
 </html>

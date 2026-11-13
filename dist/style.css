@@ -8,7 +8,7 @@ button,a,select{cursor:pointer}
 button{border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);padding:.65rem .9rem;font-weight:700}
 button:disabled{opacity:.55;cursor:wait}
 a{color:inherit;text-decoration:none}
-:focus-visible{outline:3px solid #8054df;outline-offset:3px}
+:focus-visible{outline:3px solid #111;outline-offset:3px}
 .top{background:#fff;border-bottom:1px solid var(--line)}
 .top-inner{max-width:1170px;margin:auto;min-height:73px;display:flex;align-items:center;gap:32px;padding:0 26px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;white-space:nowrap}
@@ -814,3 +814,44 @@ body.study-mode .scrap-topics button.chip[aria-pressed=true]:not(.tv-card){backg
 /* ---- 게시판: 사담·응원 ---- */
 .chat-body{white-space:pre-wrap;margin:0 0 8px;font-size:16px;line-height:1.65;overflow-wrap:anywhere}
 .chat-post{padding-block:14px;border-top:1px solid var(--ds-line)}
+
+/* ================= Accessibility ================= */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:8px;top:-64px;z-index:100;padding:10px 16px;background:#111;color:#f1efe9;border:2px solid #f1efe9;font-weight:700}
+.skip-link:focus{top:8px}
+h1[tabindex="-1"]:focus,main:focus{outline:none}
+/* focus rings: ink on paper, paper on dark scenes and photos (with an ink halo on cards) */
+.media-mode :focus-visible,.media-mode #tv-overlay :focus-visible{outline-color:#f1efe9}
+.study-mode #tv-overlay :focus-visible{outline-color:#111}
+:root .media-mode .tv-card:focus-visible{outline:3px solid #f1efe9;outline-offset:3px;box-shadow:0 0 0 7px #111}
+.globe-stage:focus-visible{outline-offset:-6px}
+/* the dock keeps full contrast when idle: only its background fades */
+:root .media-mode.ui-idle .tv-dock{opacity:1;background:#111a;border-color:#f1efe944}
+:root .media-mode.ui-idle .tv-summary{opacity:1}
+/* text on photos gets a stronger scrim */
+:root .media-mode .tv-card .tv-screen::after{background:radial-gradient(ellipse at 49% 43%,transparent 47%,#100e2666 84%,#030306a6),linear-gradient(0deg,#000e,#000b 42%,transparent 74%),repeating-linear-gradient(transparent 0 3px,#06061924 4px 5px)}
+.pile-screen .ps-cap{font-size:12px;left:4%;right:4%;bottom:4%;padding:4px 5px;background:#000d;-webkit-line-clamp:2}
+/* nothing smaller than 12px */
+.tv-screen.news-screen span,.tv-chip small,.scrap-topics .chip small,.pp-note{font-size:12px}
+/* larger targets */
+:root body.study-mode .top nav a{min-height:44px;display:inline-flex;align-items:center}
+:root body.study-mode .top .brand{min-height:44px}
+:root body.study-mode .top :is(#choose-member,#write){min-height:44px}
+:root body.study-mode button:not(.tv-card){min-height:44px}
+body.study-mode .tabs a,body.study-mode .tabs button:not(.tv-card){min-height:40px;display:inline-flex;align-items:center}
+body.study-mode nav.pager button:not(.tv-card){min-height:44px}
+.media-mode .tv-dock :is(a,button){min-height:44px;display:inline-flex;align-items:center}
+.home-links a,.pp-more,body.study-mode .back{display:inline-block;padding-block:10px}
+body.study-mode :is(.meta a,.word-row a){display:inline-flex;align-items:center;min-height:24px}
+/* view switchers are links (they change page): same look as the old segmented buttons */
+body.study-mode .tabs a{border:0;border-radius:0;background:transparent;color:var(--ds-ink);padding:6px 12px;font-size:13px;font-weight:500;text-decoration:none}
+body.study-mode .tabs a + a{border-left:1px solid var(--ds-ink)}
+body.study-mode .tabs a[aria-current=page]{background:var(--ds-ink);color:var(--ds-paper)}
+body.study-mode .tabs a:not([aria-current]):hover{background:#11111112}
+/* headings after the level fixes */
+body :is(.card h3,h3.section-title,#writer-title){font-family:var(--ds-serif);font-weight:700;letter-spacing:-.01em}
+.card h3{font-size:1.05rem;margin:0 0 4px}
+/* motion preferences */
+@media(prefers-reduced-motion:reduce){
+  .media-mode .tv-sheet,#tv-overlay .tv-writer,.post-preview,.media-mode .tv-results .tv-card{animation:none}
+}
