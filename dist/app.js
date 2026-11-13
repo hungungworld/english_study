@@ -98,6 +98,16 @@ const quizButton = (key,label,items) => items.length ? `<button type="button" da
 function wordSelection() {
   return inPeriod(board.words,period).filter(word => !wordMember || word.author === wordMember);
 }
+function homeContext() {
+  const start = weekStart();
+  const fmt = ms => { const date = new Date(ms + kst); return `${date.getUTCDate()}.${date.getUTCMonth() + 1}.`; };
+  const weekWords = inPeriod(board.words,"week");
+  return {loading,error:loadError,shared,memberCount:members.filter(Boolean).length,
+    range:{from:fmt(start),to:fmt(start + 6 * day),year:new Date(start + kst).getUTCFullYear()},
+    postCount:inPeriod(board.posts,"week").length,wordCount:weekWords.length,
+    posts:sorted(board.posts).slice(0,2).map(post => ({id:post.id,title:post.title,by:author(post),date:dateFormat.format(new Date(post.created_at))})),
+    words:sorted(weekWords.length ? weekWords : board.words).slice(0,3).map(word => ({term:word.term,meaning:word.meaning}))};
+}
 function render() {
   const [page, key] = (location.hash.slice(1) || "home").split("/");
   // Old addresses keep working: 홈 -> 게시판, 퀴즈 -> 단어장 > 퀴즈, 뉴스/영상 -> 둘러보기 filters.
@@ -127,7 +137,7 @@ function render() {
   });
   if (homePage) {
     leaveMedia();
-    renderHome(main);
+    renderHome(main,homeContext());
     return;
   }
   if (media) {

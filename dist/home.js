@@ -11,6 +11,7 @@ let timer = 0;
 let pool = [];
 let cursor = 0;
 let turn = 0;
+let lastCtx = null;
 
 function screenHtml(screen,index) {
   const clip = screen.poly.map(([x,y]) => `${x}% ${y}%`).join(",");
@@ -33,6 +34,7 @@ function template() {
       <img class="tv-pile-img" src="./img/tv-pile.jpg" alt="낡은 아날로그 TV 네 대가 쌓여 있는 모습" width="880" height="1168" fetchpriority="high">
       ${SCREENS.map(screenHtml).join("")}
     </div>
+    <button type="button" class="home-scroll" data-home-scroll>스크롤 ↓</button>
   </section>`;
 }
 function interleave(news,videos) {
@@ -77,18 +79,72 @@ function nextItem(root) {
   }
   return null;
 }
+function upgrade(url) {
+  return (url || "").replace("/standard/240/","/standard/624/");
+}
+// Swiss-poster section under the TV room: asymmetric grid, tiny text columns, big
+// dates and words, a vertical menu, and black-and-white thumbnails bleeding off the bottom.
+function fillPoster(root,ctx) {
+  const paper = root.querySelector(".home-paper");
+  if (!paper || !ctx) return;
+  lastCtx = ctx;
+  const news = pool.filter(item => item.type === "news").slice(0,2);
+  const picks = (pool.length > 9 ? pool.slice(4,9) : pool.slice(0,5));
+  const link = item => `#tv/${encodeURIComponent(item.id)}`;
+  const posts = ctx.loading ? '<p>불러오는 중이에요.</p>' : ctx.error ? `<p>${escape(ctx.error)}</p>` :
+    ctx.posts.length ? ctx.posts.map(post => `<p><a href="#post/${escape(post.id)}">${escape(post.title)}</a><br>${escape(post.by)} · ${escape(post.date)}</p>`).join("") :
+    '<p>아직 올라온 글이 없어요.</p>';
+  const newsHtml = news.length ? news.map(item => `<p><a href="${link(item)}">${escape(item.title)}</a></p>`).join("") : '<p>자료를 불러오는 중이에요.</p>';
+  const words = ctx.loading ? '<div><span>…</span></div>' : ctx.words.length ?
+    ctx.words.map(word => `<div><span lang="en">${escape(word.term)}</span><small>${escape(word.meaning)}</small></div>`).join("") :
+    '<div><span>—</span><small>아직 단어가 없어요</small></div>';
+  paper.innerHTML = `
+    <div class="pp-rail">
+      <p><span class="pp-k">이번 주 기록</span>조원 ${ctx.memberCount}명<br>글 ${ctx.postCount}개<br>단어 ${ctx.wordCount}개</p>
+      <p><span class="pp-k">출처</span>BBC News<br>BBC Learning English</p>
+      <div class="pp-dates">${escape(ctx.range.from)}<span>—</span>${escape(ctx.range.to)}<span>${ctx.range.year}</span></div>
+      ${ctx.shared ? "" : '<p class="pp-note">미리보기<br>예시 데이터예요.</p>'}
+    </div>
+    <div class="pp-main">
+      <h2 id="paper-title" class="pp-title">이번 주<br>영어 공부:<br>기록</h2>
+      <p class="pp-sub">기사와 영상을 보고, 기억하고 싶은 문장을 한 줄씩 남겨요.</p>
+      <div class="pp-cols">
+        <div><h3>게시판</h3>${posts}<a class="pp-more" href="#feed">전체 보기 ↗</a></div>
+        <div><h3>둘러보기</h3>${newsHtml}<a class="pp-more" href="#explore">전체 보기 ↗</a></div>
+      </div>
+      <div class="pp-words"><h3>이번 주 단어</h3>${words}<a class="pp-more" href="#words">단어장 ↗</a></div>
+    </div>
+    <nav class="pp-vert" aria-label="메뉴"><a href="#feed">게시판</a><a href="#words">단어장</a><a href="#explore">둘러보기</a><a href="#scraps">내 스크랩</a></nav>
+    <div class="pp-strip" aria-label="이번 주 뉴스와 영상">${picks.map(item =>
+      `<a href="${link(item)}" aria-label="${escape(item.title)}"><img src="${escape(item.type === "video" ? (item.image || "").replace("hqdefault","mqdefault") : upgrade(item.image))}" data-fallback="${escape(item.image)}" alt="" loading="lazy"></a>`).join("")}</div>`;
+}
 export function leaveHome() {
   clearInterval(timer);
   timer = 0;
 }
-export function renderHome(root) {
-  if (root.querySelector(".home-scene")) return;
+export function renderHome(root,ctx) {
+  if (root.querySelector(".home-scene")) {
+    fillPoster(root,ctx);
+    return;
+  }
   leaveHome();
-  root.innerHTML = template();
+  root.innerHTML = `<div class="home-page">${template()}<section class="home-paper" aria-labelledby="paper-title"></section></div>`;
+  if (!root.dataset.homeBound) {
+    root.dataset.homeBound = "1";
+    root.addEventListener("error",event => {
+      const image = event.target;
+      if (image.matches?.(".pp-strip img") && image.dataset.fallback) { image.src = image.dataset.fallback; delete image.dataset.fallback; }
+    },true);
+    root.addEventListener("click",event => {
+      if (event.target.closest("[data-home-scroll]")) root.querySelector(".home-paper")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+    });
+  }
+  fillPoster(root,ctx);
   homeItems().then(({news,videos}) => {
     if (!root.isConnected || !root.querySelector(".home-scene")) return;
     pool = interleave(news,videos);
     cursor = 0;
+    fillPoster(root,lastCtx);
     const screens = [...root.querySelectorAll(".pile-screen")];
     if (!pool.length) {
       screens.forEach(screen => { screen.querySelector(".ps-cap").textContent = "신호 없음"; });
