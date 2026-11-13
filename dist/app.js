@@ -27,6 +27,7 @@ let loadError = "";
 let period = "week";
 let boardPeriod = "all";
 let wordMember = 0;
+let wordView = "all";
 let quiz = null;
 let noticeTimer;
 let editorChanged = false;
@@ -95,6 +96,24 @@ function wordCard(word) {
 }
 const empty = message => `<div class="card empty">${e(message)}</div>`;
 const quizButton = (key,label,items) => items.length ? `<button type="button" data-quiz="${key}">${label} · ${items.length}개</button>` : "";
+// 글별 묶음: words grouped under the article (post) they were written for.
+function groupedWords(words) {
+  const byPost = new Map();
+  for (const word of words) {
+    const key = board.posts.some(post => post.id === word.post_id) ? word.post_id : "";
+    if (!byPost.has(key)) byPost.set(key,[]);
+    byPost.get(key).push(word);
+  }
+  const groups = [...byPost.entries()].map(([id,list]) => ({post:board.posts.find(post => post.id === id),list}))
+    .sort((x,y) => (x.post ? 0 : 1) - (y.post ? 0 : 1) || Date.parse(y.post?.created_at ?? 0) - Date.parse(x.post?.created_at ?? 0));
+  if (!groups.length) return empty("이 조건에 해당하는 단어가 없어요.");
+  return `<div class="stack">${groups.map(({post,list}) => `<section class="card word-group">
+    <div class="word-group-head"><h2>${post ? `<a href="#post/${e(post.id)}">${e(post.title)}</a>` : "글 없이 추가한 단어"}</h2>
+      <div class="meta">${post ? `<span>${authorLink(post)}</span><time datetime="${e(post.created_at)}">${dateFormat.format(new Date(post.created_at))}</time>` : ""}<span>단어 ${list.length}개</span></div>
+      ${post ? `<button type="button" data-quiz="post" data-post-id="${e(post.id)}">이 글 퀴즈</button>` : ""}</div>
+    ${list.map(word => `<div class="word-row"><strong lang="en">${e(word.term)}</strong><span>${e(word.meaning)}</span>${word.example ? `<em lang="en">${e(word.example)}</em>` : ""}</div>`).join("")}
+  </section>`).join("")}</div>`;
+}
 function wordSelection() {
   return inPeriod(board.words,period).filter(word => !wordMember || word.author === wordMember);
 }
@@ -161,8 +180,8 @@ function render() {
       content = hero("단어장","함께 모은 영어 단어와 표현",'<button type="button" data-new-word>＋ 단어 추가</button>') +
         `<div class="toolbar">${views}</div>
         <div class="toolbar">${periodTabs(period)}<label><span class="hint">등록자</span><select id="word-member"><option value="0">모든 조원</option>${members.map((name,index) => `<option value="${index+1}" ${wordMember === index+1 ? "selected" : ""}>${e(name)}</option>`).join("")}</select></label></div>
-        <div class="toolbar"><span class="count">단어 ${words.length}개</span>${quizButton("words","선택한 단어로 퀴즈",words)}${quizButton("review","다시 볼 단어",reviewWords())}</div>
-        <div class="stack">${words.map(wordCard).join("") || empty("이 조건에 해당하는 단어가 없어요.")}</div>`;
+        <div class="toolbar"><div class="tabs" aria-label="단어 보기"><button type="button" data-wview="all" aria-pressed="${wordView === "all"}">단어별</button><button type="button" data-wview="group" aria-pressed="${wordView === "group"}">글별 묶음</button></div><span class="count">단어 ${words.length}개</span>${quizButton("words","선택한 단어로 퀴즈",words)}${quizButton("review","다시 볼 단어",reviewWords())}</div>
+        ${wordView === "group" ? groupedWords(words) : `<div class="stack">${words.map(wordCard).join("") || empty("이 조건에 해당하는 단어가 없어요.")}</div>`}`;
     }
   } else {
     const personal = members[member - 1];
@@ -209,8 +228,11 @@ function renderQuiz() {
   if (!quiz) {
     const options = [quizButton("week","이번 주 단어",inPeriod(board.words,"week")),quizButton("all","전체 단어",board.words),
       quizButton("review","다시 볼 단어",reviewWords())].join("");
+    const articles = sorted(board.posts).map(post => ({post,count:board.words.filter(word => word.post_id === post.id).length})).filter(item => item.count);
+    const byArticle = articles.length ? `<h2 class="section-title">글별로 풀기</h2><div class="stack">${articles.map(({post,count}) =>
+      `<div class="word-row"><strong>${e(post.title)}</strong><span>단어 ${count}개</span><button type="button" data-quiz="post" data-post-id="${e(post.id)}">풀기</button></div>`).join("")}</div>` : "";
     return `<section class="card quiz"><h1>퀴즈 범위 고르기</h1>${options
-      ? `<p>범위를 고르면 최대 10문제가 나와요.</p><div class="row">${options}</div>`
+      ? `<p>범위를 고르면 최대 10문제가 나와요.</p><div class="row">${options}</div>${byArticle}`
       : "<p>아직 퀴즈로 풀 단어가 없어요. 글을 쓰면서 단어를 추가해 보세요.</p>"}</section>`;
   }
   const total = quiz.words.length;
@@ -361,6 +383,12 @@ main.addEventListener("click",async event => {
     location.hash = data.view === "quiz" ? "words/quiz" : "words";
     return;
   }
+  if (data.wview) {
+    wordView = data.wview;
+    render();
+    main.querySelector(`[data-wview="${wordView}"]`)?.focus();
+    return;
+  }
   if (data.quiz === "reset") {
     quiz = null;
     render();
@@ -390,7 +418,7 @@ main.addEventListener("click",async event => {
     } catch (failure) { flash(failure.message); button.disabled = false; }
   }
   if (data.quiz) {
-    const choices = {week:inPeriod(board.words,"week"),all:board.words,words:wordSelection(),post:board.words.filter(word => word.post_id === id),retry:quiz?.missed,review:reviewWords()};
+    const choices = {week:inPeriod(board.words,"week"),all:board.words,words:wordSelection(),post:board.words.filter(word => word.post_id === (data.postId || id)),retry:quiz?.missed,review:reviewWords()};
     beginQuiz(choices[data.quiz] ?? []);
   }
   if ("reveal" in data && quiz) {

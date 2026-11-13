@@ -642,3 +642,13 @@ body :is(#editor,#member-editor,#member-picker,#tv-overlay) :is(button,.tv-out){
   .pp-main{padding-bottom:230px}
   .pp-strip{height:200px;left:96px;right:34px}
 }
+
+/* ---- 단어장: 글별 묶음 ---- */
+.word-group-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:8px}
+.word-group-head h2{flex:1 1 220px;margin:0;font-size:17px}
+.word-group-head .meta{display:flex;gap:10px;font-size:13px;color:var(--muted)}
+.word-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:7px 0;border-top:1px solid var(--line)}
+.word-row strong{min-width:120px}
+.word-row span{color:var(--muted)}
+.word-row em{flex-basis:100%;font-style:normal;font-size:13px;color:var(--muted)}
+.word-row button{margin-left:auto}
