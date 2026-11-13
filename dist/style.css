@@ -341,3 +341,11 @@ body :is(#editor,#member-editor,#member-picker,#tv-overlay) :is(button,.tv-out){
   .study-home.study-mode .tv-grid .tv-card:nth-child(3n){border-right:1px solid var(--line)}
   .study-home.study-mode .tv-grid .tv-card:nth-child(2n){border-right:0}
 }
+.media-mode .tv-grid{cursor:grab;user-select:none}
+.media-mode .tv-grid.is-dragging,.media-mode .tv-grid.is-dragging button{cursor:grabbing}
+@media(prefers-reduced-motion:no-preference){
+  .media-mode .tv-grid .tv-card{
+    transform:perspective(850px) translateZ(var(--curve-depth,0px))
+      rotateX(var(--curve-x,0deg)) rotateY(var(--curve-y,0deg)) scale(var(--curve-scale,1));
+  }
+}

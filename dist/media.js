@@ -23,6 +23,9 @@ let section = "";
 let landingFilter = "all";
 let homeFilter = "all";
 let frame = 0;
+let wallOffset = 0;
+let drag;
+let suppressClick = false;
 const overlay = document.querySelector("#tv-overlay");
 let selectedItem;
 let scraps = readLocal("media-scraps",[]);
@@ -42,23 +45,68 @@ function bendWall() {
     if (!feed?.isConnected || section) return;
     const width = document.documentElement.clientWidth;
     const height = window.innerHeight;
-    const cards = [...feed.querySelectorAll(".tv-card")];
+    const grid = feed.querySelector(".tv-grid");
+    if (!grid) return;
+    grid.style.translate = wallOffset + "px";
+    const cards = [...grid.querySelectorAll(".tv-card")];
     const positions = cards.map(card => ({
       card,x:card.offsetLeft + card.offsetWidth / 2,y:card.offsetTop + card.offsetHeight / 2
     }));
     for (const position of positions) {
       const {card} = position;
-      const x = (position.x - width / 2) / (width / 2);
+      const x = (position.x + wallOffset - width / 2) / (width / 2);
       const y = (position.y - window.scrollY - height / 2) / (height / 2);
       const tilt = Math.max(-1,Math.min(1,y));
       card.style.setProperty("--curve-x", tilt * -20 + "deg");
       card.style.setProperty("--curve-y", x * -32 + "deg");
-      card.style.setProperty("--curve-scale", 1 - Math.min(Math.abs(x),1.5) * .09);
+      const depth = Math.max(0,1 - .72 * x * x - .48 * y * y);
+      card.style.setProperty("--curve-depth", depth * 185 + "px");
+      card.style.setProperty("--curve-scale", .91 + depth * .025);
     }
   });
 }
 window.addEventListener("scroll",bendWall,{passive:true});
 window.addEventListener("resize",bendWall);
+
+document.addEventListener("pointerdown",event => {
+  if (event.pointerType !== "mouse" || event.button !== 0 || section || overlay.open) return;
+  const grid = event.target.closest(".media-mode .tv-grid");
+  if (!grid) return;
+  suppressClick = false;
+  drag = {id:event.pointerId,grid,x:event.clientX,y:event.clientY,offset:wallOffset,scroll:window.scrollY,active:false};
+});
+document.addEventListener("pointermove",event => {
+  if (!drag || event.pointerId !== drag.id) return;
+  const dx = event.clientX - drag.x;
+  const dy = event.clientY - drag.y;
+  if (!drag.active && Math.hypot(dx,dy) < 6) return;
+  if (!drag.active) {
+    drag.active = true;
+    drag.grid.setPointerCapture(event.pointerId);
+    drag.grid.classList.add("is-dragging");
+  }
+  const extraWidth = drag.grid.clientWidth - document.documentElement.clientWidth;
+  const limit = Math.max(48,extraWidth * .38);
+  wallOffset = Math.max(-limit,Math.min(limit,drag.offset + dx));
+  window.scrollTo(0,drag.scroll - dy);
+  bendWall();
+});
+function finishDrag(event) {
+  if (!drag || event.pointerId !== drag.id) return;
+  suppressClick = drag.active;
+  drag.grid.classList.remove("is-dragging");
+  drag = undefined;
+}
+document.addEventListener("pointerup",finishDrag);
+document.addEventListener("pointercancel",finishDrag);
+document.addEventListener("dragstart",event => {
+  if (event.target.closest(".media-mode .tv-grid")) event.preventDefault();
+});
+document.addEventListener("click",event => {
+  if (!suppressClick) return;
+  suppressClick = false;
+  if (event.detail && event.target.closest(".media-mode .tv-grid")) event.stopPropagation();
+},true);
 
 function items() {
   if (filter === "scraps") return scraps;
@@ -236,6 +284,7 @@ overlay.addEventListener("close",() => {
 export function renderMedia(root, key, view = "") {
   observer?.disconnect();
   if (feed !== root || section !== view) {
+    wallOffset = 0;
     section = view;
     filter = view === "home" ? homeFilter : view || landingFilter;
     visible = [];
