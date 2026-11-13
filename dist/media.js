@@ -216,6 +216,7 @@ async function more() {
 function appendCards() {
   if (!feed?.isConnected) return;
   const grid = feed.querySelector(".tv-grid");
+  if (!grid) return;
   const count = grid.children.length;
   grid.insertAdjacentHTML("beforeend",visible.slice(count).map(card).join(""));
   paintFooter();
@@ -224,6 +225,7 @@ function appendCards() {
 function paintFooter() {
   if (!feed?.isConnected) return;
   observer?.disconnect();
+  if (!section) return;
   const foot = feed.querySelector(".tv-footer");
   if (section === "home") {
     foot.innerHTML = pending ? "불러오는 중…" : '<a href="#videos">영상 더 보기 ↗</a><a href="#news">기사 더 보기 ↗</a>';
@@ -253,14 +255,15 @@ function paint() {
   ].filter(Boolean);
   const controls = Object.entries(filters).filter(([id]) => id !== "scraps").map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
   const keepSearchFocus = document.activeElement?.id === "tv-q";
-  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "영상·기사" : filters[section] ?? "학습 자료"}</h1></div>
+  const caret = keepSearchFocus ? document.activeElement.selectionStart : 0;
+  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "영상·기사" : filters[section] ?? "둘러보기"}</h1></div>
     ${section === "home" ? `<nav class="tv-filters home-tv-tabs" aria-label="영상 및 기사">${controls}</nav>` : ""}
-    ${!section ? `<nav class="tv-dock" aria-label="학습 자료 메뉴"><div class="resource-filters">${controls}<a href="#scraps">내 스크랩</a></div><a href="#feed">게시판 ↗</a><a href="#words">단어장 ↗</a><button type="button" data-tv-write>＋ 글쓰기</button></nav>` : ""}
-    ${!section ? searchForm() : ""}
+    ${!section ? `<div class="tv-summary" data-summary role="status" aria-live="polite">${summaryHtml()}</div>` : ""}
     ${section === "scraps" ? '<a class="back" href="#home">← 둘러보기</a>' : ""}
     ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
-    ${section ? `<div class="tv-grid">${visible.map(card).join("")}</div>` : '<div class="globe-stage" aria-label="학습 자료 지구본"><div class="globe-world"></div></div>'}
-    ${(ready || section === "scraps") && !visible.length && !messages.length ? '<p class="tv-message">표시할 콘텐츠가 없어요.</p>' : ""}
+    ${section ? `<div class="tv-grid">${visible.map(card).join("")}</div>` : `<div class="tv-view" data-view data-mode="${resultsActive() ? "results" : "globe"}">${viewInner()}</div>`}
+    ${(ready || section === "scraps") && !visible.length && !messages.length && (section || !resultsActive()) ? '<p class="tv-message">표시할 콘텐츠가 없어요.</p>' : ""}
+    ${!section ? sheetHtml() + dockHtml() : ""}
     <div class="tv-footer" role="status"></div></section>`;
   paintFooter();
   bendWall();
@@ -269,8 +272,7 @@ function paint() {
     const input = feed.querySelector("#tv-q");
     if (input) {
       input.value = searchQuery;
-      updateSearchStatus();
-      if (keepSearchFocus) { input.focus(); input.setSelectionRange(input.value.length,input.value.length); }
+      if (keepSearchFocus) { input.focus(); input.setSelectionRange(caret,caret); }
     }
   }
 }
@@ -329,75 +331,242 @@ overlay.addEventListener("close",() => {
     lastFocus = "";
   }
 });
-// ---- Search ----------------------------------------------------------------
-// A: filter what is already loaded (news + videos) as you type.
-// B: ask /api/search, which reads BBC's public section feeds, for more news.
+// ---- Landing filters ---------------------------------------------------------
+// Rest state: only the dock is visible. "탐색" opens a sheet (search, type, topics);
+// applying it closes the sheet and leaves a one-line summary of what is active.
+// Keyword or topic filters switch the globe to a result list; type alone keeps the globe.
+const TOPICS = ["AI·테크","경제·금융","무역","에너지·기후","헬스·바이오","식품·뷰티","교육","엔터·문화","정치·국제","사회·생활"];
+const selectedTopics = new Set();
+let sheetOpen = false;
 let searchQuery = "";
 let searchNews = [];
+let searchKey = "";
 let searchState = "";
 let searchTimer = 0;
 let searchSeq = 0;
+let idleTimer = 0;
 const norm = value => String(value ?? "").toLowerCase();
+const byDate = (a,b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0);
+const topicsOf = item => item.topics ?? [];
 function searchTerms() {
   return norm(searchQuery).split(/\s+/).filter(Boolean);
 }
-function searchResults() {
+function resultsActive() {
+  return searchTerms().length > 0 || selectedTopics.size > 0;
+}
+function typeOk(item) {
+  return filter === "news" ? item.type === "news" : filter === "video" ? item.type === "video" : true;
+}
+function currentKey() {
+  const q = searchQuery.trim();
+  return JSON.stringify([q.length >= 2 ? norm(q) : "",[...selectedTopics].sort()]);
+}
+// A: items already loaded, matched by title. B: BBC section feeds via /api/search,
+// used only while they belong to the filters that are on screen right now.
+function baseResults() {
   const terms = searchTerms();
-  const all = merge([...news,...videos].filter(item => terms.every(term => norm(item.title).includes(term))),searchNews);
-  const pool = filter === "news" ? all.filter(item => item.type === "news")
-    : filter === "video" ? all.filter(item => item.type === "video") : all;
-  return pool.sort((a,b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0));
+  const local = [...news,...videos].filter(item => terms.every(term => norm(item.title).includes(term)));
+  return merge(local,searchKey === currentKey() ? searchNews : []).filter(typeOk);
 }
-function searchForm() {
-  return `<form class="tv-search" role="search" data-tv-search><input id="tv-q" type="search" name="q" placeholder="뉴스·영상 검색" autocomplete="off" enterkeyhint="search" aria-label="뉴스와 영상 검색" maxlength="60"><span class="tv-search-status" role="status" aria-live="polite"></span></form>`;
+function landingResults() {
+  return baseResults().filter(item => !selectedTopics.size || topicsOf(item).some(topic => selectedTopics.has(topic))).sort(byDate);
 }
-function updateSearchStatus() {
-  const status = feed?.querySelector(".tv-search-status");
-  if (!status) return;
-  if (!searchTerms().length) { status.textContent = ""; return; }
-  const count = searchResults().length;
-  status.textContent = searchState === "loading" ? `${count}개 · BBC 기사 찾는 중…`
-    : searchState === "error" ? `${count}개 · BBC 검색을 불러오지 못했어요`
-    : count ? `${count}개` : "결과가 없어요";
+function topicCounts() {
+  const base = baseResults();
+  return Object.fromEntries(TOPICS.map(topic => [topic,base.filter(item => topicsOf(item).includes(topic)).length]));
+}
+function filterCount() {
+  return (searchTerms().length ? 1 : 0) + selectedTopics.size + (filter !== "all" ? 1 : 0);
+}
+function applyLabel() {
+  return resultsActive() ? `결과 ${landingResults().length}개 보기` : "닫기";
+}
+function typeControls() {
+  return Object.entries(filters).filter(([id]) => id !== "scraps")
+    .map(([id,label]) => `<button type="button" data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
+}
+function dockHtml() {
+  const count = filterCount();
+  return `<nav class="tv-dock" aria-label="둘러보기 메뉴"><button type="button" class="tv-explore" data-sheet-toggle aria-expanded="${sheetOpen}" aria-controls="tv-sheet">탐색${count ? `<span class="badge" aria-label="적용된 필터 ${count}개">${count}</span>` : ""}</button><a href="#scraps">내 스크랩</a><a href="#feed">게시판</a><a href="#words">단어장</a><button type="button" data-tv-write>＋ 글쓰기</button></nav>`;
+}
+function sheetHtml() {
+  const counts = topicCounts();
+  return `<div class="tv-sheet" id="tv-sheet" role="dialog" aria-label="탐색 필터" ${sheetOpen ? "" : "hidden"}>
+    <form role="search" data-tv-search><input id="tv-q" type="search" name="q" placeholder="뉴스·영상 검색  ( / )" autocomplete="off" enterkeyhint="search" aria-label="뉴스와 영상 검색" maxlength="60"></form>
+    <div class="tv-sheet-row"><div class="tv-seg" role="group" aria-label="유형">${typeControls()}</div><button type="button" class="tv-link" data-reset-filters>초기화</button></div>
+    <div class="tv-topics" role="group" aria-label="주제">${TOPICS.map(topic =>
+      `<button type="button" class="tv-chip${counts[topic] ? "" : " is-zero"}" data-topic="${topic}" aria-pressed="${selectedTopics.has(topic)}">${topic}<small>${counts[topic]}</small></button>`).join("")}</div>
+    <button type="button" class="tv-apply" data-sheet-apply>${applyLabel()}</button>
+  </div>`;
+}
+function summaryHtml() {
+  if (!resultsActive() && filter === "all") return "";
+  const pills = [];
+  if (searchTerms().length) pills.push(`<span class="tv-pill">“${escape(searchQuery.trim())}” <button type="button" data-remove-query aria-label="검색어 해제">✕</button></span>`);
+  for (const topic of selectedTopics) pills.push(`<span class="tv-pill">${escape(topic)} <button type="button" data-remove-topic="${escape(topic)}" aria-label="${escape(topic)} 해제">✕</button></span>`);
+  if (filter !== "all") pills.push(`<span class="tv-pill">${filters[filter]} <button type="button" data-remove-type aria-label="유형 해제">✕</button></span>`);
+  const total = resultsActive() ? landingResults().length : items().length;
+  pills.push(`<span class="tv-pill">결과 ${total}개${searchState === "loading" ? " · BBC 기사 찾는 중…" : searchState === "error" ? " · BBC 검색 실패, 불러온 자료만" : ""}</span>`);
+  pills.push('<span class="tv-pill"><button type="button" data-reset-filters>초기화</button></span>');
+  return pills.join("");
+}
+function viewInner() {
+  if (!resultsActive()) return '<div class="globe-stage" aria-label="학습 자료 지구본"><div class="globe-world"></div></div>';
+  const list = landingResults();
+  if (!list.length) {
+    return `<div class="tv-results"><div class="tv-empty"><p>${searchState === "loading" ? "BBC 기사까지 찾는 중이에요…" : "결과가 없어요."}</p>${searchState === "loading" ? "" :
+      '<p>다른 키워드를 쓰거나 필터를 초기화해 보세요.</p><button type="button" data-reset-filters>필터 초기화</button>'}</div></div>`;
+  }
+  return `<div class="tv-results">${list.slice(0,60).map(card).join("")}</div>`;
+}
+// Updates everything except the search input, so typing never loses focus or caret.
+function refreshLanding() {
+  const home = feed?.querySelector(".tv-home");
+  if (!home || section) return;
+  home.querySelector("[data-summary]").innerHTML = summaryHtml();
+  const counts = topicCounts();
+  home.querySelectorAll("[data-topic]").forEach(chip => {
+    const topic = chip.dataset.topic;
+    chip.setAttribute("aria-pressed",selectedTopics.has(topic));
+    chip.classList.toggle("is-zero",!counts[topic]);
+    chip.querySelector("small").textContent = counts[topic];
+  });
+  home.querySelector("[data-sheet-apply]").textContent = applyLabel();
+  const explore = home.querySelector(".tv-explore");
+  const count = filterCount();
+  let badge = explore.querySelector(".badge");
+  if (count) {
+    if (!badge) { badge = document.createElement("span"); badge.className = "badge"; explore.append(badge); }
+    badge.textContent = count;
+    badge.setAttribute("aria-label",`적용된 필터 ${count}개`);
+  } else badge?.remove();
+  const view = home.querySelector("[data-view]");
+  const mode = resultsActive() ? "results" : "globe";
+  if (mode === "results" || view.dataset.mode !== mode) {
+    view.dataset.mode = mode;
+    view.innerHTML = viewInner();
+    if (mode === "globe") mountGlobe();
+  } else refreshGlobe();
+}
+function setSheet(open) {
+  sheetOpen = open;
+  const home = feed?.querySelector(".tv-home");
+  if (!home) return;
+  home.querySelector("#tv-sheet").hidden = !open;
+  home.querySelector(".tv-explore").setAttribute("aria-expanded",open);
+  if (open) home.querySelector("#tv-q").focus();
+  else document.body.classList.remove("ui-idle");
+}
+function scheduleSearch() {
+  clearTimeout(searchTimer);
+  searchSeq++;
+  const needsServer = searchQuery.trim().length >= 2 || selectedTopics.size > 0;
+  searchState = needsServer ? "loading" : "";
+  if (needsServer) searchTimer = setTimeout(runSearch,350);
 }
 async function runSearch() {
-  const query = searchQuery.trim();
+  const params = new URLSearchParams();
+  const q = searchQuery.trim();
+  if (q.length >= 2) params.set("q",q);
+  if (selectedTopics.size) params.set("topics",[...selectedTopics].join(","));
+  const key = currentKey();
   const seq = ++searchSeq;
-  if (query.length < 2) { searchNews = []; searchState = ""; return; }
-  searchState = "loading";
   try {
-    const result = await get("/api/search?q=" + encodeURIComponent(query));
+    const result = await get("/api/search?" + params);
     if (seq !== searchSeq) return;
     searchNews = result.items;
+    searchKey = key;
     searchState = "";
   } catch {
     if (seq !== searchSeq) return;
     searchNews = [];
+    searchKey = "";
     searchState = "error";
   }
-  if (feed?.isConnected && !section) { refreshGlobe(); updateSearchStatus(); }
+  if (feed?.isConnected && !section) refreshLanding();
 }
-function onSearchInput(value) {
-  searchQuery = value;
+function filtersChanged() {
+  scheduleSearch();
+  refreshLanding();
+}
+function resetFilters() {
   clearTimeout(searchTimer);
+  searchSeq++;
+  searchQuery = "";
   searchNews = [];
-  searchState = searchQuery.trim().length >= 2 ? "loading" : "";
-  if (feed?.isConnected && !section) { refreshGlobe(); updateSearchStatus(); }
-  if (searchState === "loading") searchTimer = setTimeout(runSearch,350);
-  else searchSeq++;
+  searchKey = "";
+  searchState = "";
+  selectedTopics.clear();
+  filter = "all";
+  landingFilter = "all";
+  visible = [];
+  generation++;
+  paint();
+}
+function landingClick(data) {
+  if ("sheetToggle" in data) setSheet(!sheetOpen);
+  if ("sheetApply" in data) setSheet(false);
+  if (data.topic) {
+    if (selectedTopics.has(data.topic)) selectedTopics.delete(data.topic);
+    else selectedTopics.add(data.topic);
+    filtersChanged();
+  }
+  if ("removeTopic" in data) { selectedTopics.delete(data.removeTopic); filtersChanged(); }
+  if ("removeQuery" in data) {
+    searchQuery = "";
+    const input = feed.querySelector("#tv-q");
+    if (input) input.value = "";
+    filtersChanged();
+  }
+  if ("removeType" in data) {
+    filter = "all";
+    landingFilter = "all";
+    visible = [];
+    generation++;
+    paint();
+  }
+  if ("resetFilters" in data) resetFilters();
 }
 document.addEventListener("input",event => {
-  if (event.target.id === "tv-q") onSearchInput(event.target.value);
+  if (event.target.id !== "tv-q") return;
+  searchQuery = event.target.value;
+  filtersChanged();
 });
 document.addEventListener("submit",event => {
-  if (event.target.matches?.("[data-tv-search]")) event.preventDefault();
+  if (!event.target.matches?.("[data-tv-search]")) return;
+  event.preventDefault();
+  setSheet(false);
 });
 document.addEventListener("keydown",event => {
-  if (event.key === "Escape" && event.target.id === "tv-q" && event.target.value) {
-    event.target.value = "";
-    onSearchInput("");
+  if (!feed?.isConnected || section) return;
+  if (event.key === "Escape") {
+    if (event.target.id === "tv-q" && event.target.value) {
+      event.target.value = "";
+      searchQuery = "";
+      filtersChanged();
+    } else if (sheetOpen && !overlay.open) {
+      setSheet(false);
+      feed.querySelector(".tv-explore")?.focus();
+    }
+    return;
+  }
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
+  if (event.key === "/" && !typing && !overlay.open && !document.querySelector("dialog[open]")) {
+    event.preventDefault();
+    setSheet(true);
   }
 });
+document.addEventListener("pointerdown",event => {
+  if (sheetOpen && feed?.isConnected && !section && !event.target.closest(".tv-sheet,.tv-dock")) setSheet(false);
+},true);
+// Dim the dock and summary while the pointer is idle so the globe stays the main thing.
+function wake() {
+  document.body.classList.remove("ui-idle");
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => { if (!sheetOpen) document.body.classList.add("ui-idle"); },3500);
+}
+for (const type of ["pointermove","pointerdown","keydown","touchstart"]) document.addEventListener(type,wake,{passive:true});
+wake();
 
 // ---- Landing globe -------------------------------------------------------
 // Cards sit on a huge sphere seen from outside, so the front keeps the convex
@@ -454,7 +623,7 @@ function buildGlobe() {
   globe.dirty = true;
 }
 function setGlobeList() {
-  globe.list = searchTerms().length ? searchResults() : items();
+  globe.list = items();
   globe.stepC = coprime(globe.list.length || 1,.618);
   globe.stepR = coprime(globe.list.length || 1,.382);
 }
@@ -609,6 +778,7 @@ export function leaveMedia() {
 }
 export function mediaClick(button) {
   const data = button.dataset;
+  if (!section) landingClick(data);
   if (data.tvFilter) {
     filter = data.tvFilter;
     if (section === "home") homeFilter = filter;
