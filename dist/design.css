@@ -715,3 +715,17 @@
   :root:root:root body .home-paper .pp-gear{order:9}
   :root:root:root body .home-paper .pp-prefs{order:10}
 }
+
+/* ---- Item dialog summary: two lines, then "More" (only when it is actually cut off); it expands in place, never as a second popup ---- */
+:root:root:root body #tv-overlay .tv-detail-copy .tv-summary.is-clamped{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;margin-bottom:0}
+:root:root:root body #tv-overlay .tv-detail-copy .tv-summary:not(.is-clamped){margin-bottom:var(--ds-sp-2)}
+:root:root:root body #tv-overlay .tv-more{min-height:var(--ds-h-chip);height:var(--ds-h-chip);padding:0;margin:0 0 var(--ds-sp-2);border:0;border-radius:0;background:transparent;color:var(--ds-on-dark);font:500 var(--ds-fs-ui)/1 var(--ds-sans)}
+:root:root:root body #tv-overlay .tv-more[hidden]{display:none}
+:root:root:root body #tv-overlay .tv-more span{border-bottom:1px solid currentColor;padding-bottom:var(--ds-sp-1)}
+:root:root:root body.study-mode #tv-overlay .tv-more{color:var(--ds-ink)}
+
+/* Note sections (Summary, My thoughts, Key sentence) use the Item title size from the ladder */
+:root:root:root body .study-notes h2{font-size:var(--ds-fs-item);line-height:1.35;margin:0 0 var(--ds-sp-2)}
+
+/* Key sentence quote: ink rule and sand wash (the old purple rule and beige were outside the palette) */
+:root:root:root body .study-notes blockquote{background:var(--ds-sand);border-inline-start:2px solid var(--ds-ink);color:var(--ds-ink)}

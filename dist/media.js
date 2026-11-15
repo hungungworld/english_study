@@ -373,13 +373,21 @@ function paint() {
     }
   }
 }
+// BBC summaries are one to three sentences (85-160 characters today); the cap only guards against an unusually long one.
+const clipSummary = text => text.length > 600 ? text.slice(0,600).replace(/\s+\S*$/,"") + "…" : text;
+// "More" appears only when the clamped summary is actually cut off.
+function fitSummary() {
+  const text = overlay.querySelector(".tv-summary.is-clamped");
+  const more = overlay.querySelector("[data-summary-more]");
+  if (text && more) more.hidden = text.scrollHeight <= text.clientHeight + 1;
+}
 function detail(item) {
   const saved = scraps.some(entry => scrapKey(entry) === scrapKey(item));
   return `<div class="tv-stage"><section class="tv-detail"><button type="button" class="tv-close" aria-label="Close">✕</button>
     ${item.type === "video" ? `<iframe class="tv-player" title="${escape(item.title)}" src="https://www.youtube-nocookie.com/embed/${escape(item.id)}" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>` : screen(item,true)}
     <div class="tv-detail-copy"><p class="tv-label">${escape(item.source)} · ${date(item)}</p>
     <h1 lang="en">${escape(item.title)}</h1>
-    ${item.summary ? `<p class="tv-summary" lang="en">${escape(item.summary)}</p>` : ""}
+    ${item.summary ? `<p class="tv-summary is-clamped" id="tv-sum" lang="en">${escape(clipSummary(item.summary))}</p><button type="button" class="tv-more" data-summary-more aria-expanded="false" aria-controls="tv-sum" hidden><span>More</span></button>` : ""}
     <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "Open on YouTube" : "Read on BBC"}<span class="ar ne" aria-hidden="true"></span></a>
     <button type="button" class="tv-action" data-write-source><span class="ic plus" aria-hidden="true"></span>Write</button>
     <button type="button" class="tv-action" data-scrap aria-label="Save" aria-pressed="${saved}" title="${saved ? "Remove from saved" : "Save"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div></section><aside class="tv-writer" aria-label="Write a note" hidden></aside></div>`;
@@ -389,6 +397,7 @@ function showDetail(item, origin) {
   overlay.classList.remove("is-writing");
   overlay.innerHTML = detail(item);
   overlay.showModal();
+  fitSummary();
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
     const target = overlay.getBoundingClientRect();
     const x = origin ? origin.x + origin.width / 2 - target.x - target.width / 2 : 0;
@@ -407,6 +416,14 @@ function openSideWindow(url) {
   window.open(url,"article-window",features);
 }
 overlay.addEventListener("click",event => {
+  const moreButton = event.target.closest("[data-summary-more]");
+  if (moreButton) {
+    const text = overlay.querySelector(".tv-summary");
+    const open = text.classList.toggle("is-clamped") === false;
+    moreButton.setAttribute("aria-expanded",open);
+    moreButton.firstElementChild.textContent = open ? "Less" : "More";
+    return;
+  }
   if (selectedItem && event.target.closest("[data-write-source]")) {
     // Keep the detail window (and the playing video) open and show the form beside it.
     const host = overlay.querySelector(".tv-writer");
@@ -1009,3 +1026,4 @@ export function mediaClick(button) {
     loadFirst();
   }
 }
+window.addEventListener("resize",() => { if (overlay.open) fitSummary(); });
