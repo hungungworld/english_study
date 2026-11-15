@@ -44,7 +44,7 @@
 /* ------------------------------------------------------------------ buttons */
 :root:root body button:not(.tv-card){
   box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:var(--ds-sp-2);
-  min-height:var(--ds-h-button);padding:0 var(--ds-sp-4);
+  min-height:var(--ds-h-button);padding:0 var(--ds-pad-std);
   font:500 var(--ds-fs-ui)/1.2 var(--ds-sans);letter-spacing:0;border-radius:var(--ds-radius);
 }
 /* large (home) */
@@ -220,7 +220,7 @@
 :root:root:root body #tv-overlay .tv-detail-copy .tv-summary{margin:0 0 var(--ds-sp-4)}
 
 /* 홈 CTA: 크고 굵던 버튼을 기본 버튼 크기(44px, 14px/500)로 줄임 */
-:root:root:root body :is(a.home-primary,button.home-ghost){min-height:var(--ds-h-button);padding:0 var(--ds-sp-4);font:500 var(--ds-fs-ui)/1.2 var(--ds-sans);letter-spacing:.02em}
+:root:root:root body :is(a.home-primary,button.home-ghost){min-height:var(--ds-h-button);padding:0 var(--ds-pad-hero);font:500 var(--ds-fs-ui)/1.2 var(--ds-sans);letter-spacing:.02em}
 :root:root:root body .home-links{gap:var(--ds-sp-4)}
 :root:root:root body .home-links a{border-bottom-color:transparent;padding-bottom:0}
 :root:root:root body .home-links a:hover{border-bottom-color:currentColor}
@@ -540,7 +540,7 @@
 :root:root:root body .pp-words div span{font-weight:500}
 
 /* ---- 헤더 액션 버튼(＋ 노트 쓰기 · ＋ 글쓰기 · ＋ 단어 추가): 슬림 36px, 제목 첫 줄의 가운데에 맞춤 (DESIGN.md 2.5) ---- */
-:root:root:root body :is(.hero,.pr-head) > button{min-height:var(--ds-h-chip);height:var(--ds-h-chip);padding:0 var(--ds-sp-4);font:500 var(--ds-fs-ui)/1 var(--ds-sans);white-space:nowrap;align-self:flex-start;margin-top:calc((var(--ds-fs-h1) * 1.35 - var(--ds-h-chip)) / 2)}
+:root:root:root body :is(.hero,.pr-head) > button{min-height:var(--ds-h-chip);height:var(--ds-h-chip);padding:0 var(--ds-pad-std);font:500 var(--ds-fs-ui)/1 var(--ds-sans);white-space:nowrap;align-self:flex-start;margin-top:calc((var(--ds-fs-h1) * 1.35 - var(--ds-h-chip)) / 2)}
 :root:root:root body :is(.hero,.pr-head){align-items:flex-start}
 
 /* ---- 홈 중단 정렬: 왼쪽 "이번 주 노트·출처"가 오른쪽 "최근 노트·새로 올라온 뉴스"와 같은 헤어라인 아래에서 시작하고 같은 높이에서 끝남 ---- */
@@ -652,3 +652,36 @@
 /* ---- "+" is drawn, not typed: the full-width plus glyph sat off-centre inside buttons ---- */
 :root:root:root body .ic.plus{width:var(--ds-sp-4);height:var(--ds-sp-4);margin:0;vertical-align:0;--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='square'%3E%3Cpath d='M8 3v10M3 8h10'/%3E%3C/svg%3E")}
 :root:root:root body button:has(> .ic.plus){display:inline-flex;align-items:center;justify-content:center;gap:var(--ds-sp-2);line-height:1}
+
+/* ======================================================================
+   Button system (DESIGN.md 2.5 / 3): three padding tiers by role, ruled dock, bare icon buttons
+   ====================================================================== */
+:root{--ds-pad-hero:var(--ds-sp-6);--ds-pad-std:var(--ds-sp-5);--ds-pad-compact:var(--ds-sp-4)}
+@media (max-width:700px){:root{--ds-pad-hero:var(--ds-sp-5);--ds-pad-std:var(--ds-sp-4);--ds-pad-compact:var(--ds-sp-3)}}
+
+/* Compact tier: small buttons inside lists, filters and sheets (36px tall) */
+:root:root:root body :is(button[data-scrap-reset],button[data-prefs-reset],button[data-reset-filters],button[data-remove-word],button[data-more],button[data-reload],button[data-refresh]):not(.tv-pill *){min-height:var(--ds-h-chip);height:var(--ds-h-chip);padding:0 var(--ds-pad-compact)}
+/* Chips follow the compact padding */
+:root:root:root body :is(.chip,.tv-chip){padding:0 var(--ds-pad-compact)}
+:root:root:root body .chip-radio span{padding:0 var(--ds-pad-compact)}
+
+/* Home call to action: the arrow nudges on hover */
+:root:root:root body a.home-primary .ar{transition:transform .16s ease}
+:root:root:root body a.home-primary:hover .ar{transform:translateX(3px)}
+@media (prefers-reduced-motion:reduce){:root:root:root body a.home-primary:hover .ar{transform:none}}
+
+/* Icon buttons (close, info): no border, just the icon and a faint wash on hover; the 44px tap area stays */
+:root:root:root body :is([data-close],.tv-close,#member-drawer form button){border-color:transparent;background:transparent}
+:root:root:root body :is([data-close],.tv-close,#member-drawer form button):hover:enabled{background:var(--ds-wash);color:var(--ds-ink);border-color:transparent}
+:root:root:root body.media-mode :is(.tv-sheet .dialog-head [data-close],.tv-close),:root:root:root body #tv-overlay :is([data-close],.tv-close){background:transparent;border-color:transparent;color:var(--ds-on-dark)}
+:root:root:root body.media-mode :is(.tv-sheet .dialog-head [data-close],.tv-close):hover,:root:root:root body #tv-overlay :is([data-close],.tv-close):hover{background:rgba(241,239,233,.14);color:var(--ds-on-dark);border-color:transparent}
+
+/* Explore dock: one ruled bar instead of three boxes */
+:root:root:root body.media-mode .tv-dock{gap:0;padding:0;border:1px solid rgba(241,239,233,.45);border-radius:var(--ds-radius);background:rgba(17,17,17,.9)}
+:root:root:root body.media-mode .tv-dock > :is(a,button){position:relative;height:var(--ds-h-button);min-height:var(--ds-h-button);padding:0 var(--ds-sp-4);border:0;border-radius:0;background:transparent;color:var(--ds-on-dark-2)}
+:root:root:root body.media-mode .tv-dock > :is(a,button) + :is(a,button){border-left:1px solid rgba(241,239,233,.25)}
+:root:root:root body.media-mode .tv-dock > :is(a,button):hover{background:rgba(241,239,233,.08);color:var(--ds-on-dark)}
+:root:root:root body.media-mode .tv-dock .tv-explore{background:transparent;color:var(--ds-on-dark)}
+:root:root:root body.media-mode .tv-dock .tv-explore[aria-expanded=true]::after{content:"";position:absolute;left:var(--ds-sp-4);right:var(--ds-sp-4);bottom:var(--ds-sp-2);height:2px;background:var(--ds-on-dark)}
+:root:root:root body.media-mode .tv-dock .tv-explore .badge{background:var(--ds-paper);color:var(--ds-ink)}
+:root:root:root body.media-mode .tv-dock .tv-explore[aria-expanded=true] .badge{background:var(--ds-paper);color:var(--ds-ink)}

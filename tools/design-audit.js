@@ -19,6 +19,7 @@
       ['.tabs button,.filters-right select,[data-board-author]', 32, 1],
       ['.pr-group a,.pr-group button', 32, 1],
       ['.hero > button,.pr-head > button', 36, 1],
+      ['button[data-scrap-reset],button[data-prefs-reset],button[data-reset-filters]:not(.tv-pill *):not(.tv-link),button[data-remove-word],button[data-more],button[data-reload],button[data-refresh]', 36, 1],  // Compact tier
       ['.scroll-glow', 96, 1],                             // home scroll cue (DESIGN.md 6-8): a tall soft light, not a regular button
       ['.tv-about-btn', 34, 1],                            // inside the 36px Explore pill (1px border each side)
       ['.chip,.tv-chip', 36, 1],
@@ -135,7 +136,7 @@
     for (let i = 0; i < inter.length; i++) for (let j = i + 1; j < inter.length; j++) {
       const a = inter[i], b = inter[j];
       if (a.contains(b) || b.contains(a)) continue;
-      if (a.parentElement === b.parentElement && a.parentElement.matches('.tabs,.tv-seg')) continue;
+      if (a.parentElement === b.parentElement && a.parentElement.matches('.tabs,.tv-seg,.tv-dock')) continue;
       const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
       const dx = Math.max(ra.left - rb.right, rb.left - ra.right), dy = Math.max(ra.top - rb.bottom, rb.top - ra.bottom);
       let kind = null, gap = 0;

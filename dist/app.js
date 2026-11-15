@@ -84,7 +84,7 @@ let glueQueued = false;
 new MutationObserver(() => {
   if (glueQueued) return;
   glueQueued = true;
-  requestAnimationFrame(() => { glueQueued = false; glue(); });
+  setTimeout(() => { glueQueued = false; glue(); },0);
 }).observe(document.body,{childList:true,subtree:true});
 window.addEventListener("sync-failed",() => flash("Could not save to the shared database. Check your connection."));
 function safeLink(value) {
