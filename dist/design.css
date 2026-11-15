@@ -685,3 +685,9 @@
 :root:root:root body.media-mode .tv-dock .tv-explore[aria-expanded=true]::after{content:"";position:absolute;left:var(--ds-sp-4);right:var(--ds-sp-4);bottom:var(--ds-sp-2);height:2px;background:var(--ds-on-dark)}
 :root:root:root body.media-mode .tv-dock .tv-explore .badge{background:var(--ds-paper);color:var(--ds-ink)}
 :root:root:root body.media-mode .tv-dock .tv-explore[aria-expanded=true] .badge{background:var(--ds-paper);color:var(--ds-ink)}
+
+/* Close buttons: the writer panel inside the item dialog is paper-coloured, so its ✕ is ink; the dialog's own ✕ sits on photos, so it keeps a dark backing. */
+:root:root:root body #tv-overlay .tv-writer [data-close]{background:transparent;color:var(--ds-ink);border-color:transparent}
+:root:root:root body #tv-overlay .tv-writer [data-close]:hover:enabled{background:var(--ds-wash);color:var(--ds-ink);border-color:transparent}
+:root:root:root body #tv-overlay .tv-close{background:rgba(17,17,17,.87);color:var(--ds-on-dark);border-color:rgba(241,239,233,.5)}
+:root:root:root body #tv-overlay .tv-close:hover{background:var(--ds-on-dark);color:var(--ds-ink)}
