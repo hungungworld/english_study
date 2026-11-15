@@ -793,3 +793,10 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body .word-fields .suggest{display:flex;flex-wrap:wrap;gap:var(--ds-sp-2)}
 :root:root:root body .word-fields .suggest:empty{display:none}
 :root:root:root body .word-fields .hint{margin:0}
+
+/* ---- "Add a word" nudge: pressing Post note with no words highlights the Add a word button with a ring that pulses outward twice (no shadow, no gradient), and shows one line of guidance. ---- */
+@keyframes ds-nudge{0%{outline:2px solid transparent;outline-offset:2px}35%{outline:2px solid var(--ds-ink);outline-offset:5px}100%{outline:2px solid transparent;outline-offset:12px}}
+:root:root:root body button.is-nudged{animation:ds-nudge 1.3s ease-out 2}
+@media (prefers-reduced-motion:reduce){:root:root:root body button.is-nudged{animation:none;outline:2px solid var(--ds-ink);outline-offset:4px}}
+:root:root:root body .hint.nudge{margin:0;color:var(--ds-ink);font-weight:500}
+:root:root:root body .hint.nudge[hidden]{display:none}

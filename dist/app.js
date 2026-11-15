@@ -601,6 +601,7 @@ function openEditor(standalone, post, source, host, kind) {
   ${canSwitch ? `<div class="tv-seg type-seg" role="group" aria-label="Post type"><button type="button" data-type="note" aria-pressed="${type === "note"}">Note</button><button type="button" data-type="post" aria-pressed="${type === "post"}">Post</button></div>` : ""}
   <div class="compose" data-compose></div>
   <div class="stack" data-words>${standalone ? wordFields({},false) : words.map(word => wordFields(word)).join("")}</div>
+  <p class="hint nudge" data-nudge role="status" hidden>Add the words you learned from this note. Tap “Add a word”, or press “Post note” again to post without words.</p>
   <div class="row"><button type="button" data-add-word><span class="ic plus" aria-hidden="true"></span>Add a word</button><button class="primary" type="submit"></button></div>
   <p class="form-error" id="${pre}-error" role="alert" hidden></p></form>`;
   if (!host) editor.setAttribute("aria-labelledby","editor-title");
@@ -609,6 +610,8 @@ function openEditor(standalone, post, source, host, kind) {
   const wordsBox = form.querySelector("[data-words]");
   const addWord = form.querySelector("[data-add-word]");
   const submit = form.querySelector('[type="submit"]');
+  const nudge = form.querySelector("[data-nudge]");
+  let nudged = false;
   form.elements.author.value = selected.author;
   const setGuest = () => {
     const guest = form.elements.author.value === "0";
@@ -705,6 +708,18 @@ function openEditor(standalone, post, source, host, kind) {
     if (entry.link && !safeLink(entry.link)) problems.push(["The reference link must start with https://.",[form.elements.link]]);
     if ([...entry.body].length > 12000) problems.push(["This is too long to save. Shorten it a little.",[form.elements.body ?? form.elements["field-0"]]]);
     if (problems.length) return showFormError(form,problems.map(problem => problem[0]).join(" "),problems.flatMap(problem => problem[1]).filter(Boolean));
+    // A new note without words: the first press points at "Add a word" (a short highlight and one line in English); the second press posts.
+    if (!standalone && type === "note" && !editing && !entry.words.length && !nudged) {
+      nudged = true;
+      nudge.hidden = false;
+      addWord.classList.remove("is-nudged");
+      void addWord.offsetWidth;
+      addWord.classList.add("is-nudged");
+      addWord.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+      addWord.focus({preventScroll:true});
+      setTimeout(() => addWord.classList.remove("is-nudged"),2800);
+      return;
+    }
     form.querySelector(".form-error").hidden = true;
     submit.disabled = true;
     try {
@@ -751,6 +766,8 @@ function formClick(event, container, close) {
   if (event.target.closest("[data-close]")) close();
   if (event.target.closest("[data-add-word]")) {
     const fields = container.querySelector("[data-words]");
+    const nudgeLine = container.querySelector("[data-nudge]");
+    if (nudgeLine) nudgeLine.hidden = true;
     if (fields.children.length >= 20) return flash("A note can have up to 20 words.");
     fields.insertAdjacentHTML("beforeend",wordFields());
     fields.lastElementChild.querySelector("input").focus();
