@@ -283,7 +283,15 @@ function announceRoute() {
   }
 }
 function render() {
-  const [page, key] = (location.hash.slice(1) || "home").split("/");
+  const [page, key, claimToken] = (location.hash.slice(1) || "home").split("/");
+  // A private link (#claim/<post>/<key>) lets this browser edit or delete that post, like the browser that wrote it.
+  if (page === "claim" && key && claimToken) {
+    own[key] = claimToken;
+    writeLocal("own",own);
+    location.replace("#post/" + key);
+    flash("You can edit this post from this browser now.");
+    return;
+  }
   // Old addresses keep working: 홈 -> 게시판, 퀴즈 -> 단어장 > 퀴즈, 뉴스/영상 -> 둘러보기 filters.
   const legacy = {study:"home",quiz:"words",news:"explore",videos:"explore"};
   if (legacy[page]) {
@@ -494,6 +502,10 @@ function openEditor(standalone, post, source, host, kind) {
   else if (editing && type === "note") values[SUBJECTS[subject].fields.find(field => field.required).label] = post.body;   // an old plain-text note
   let where = post ? boardKind(post) : kind === "chat" ? "chat" : "study";
   let pinned = editing && isPinned(post);
+  // A note with sections of its own (not one of the subject forms, e.g. a guide) is edited section by section so nothing is lost.
+  const formLabels = notes ? SUBJECTS[notes.subject].fields.map(field => field.label) : [];
+  const custom = Boolean(notes && notes.sections.some(item => !formLabels.includes(item.label)));
+  const customSections = custom ? notes.sections.map(item => ({...item})) : [];
   let title = post?.title ?? source?.title.slice(0,150) ?? "";
   let link = post?.link ?? source?.url ?? "";
   let bodyText = editing && type === "post" ? post.body : "";
@@ -526,7 +538,8 @@ function openEditor(standalone, post, source, host, kind) {
     if (form.elements.title) title = form.elements.title.value;
     if (form.elements.link) link = form.elements.link.value;
     if (type === "post" && form.elements.body) bodyText = form.elements.body.value;
-    if (type === "note") SUBJECTS[subject].fields.forEach((field,index) => {
+    if (type === "note" && custom) customSections.forEach((item,index) => { if (form.elements[`custom-${index}`]) item.text = form.elements[`custom-${index}`].value; });
+    else if (type === "note") SUBJECTS[subject].fields.forEach((field,index) => {
       const input = field.choices ? form.querySelector(`[name="field-${index}"]:checked`) : form.elements[`field-${index}`];
       if (input) values[field.label] = input.value;
     });
@@ -534,10 +547,15 @@ function openEditor(standalone, post, source, host, kind) {
   const paint = () => {
     if (!standalone) {
       if (type === "note") {
-        compose.innerHTML = `<label>Title<input name="title" required maxlength="150" value="${e(title)}"></label>
+        const pinRow = `<div class="pin-row"><button type="button" class="chip" data-pin aria-pressed="${pinned}">Pin to top</button><p class="hint">Keeps this note above the others on the Study board.</p></div>`;
+        compose.innerHTML = custom ? `<label>Title<input name="title" required maxlength="150" value="${e(title)}"></label>
+        <p class="hint">This note has its own sections. Edit them here.</p>
+        ${customSections.map((item,index) => `<label>${e(item.label || "Introduction")} (optional)<textarea name="custom-${index}" rows="3" maxlength="4000">${e(item.text)}</textarea></label>`).join("")}
+        <label>Reference link (optional)<input type="url" name="link" value="${e(link)}" maxlength="2000" placeholder="https://"></label>${pinRow}` :
+        `<label>Title<input name="title" required maxlength="150" value="${e(title)}"></label>
         ${subjectChips(subject)}<p class="hint">${e(SUBJECTS[subject].hint)}</p>
         ${SUBJECTS[subject].fields.map((field,index) => fieldHtml(field,index,values[field.label] ?? "")).join("")}
-        <label>Reference link (optional)<input type="url" name="link" value="${e(link)}" maxlength="2000" placeholder="https://"></label>`;
+        <label>Reference link (optional)<input type="url" name="link" value="${e(link)}" maxlength="2000" placeholder="https://"></label>${pinRow}`;
       } else {
         compose.innerHTML = `${where === "chat" ? "" : `<label>Title (optional)<input name="title" maxlength="150" value="${e(title)}"></label>`}
         <label>Message<textarea name="body" required maxlength="10000" rows="6" placeholder="Write anything…">${e(bodyText)}</textarea></label>
@@ -581,16 +599,17 @@ function openEditor(standalone, post, source, host, kind) {
     }));
     if (standalone) entry.words = wordEntries();
     else if (type === "note") {
-      const fields = SUBJECTS[subject].fields;
-      const sections = fields.map(field => ({label:field.label,text:String(values[field.label] ?? "").trim()}));
+      const fields = custom ? [] : SUBJECTS[subject].fields;
+      const sections = custom ? customSections.map(item => ({label:item.label,text:item.text.trim()})) : fields.map(field => ({label:field.label,text:String(values[field.label] ?? "").trim()}));
       const missing = [];
       const missingFields = [];
       if (!title.trim()) { missing.push("“Title”"); missingFields.push(form.elements.title); }
       fields.forEach((field,index) => {
         if (field.required && !sections[index].text) { missing.push(`“${field.label}”`); missingFields.push(form.elements[`field-${index}`]); }
       });
+      if (!sections.some(item => item.text)) { missing.push("at least one section"); }
       if (missing.length) problems.push([`Fill in ${joinList(missing)}.`,missingFields]);
-      entry = {...entry,title:title.trim(),body:notesPrefix + JSON.stringify({subject,sections:sections.filter(item => item.text)}),link:link.trim(),tag:subject,words:wordEntries()};
+      entry = {...entry,title:title.trim(),body:notesPrefix + JSON.stringify({subject,sections:sections.filter(item => item.text)}),link:link.trim(),tag:pinned ? "Pinned" : subject,words:wordEntries()};
     } else {
       const text = bodyText.trim();
       if (!text) problems.push(["Enter a message.",[form.elements.body]]);

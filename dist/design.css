@@ -733,7 +733,7 @@
 :root:root:root body .pin-row .hint{margin:0}
 
 /* Pin: a thumbtack tilted 35 degrees, straight lines and square ends like the other icons; sits before the title of a pinned post */
-:root:root:root body .ic.pin{width:var(--ds-fs-item);height:var(--ds-fs-item);margin:0 var(--ds-sp-2) 0 0;--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cg transform='rotate(35 8 8)'%3E%3Cpath d='M5 1.5h6M6 1.5v5L4 9.5h8L10 6.5v-5M8 9.5v5'/%3E%3C/g%3E%3C/svg%3E")}
+:root:root:root body .ic.pin{width:1em;height:1em;margin:0 .4em 0 0;vertical-align:-.1em;--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cg transform='rotate(35 8 8)'%3E%3Cpath d='M5 1.5h6M6 1.5v5L4 9.5h8L10 6.5v-5M8 9.5v5'/%3E%3C/g%3E%3C/svg%3E")}
 
 /* Edit / Delete row under the Cheer and Comment row: 16px apart */
 :root:root:root body .card .post-actions + .row{margin-top:var(--ds-sp-4)}
@@ -745,9 +745,13 @@
 :root:root:root body #editor :is(.type-seg button,.chip)[aria-pressed=true]{background:var(--ds-ink);color:var(--ds-paper);border-color:var(--ds-ink);font-weight:700}
 :root:root:root body #editor :is(.type-seg button,.chip):not([aria-pressed=true]):hover:enabled{background:var(--ds-wash);color:var(--ds-ink)}
 
-/* Search panel: a quiet line that says the list was loaded from BBC and how fresh it is (Caption size, muted on dark, 16px above the button) */
-:root:root:root body.media-mode .tv-sheet .tv-fresh{display:flex;align-items:center;gap:var(--ds-sp-2);margin:0 0 var(--ds-sp-4);font:400 var(--ds-fs-caption)/1.5 var(--ds-sans);color:var(--ds-on-dark-muted)}
+/* Search panel: the "Loaded from BBC · updated …" line sits under the title like a subtitle (UI size, muted on dark),
+   far from the chip scrollbar and the Show button; 16px below it before the search box. */
+:root:root:root body.media-mode .tv-sheet .dialog-head{align-items:flex-start;margin-bottom:var(--ds-sp-4)}
+:root:root:root body.media-mode .tv-sheet .dialog-title{min-width:0}
+:root:root:root body.media-mode .tv-sheet .tv-fresh{display:flex;align-items:center;gap:var(--ds-sp-2);margin:var(--ds-sp-1) 0 0;font:400 var(--ds-fs-ui)/1.5 var(--ds-sans);color:var(--ds-on-dark-muted)}
 :root:root:root body.media-mode .tv-sheet .tv-fresh:empty{display:none}
+:root:root:root body .tv-fresh .ic.check{width:var(--ds-fs-ui);height:var(--ds-fs-ui)}
 :root:root:root body .ic.check{width:var(--ds-fs-caption);height:var(--ds-fs-caption);margin:0;vertical-align:0;--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='square'%3E%3Cpath d='M3 8.5l3.2 3.2L13 4.8'/%3E%3C/svg%3E")}
 
 /* Horizontal chip rows (Search topics, Saved topics): a thin 4px line scrollbar, no arrows, square ends (paper on the dark panel, ink on paper pages).
@@ -764,4 +768,18 @@
   :root:root:root body :is(.tv-topics,.scrap-topics){scrollbar-width:thin}
   :root:root:root body.media-mode .tv-topics{scrollbar-color:var(--ds-paper) rgba(241,239,233,.2)}
   :root:root:root body.study-mode .scrap-topics{scrollbar-color:var(--ds-ink) var(--ds-line)}
+}
+
+/* Page and panel scrollbars: the same thin line as the chip rows, 6px wide on vertical scrollers (paper on dark scenes, ink on paper pages).
+   Firefox gets the standard thin scrollbar. */
+html::-webkit-scrollbar,#editor::-webkit-scrollbar,#tv-overlay::-webkit-scrollbar,.tv-writer::-webkit-scrollbar,.tv-sheet::-webkit-scrollbar,.pp-prefs::-webkit-scrollbar{width:6px;height:6px}
+html::-webkit-scrollbar-button,#editor::-webkit-scrollbar-button,#tv-overlay::-webkit-scrollbar-button,.tv-writer::-webkit-scrollbar-button,.tv-sheet::-webkit-scrollbar-button,.pp-prefs::-webkit-scrollbar-button{display:none;width:0;height:0}
+html::-webkit-scrollbar-track,#editor::-webkit-scrollbar-track,#tv-overlay::-webkit-scrollbar-track,.tv-writer::-webkit-scrollbar-track,.tv-sheet::-webkit-scrollbar-track,.pp-prefs::-webkit-scrollbar-track{border-radius:0;background:var(--ds-line)}
+html::-webkit-scrollbar-thumb,#editor::-webkit-scrollbar-thumb,#tv-overlay::-webkit-scrollbar-thumb,.tv-writer::-webkit-scrollbar-thumb,.tv-sheet::-webkit-scrollbar-thumb,.pp-prefs::-webkit-scrollbar-thumb{border-radius:0;background:var(--ds-ink)}
+html:has(body.media-mode)::-webkit-scrollbar-track,body.media-mode #tv-overlay::-webkit-scrollbar-track,body.media-mode .tv-sheet::-webkit-scrollbar-track{background:rgba(241,239,233,.2)}
+html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::-webkit-scrollbar-thumb,body.media-mode .tv-sheet::-webkit-scrollbar-thumb{background:var(--ds-paper)}
+@supports not selector(::-webkit-scrollbar){
+  html,#editor,#tv-overlay,.tv-writer,.tv-sheet,.pp-prefs{scrollbar-width:thin}
+  html,#editor,#tv-overlay,.tv-writer,.tv-sheet,.pp-prefs{scrollbar-color:var(--ds-ink) var(--ds-line)}
+  html:has(body.media-mode),body.media-mode #tv-overlay,body.media-mode .tv-sheet{scrollbar-color:var(--ds-paper) rgba(241,239,233,.2)}
 }

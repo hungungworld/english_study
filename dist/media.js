@@ -540,12 +540,11 @@ function freshText() {
 function sheetHtml() {
   const counts = topicCounts();
   return `<div class="tv-sheet" id="tv-sheet" role="dialog" aria-label="Search" ${sheetOpen ? "" : "hidden"}>
-    <div class="dialog-head"><h2>Search</h2><button type="button" data-sheet-toggle data-close aria-label="Close search">✕</button></div>
+    <div class="dialog-head"><div class="dialog-title"><h2>Search</h2><p class="tv-fresh" data-fresh>${freshText()}</p></div><button type="button" data-sheet-toggle data-close aria-label="Close search">✕</button></div>
     <form role="search" data-tv-search><input id="tv-q" type="search" name="q" placeholder="e.g. climate, AI" aria-keyshortcuts="/" autocomplete="off" enterkeyhint="search" aria-label="Search news and videos" maxlength="60"></form>
     <div class="tv-sheet-row"><div class="tv-seg" role="group" aria-label="Type">${typeControls()}</div><button type="button" class="tv-link" data-reset-filters>Reset</button></div>
     <div class="tv-topics" role="group" aria-label="Topics">${TOPICS.map(topic =>
       `<button type="button" class="tv-chip${counts[topic] ? "" : " is-zero"}" data-topic="${topic}" aria-pressed="${selectedTopics.has(topic)}">${topic}<small>${counts[topic]}</small></button>`).join("")}</div>
-    <p class="tv-fresh" data-fresh>${freshText()}</p>
     <button type="button" class="tv-apply" data-sheet-apply>${applyLabel()}</button>
   </div>`;
 }
