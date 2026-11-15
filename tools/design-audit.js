@@ -132,7 +132,7 @@
     for (const el of all.filter(e => e.matches('textarea'))) if (el.getBoundingClientRect().height < 111) add('control-height', el, 'textarea under 112px');
 
     // spacing: interactive neighbours must not touch or overlap
-    const inter = all.filter(e => e.matches('button,a[href],input:not([type=hidden]),select,textarea') && !inMedia(e) && !e.closest('.pp-vert'));
+    const inter = all.filter(e => e.matches('button,a[href],input:not([type=hidden]),select,textarea') && !inMedia(e) && !e.closest('.pp-vert,.sr-only'));
     for (let i = 0; i < inter.length; i++) for (let j = i + 1; j < inter.length; j++) {
       const a = inter[i], b = inter[j];
       if (a.contains(b) || b.contains(a)) continue;
@@ -144,6 +144,18 @@
       else if (dx < 0 && dy >= 0 && dy < SPEC.minGap - .5) { kind = 'vertical-gap'; gap = Math.round(dy); }
       else if (dy < 0 && dx >= 0 && dx < SPEC.minGap - .5) { kind = 'horizontal-gap'; gap = Math.round(dx); }
       if (kind) add('spacing-' + kind, a, 'with ' + desc(b) + ' = ' + gap + 'px (min ' + SPEC.minGap + ')');
+    }
+
+    // selected state: a pressed segment, chip or tab must look different from an unpressed sibling (DESIGN.md 10)
+    const looks = el => { const c = getComputedStyle(el); return [c.backgroundColor, c.color, c.fontWeight, c.borderBottomColor, c.borderBottomWidth, c.textDecorationLine].join('|'); };
+    for (const group of new Set(all.filter(e => e.matches('[aria-pressed=true]') && !inMedia(e)).map(e => e.parentElement))) {
+      const kids = [...group.children].filter(k => k.hasAttribute('aria-pressed'));
+      const on = kids.find(k => k.getAttribute('aria-pressed') === 'true'), off = kids.find(k => k.getAttribute('aria-pressed') === 'false');
+      if (on && off && looks(on) === looks(off)) add('selected-state', on, 'looks the same as an unselected sibling');
+    }
+    for (const input of all.filter(e => e.matches('.chip-radio input:checked'))) {
+      const label = input.closest('.chip-radio'), other = [...label.parentElement.querySelectorAll('.chip-radio input:not(:checked)')][0];
+      if (other && looks(input.nextElementSibling) === looks(other.nextElementSibling)) add('selected-state', input.nextElementSibling, 'checked chip looks the same as an unchecked one');
     }
 
     // text stacked right above a control: DESIGN.md 5 wants at least 16px between a line of text and the button, link-button or field under it

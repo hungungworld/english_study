@@ -724,3 +724,23 @@
 
 /* Item dialog: the BBC summary is shown in full, and there is always 16px between it and the buttons below (DESIGN.md 5) */
 :root:root:root body #tv-overlay .tv-detail-copy .tv-summary{margin:0 0 var(--ds-sp-4)}
+
+/* ---- Write: Note / Post (approved parts only: .tv-seg, chips, standard buttons) ---- */
+:root:root:root body .compose{display:contents}
+:root:root:root body .type-seg{margin:0 0 var(--ds-sp-4)}
+:root:root:root body .type-seg button[aria-pressed=true]{background:var(--ds-ink);color:var(--ds-paper);font-weight:700}
+:root:root:root body .pin-row{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ds-sp-2)}
+:root:root:root body .pin-row .hint{margin:0}
+
+/* Pushpin: drawn like the other icons; sits before the title of a pinned post */
+:root:root:root body .ic.pin{margin:0 var(--ds-sp-2) 0 0;--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.8 1.8l4.4 4.4-1.6.5-2.2 2.2.2 2.4-1.2 1.2L5.4 8.7 2 12.1l-.4-.4 3.4-3.4L2.6 5.9l1.2-1.2 2.4.2 2.2-2.2z'/%3E%3C/svg%3E")}
+
+/* Edit / Delete row under the Cheer and Comment row: 16px apart */
+:root:root:root body .card .post-actions + .row{margin-top:var(--ds-sp-4)}
+
+/* Selected state in the Write dialog: the pressed segment / chip is ink-filled. (`#editor button` rules in style.css are more specific, so these name #editor.) */
+:root:root:root body #editor .type-seg{border:1px solid var(--ds-line);overflow:hidden}
+:root:root:root body #editor .type-seg button{border:0;border-radius:0;background:transparent;color:var(--ds-ink)}
+:root:root:root body #editor .type-seg button + button{border-left:1px solid var(--ds-line)}
+:root:root:root body #editor :is(.type-seg button,.chip)[aria-pressed=true]{background:var(--ds-ink);color:var(--ds-paper);border-color:var(--ds-ink);font-weight:700}
+:root:root:root body #editor :is(.type-seg button,.chip):not([aria-pressed=true]):hover:enabled{background:var(--ds-wash);color:var(--ds-ink)}

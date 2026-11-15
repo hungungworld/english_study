@@ -100,22 +100,61 @@ function hero(title, description, button = "") {
   return `<section class="hero"><div><h1>${e(title)}</h1><p>${e(description)}</p></div>${button}</section>`;
 }
 function meta(item) {
-  return `<div class="meta"><span>${monogram(item)}${authorLink(item)}</span><time datetime="${e(item.created_at)}">${dateFormat.format(new Date(item.created_at))}</time>${item.tag ? `<span class="tag">${e(item.tag)}</span>` : ""}</div>`;
+  return `<div class="meta"><span>${monogram(item)}${authorLink(item)}</span><time datetime="${e(item.created_at)}">${dateFormat.format(new Date(item.created_at))}</time>${item.tag && item.tag !== "Pinned" ? `<span class="tag">${e(item.tag)}</span>` : ""}</div>`;
 }
-const notesPrefix = "study-notes:v1\n";
+// ---- Writing: a Note follows the form of its subject (one master list); a Post is plain text ----
+// To add a subject (Grammar, Writing ...) add one entry here. "required" fields must be filled; "quote" fields are shown as a quotation.
+const SUBJECTS = {
+  Article:{hint:"Read something? Capture what it says and what you think.",fields:[
+    {label:"Summary",hint:"Sum up what this article is about.",required:true,rows:3},
+    {label:"My thoughts",hint:"What you learned or what you think.",required:true,rows:3},
+    {label:"Key sentence",hint:"Your key English sentence",quote:true,lang:"en"}]},
+  Video:{hint:"Watched something? Capture the main idea and a line to steal.",fields:[
+    {label:"Summary",hint:"What is the video about?",required:true,rows:3},
+    {label:"My thoughts",hint:"What stayed with you?",required:true,rows:3},
+    {label:"Key sentence",hint:"A line you want to say yourself",quote:true,lang:"en"}]},
+  TOEIC:{hint:"Studying for the test? Record the question and why you missed it.",fields:[
+    {label:"Part",choices:["Part 1","Part 2","Part 3","Part 4","Part 5","Part 6","Part 7"]},
+    {label:"What I got wrong",hint:"Paste the question or describe it.",required:true,rows:3},
+    {label:"Why",hint:"Why did you choose the wrong answer?",required:true,rows:3},
+    {label:"Rule to remember",hint:"The rule in one line",quote:true},
+    {label:"Example",hint:"A new example sentence",lang:"en"}]},
+  Speaking:{hint:"Practised speaking? Keep what you said and how to say it better.",fields:[
+    {label:"Topic",hint:"What was the topic?",required:true},
+    {label:"My answer",hint:"What you said, or the script",required:true,rows:3},
+    {label:"Better phrases",hint:"Phrases you want to use next time",quote:true,rows:2,lang:"en"},
+    {label:"Next time",hint:"One thing to improve"}]},
+  Other:{hint:"Anything else. One box, no required sections.",fields:[
+    {label:"Notes",hint:"Write anything…",required:true,rows:6}]}
+};
+const SUBJECT_NAMES = Object.keys(SUBJECTS);
+const notesPrefix = "study-notes:v2\n";
+const notesPrefixV1 = "study-notes:v1\n";
+// Returns {subject, sections:[{label,text}]}; the first version (summary / reflection / sentence) is read as an Article note.
 function readNotes(body = "") {
-  if (body.startsWith(notesPrefix)) {
-    try {
-      const notes = JSON.parse(body.slice(notesPrefix.length));
-      if ([notes?.summary,notes?.reflection,notes?.sentence].every(value => typeof value === "string")) return notes;
-    } catch { /* Display the saved text if it cannot be decoded. */ }
-  }
+  try {
+    if (body.startsWith(notesPrefix)) {
+      const data = JSON.parse(body.slice(notesPrefix.length));
+      if (Array.isArray(data?.sections) && data.sections.every(item => typeof item?.label === "string" && typeof item?.text === "string"))
+        return {subject:SUBJECTS[data.subject] ? data.subject : "Other",sections:data.sections};
+    } else if (body.startsWith(notesPrefixV1)) {
+      const old = JSON.parse(body.slice(notesPrefixV1.length));
+      if ([old?.summary,old?.reflection,old?.sentence].every(value => typeof value === "string"))
+        return {subject:"Article",sections:[["Summary",old.summary],["My thoughts",old.reflection],["Key sentence",old.sentence]].filter(([,text]) => text).map(([label,text]) => ({label,text}))};
+    }
+  } catch { /* Display the saved text if it cannot be decoded. */ }
   return null;
 }
+const isQuote = (subject, label) => Boolean(SUBJECTS[subject]?.fields.find(field => field.label === label)?.quote);
+const isPinned = post => post.tag === "Pinned";
+// A Note has a saved form (or, for old plain-text notes, a subject tag); everything else is a Post.
+const isNote = post => Boolean(readNotes(post.body)) || SUBJECT_NAMES.includes(post.tag);
+const pinFirst = list => [...list.filter(isPinned),...list.filter(post => !isPinned(post))];
+const pinIcon = '<span class="ic pin" role="img" aria-label="Pinned"></span>';
 function postCard(post, index) {
   const notes = readNotes(post.body);
-  const preview = notes ? notes.summary || notes.reflection || notes.sentence : post.body;
-  return `<article class="card post-preview" style="--post-delay:${Math.min(index,8)*45}ms"><h2><a href="#post/${e(post.id)}">${e(post.title)}</a></h2>${meta(post)}<p class="snippet">${e(preview)}</p>${postActions(post)}</article>`;
+  const preview = notes ? notes.sections[0]?.text ?? "" : post.body;
+  return `<article class="card post-preview" style="--post-delay:${Math.min(index,8)*45}ms"><h2>${isPinned(post) ? pinIcon : ""}<a href="#post/${e(post.id)}">${e(post.title)}</a></h2>${meta(post)}<p class="snippet">${e(preview)}</p>${postActions(post)}</article>`;
 }
 function wordCard(word, level = 2, noteLink = true) {
   return `<article class="card"><h${level}>${e(word.term)}</h${level}><p>${e(word.meaning)}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}<div class="meta">${authorLink(word)}${noteLink && word.post_id ? `<a href="#post/${e(word.post_id)}">View note</a>` : ""}</div></article>`;
@@ -142,11 +181,6 @@ function commentsSection(post) {
 const writerName = post => e(author(post ?? {author:readLocal("active-member",0),author_name:""}));
 const monogram = item => item.author ? `<span class="mono" aria-hidden="true">${item.author}</span>` : "";
 const MONTHS = ["Jan.","Feb.","Mar.","Apr.","May","Jun.","Jul.","Aug.","Sep.","Oct.","Nov.","Dec."];
-const TAGS = ["Article","Video","TOEIC","Speaking","Other"];
-function tagOptions(current = "") {
-  const list = current && !TAGS.includes(current) ? [...TAGS,current] : TAGS;
-  return `<fieldset class="tag-options"><legend>Tag (optional)</legend>${["",...list].map(tag => `<label class="chip-radio"><input type="radio" name="tag" value="${e(tag)}" ${tag === current ? "checked" : ""}><span>${tag ? e(tag) : "None"}</span></label>`).join("")}</fieldset>`;
-}
 const hearts = count => `<span class="hearts" role="img" aria-label="${count} hearts">${Array.from({length:MAX_HEARTS},(_,i) => `<span class="ic heart${i < count ? "" : " off"}" aria-hidden="true"></span>`).join("")}</span>`;
 const weekdays = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 function studyPanel() {
@@ -322,7 +356,8 @@ function posterPage({title,sub,action = "",label = "Info and filters",bottom,bod
 }
 function renderBoard(chat) {
   const kind = chat ? "chat" : "study";
-  const posts = sorted(board.posts.filter(post => boardKind(post) === kind && (!labMember || post.author === labMember)));
+  const found = sorted(board.posts.filter(post => boardKind(post) === kind && (!labMember || post.author === labMember)));
+  const posts = chat ? found : pinFirst(found);
   const shown = paged("feed",posts);
   const weekCount = which => inPeriod(board.posts.filter(post => boardKind(post) === which),"week").length;
   const write = chat ? '<button type="button" class="primary" data-new-chat><span class="ic plus" aria-hidden="true"></span>Write</button>' : '<button type="button" class="primary" data-new-note><span class="ic plus" aria-hidden="true"></span>Write</button>';
@@ -357,13 +392,9 @@ function renderPost(id) {
   const words = board.words.filter(word => word.post_id === id);
   const link = safeLink(post.link);
   const notes = readNotes(post.body);
-  const body = notes ? `<div class="study-notes">
-    ${notes.summary ? `<section><h2>Summary</h2><p class="prose">${e(notes.summary)}</p></section>` : ""}
-    ${notes.reflection ? `<section><h2>My thoughts</h2><p class="prose">${e(notes.reflection)}</p></section>` : ""}
-    ${notes.sentence ? `<section><h2>Key sentence</h2><blockquote lang="en">${e(notes.sentence)}</blockquote></section>` : ""}
-  </div>` : `<div class="prose"><p>${e(post.body)}</p></div>`;
+  const body = notes ? `<div class="study-notes">${notes.sections.map(item => `<section><h2>${e(item.label)}</h2>${isQuote(notes.subject,item.label) ? `<blockquote lang="en">${e(item.text)}</blockquote>` : `<p class="prose">${e(item.text)}</p>`}</section>`).join("")}</div>` : `<div class="prose"><p>${e(post.body)}</p></div>`;
   const chatPost = boardKind(post) === "chat";
-  return `<a class="back" href="${chatPost ? "#feed/chat" : "#feed"}"><span class="ar l" aria-hidden="true"></span>${chatPost ? "Free board" : "Study board"}</a><article class="card">${chatPost ? "" : `<h1>${e(post.title)}</h1>`}${meta(post)}${body}
+  return `<a class="back" href="${chatPost ? "#feed/chat" : "#feed"}"><span class="ar l" aria-hidden="true"></span>${chatPost ? "Free board" : "Study board"}</a><article class="card">${chatPost ? "" : `<h1>${isPinned(post) ? pinIcon : ""}${e(post.title)}</h1>`}${meta(post)}${body}
   <div class="post-actions">${reactionButton(post,true)}<a class="comment-link" href="#post/${e(post.id)}/comment"><span class="ic chat" aria-hidden="true"></span>Comment · ${commentCount(post)}</a></div>
   ${link ? `<p><a class="back" href="${e(link)}" target="_blank" rel="noopener noreferrer">Reference link<span class="ar ne" aria-hidden="true"></span></a></p>` : ""}
   ${own[id] ? '<div class="row"><button data-edit>Edit</button><button data-delete>Delete</button></div>' : ""}</article>
@@ -431,82 +462,57 @@ function clearInvalid(event) {
 }
 const authorOptions = post => members.map((name,index) => name ? `<option value="${index+1}">${e(name)}</option>` : "").join("") + (post?.author === 0 ? '<option value="0">Other</option>' : "");
 // 사담·응원: a short plain message with no title, words or link.
-function openChatEditor(post) {
-  const selected = post ?? {author:readLocal("active-member",0),author_name:""};
-  editorChanged = false;
-  editor.innerHTML = `<div class="dialog-head"><h2 id="editor-title">${post ? "Edit post" : "Write"}</h2><button type="button" data-close aria-label="Close">✕</button></div>
-  <form novalidate><p class="hint">Author · <strong>${writerName(post)}</strong></p><label class="sr-only">Author<select name="author" disabled>${authorOptions(post)}</select></label>
-  <label data-guest>Display name<input name="author_name" maxlength="40" value="${e(selected.author_name)}"></label>
-  <label>Message<textarea name="body" required maxlength="1000" rows="6" placeholder="Today’s story, a cheer, a chat — anything goes.">${e(post?.body ?? "")}</textarea></label>
-  <div class="row"><button class="primary" type="submit">${post ? "Save changes" : "Post"}</button></div>
-  <p class="form-error" id="editor-error" role="alert" hidden></p></form>`;
-  editor.setAttribute("aria-labelledby","editor-title");
-  const form = editor.querySelector("form");
-  form.elements.author.value = selected.author;
-  const setGuest = () => {
-    const guest = form.elements.author.value === "0";
-    form.querySelector("[data-guest]").hidden = !guest;
-    form.elements.author_name.required = guest;
-  };
-  setGuest();
-  form.oninput = event => { editorChanged = true; clearInvalid(event); };
-  form.onsubmit = async event => {
-    event.preventDefault();
-    const text = String(form.elements.body.value).trim();
-    const guestName = String(form.elements.author_name.value).trim();
-    const submit = form.querySelector('[type="submit"]');
-    if (selected.author === 0 && !guestName) return showFormError(form,"Enter a display name.",[form.elements.author_name]);
-    if (!text) return showFormError(form,"Enter a message.",[form.elements.body]);
-    form.querySelector(".form-error").hidden = true;
-    const entry = {author:selected.author,author_name:selected.author === 0 ? guestName : "",
-      title:[...text.replace(/\s+/g," ")].slice(0,40).join(""),body:text,link:"",tag:"",board:"chat",words:[]};
-    submit.disabled = true;
-    try {
-      const token = post ? own[post.id] : crypto.randomUUID() + crypto.randomUUID();
-      const id = await saveEntry(entry,token,post?.id);
-      if (id) {
-        own[id] = token;
-        writeLocal("own",own);
-      }
-      editorChanged = false;
-      editor.close();
-      await refresh();
-      location.hash = "feed/chat";
-      flash("Posted.");
-    } catch (failure) {
-      showFormError(form,failure.message);
-    } finally { submit.disabled = false; }
-  };
-  editor.showModal();
-  form.elements.body.focus();
-}
+// ---- Write: Note (the form follows its subject) or Post (plain text, optionally pinned) ----
+const fieldHtml = (field, index, value = "") => {
+  const name = `field-${index}`;
+  const optional = field.required ? "" : " (optional)";
+  if (field.choices) return `<fieldset class="tag-options"><legend>${e(field.label)}${optional}</legend>${["",...field.choices].map(choice => `<label class="chip-radio"><input type="radio" name="${name}" value="${e(choice)}" ${choice === value ? "checked" : ""}><span>${choice ? e(choice) : "None"}</span></label>`).join("")}</fieldset>`;
+  const attrs = `name="${name}" maxlength="4000" placeholder="${e(field.hint ?? "")}"${field.lang ? ` lang="${field.lang}"` : ""}`;
+  return field.rows ? `<label>${e(field.label)}${optional}<textarea ${attrs} rows="${field.rows}">${e(value)}</textarea></label>` :
+    `<label>${e(field.label)}${optional}<input ${attrs} value="${e(value)}"></label>`;
+};
+const subjectChips = current => `<fieldset class="tag-options"><legend>What did you study?</legend>${SUBJECT_NAMES.map(name => `<label class="chip-radio"><input type="radio" name="subject" value="${e(name)}" ${name === current ? "checked" : ""}><span>${e(name)}</span></label>`).join("")}</fieldset>`;
+const whereChips = current => `<fieldset class="tag-options"><legend>Where</legend>${[["study","Study board"],["chat","Free board"]].map(([value,label]) => `<label class="chip-radio"><input type="radio" name="where" value="${value}" ${value === current ? "checked" : ""}><span>${label}</span></label>`).join("")}</fieldset>`;
+const joinList = items => items.length > 1 ? `${items.slice(0,-1).join(", ")} and ${items.at(-1)}` : items[0];
+
 function openEditor(standalone, post, source, host, kind) {
   if (!post && !members[readLocal("active-member",0) - 1]) {
     chooseMember(() => openEditor(standalone,post,source,host,kind));
     return;
   }
-  if ((post?.board ?? kind) === "chat") return openChatEditor(post);
   const pre = host ? "writer" : "editor";
-  const notes = readNotes(post?.body) ?? {summary:post?.body ?? "",reflection:"",sentence:""};
-  const selected = post ?? {author:readLocal("active-member",0),author_name:""};
-  const words = post ? board.words.filter(word => word.post_id === post.id) : [];
-  editorChanged = false;
   const target = host ?? editor;
-  const heading = standalone ? "Add a word" : post ? "Edit note" : source ? "Write about this item" : "Write";
+  const selected = post ?? {author:readLocal("active-member",0),author_name:""};
+  const editing = Boolean(post);
+  const words = editing && !standalone ? board.words.filter(word => word.post_id === post.id) : [];
+  const notes = editing ? readNotes(post.body) : null;
+  let type = post ? (isNote(post) ? "note" : "post") : source ? "note" : kind === "chat" ? "post" : "note";
+  const canSwitch = !standalone && !editing && !source;
+  let subject = notes?.subject ?? (SUBJECT_NAMES.includes(post?.tag) ? post.tag : source?.type === "video" ? "Video" : "Article");
+  const values = {};
+  if (notes) for (const item of notes.sections) values[item.label] = item.text;
+  else if (editing && type === "note") values[SUBJECTS[subject].fields.find(field => field.required).label] = post.body;   // an old plain-text note
+  let where = post ? boardKind(post) : kind === "chat" ? "chat" : "study";
+  let pinned = editing && isPinned(post);
+  let title = post?.title ?? source?.title.slice(0,150) ?? "";
+  let link = post?.link ?? source?.url ?? "";
+  let bodyText = editing && type === "post" ? post.body : "";
+  editorChanged = false;
+  const heading = standalone ? "Add a word" : editing ? (type === "note" ? "Edit note" : "Edit post") : source ? "Write about this item" : "Write";
   target.innerHTML = `<div class="dialog-head"><h2 id="${pre}-title">${heading}</h2><button type="button" data-close aria-label="Close">✕</button></div>
   <form novalidate><p class="hint">Author · <strong>${writerName(post)}</strong></p><label class="sr-only">Author<select name="author" disabled>${authorOptions(post)}</select></label>
   <label data-guest>Display name<input name="author_name" maxlength="40" value="${e(selected.author_name)}"></label>
-  ${standalone ? "" : `<label>Title<input name="title" required maxlength="150" value="${e(post?.title ?? source?.title.slice(0,150))}"></label>
-  <label>Summary<textarea name="summary" required maxlength="12000" rows="3" placeholder="Sum up what this item is about.">${e(notes.summary)}</textarea></label>
-  <label>My thoughts<textarea name="reflection" maxlength="4000" rows="3" placeholder="What you learned or what you think.">${e(notes.reflection)}</textarea></label>
-  <label>Key sentence<input name="sentence" lang="en" maxlength="500" value="${e(notes.sentence)}" placeholder="Your key English sentence"></label>
-  <label>Reference link (optional)<input type="url" name="link" value="${e(post?.link ?? source?.url)}" maxlength="2000" placeholder="https://"></label>
-  ${tagOptions(post?.tag ?? (source ? source.type === "video" ? "Video" : "Article" : ""))}`}
+  ${canSwitch ? `<div class="tv-seg type-seg" role="group" aria-label="Post type"><button type="button" data-type="note" aria-pressed="${type === "note"}">Note</button><button type="button" data-type="post" aria-pressed="${type === "post"}">Post</button></div>` : ""}
+  <div class="compose" data-compose></div>
   <div class="stack" data-words>${standalone ? wordFields({},false) : words.map(word => wordFields(word)).join("")}</div>
-  <div class="row">${standalone ? "" : '<button type="button" data-add-word><span class="ic plus" aria-hidden="true"></span>Add a word</button>'}<button class="primary" type="submit">${standalone ? "Add" : post ? "Save changes" : "Post note"}</button></div>
+  <div class="row"><button type="button" data-add-word><span class="ic plus" aria-hidden="true"></span>Add a word</button><button class="primary" type="submit"></button></div>
   <p class="form-error" id="${pre}-error" role="alert" hidden></p></form>`;
   if (!host) editor.setAttribute("aria-labelledby","editor-title");
   const form = target.querySelector("form");
+  const compose = form.querySelector("[data-compose]");
+  const wordsBox = form.querySelector("[data-words]");
+  const addWord = form.querySelector("[data-add-word]");
+  const submit = form.querySelector('[type="submit"]');
   form.elements.author.value = selected.author;
   const setGuest = () => {
     const guest = form.elements.author.value === "0";
@@ -514,41 +520,92 @@ function openEditor(standalone, post, source, host, kind) {
     form.elements.author_name.required = guest;
   };
   setGuest();
-  form.oninput = event => { editorChanged = true; clearInvalid(event); };
-  form.elements.author.onchange = setGuest;
+  // Keep what has been typed when the type, subject or board changes.
+  const capture = () => {
+    if (standalone) return;
+    if (form.elements.title) title = form.elements.title.value;
+    if (form.elements.link) link = form.elements.link.value;
+    if (type === "post" && form.elements.body) bodyText = form.elements.body.value;
+    if (type === "note") SUBJECTS[subject].fields.forEach((field,index) => {
+      const input = field.choices ? form.querySelector(`[name="field-${index}"]:checked`) : form.elements[`field-${index}`];
+      if (input) values[field.label] = input.value;
+    });
+  };
+  const paint = () => {
+    if (!standalone) {
+      if (type === "note") {
+        compose.innerHTML = `<label>Title<input name="title" required maxlength="150" value="${e(title)}"></label>
+        ${subjectChips(subject)}<p class="hint">${e(SUBJECTS[subject].hint)}</p>
+        ${SUBJECTS[subject].fields.map((field,index) => fieldHtml(field,index,values[field.label] ?? "")).join("")}
+        <label>Reference link (optional)<input type="url" name="link" value="${e(link)}" maxlength="2000" placeholder="https://"></label>`;
+      } else {
+        compose.innerHTML = `${where === "chat" ? "" : `<label>Title (optional)<input name="title" maxlength="150" value="${e(title)}"></label>`}
+        <label>Message<textarea name="body" required maxlength="10000" rows="6" placeholder="Write anything…">${e(bodyText)}</textarea></label>
+        <label>Link (optional)<input type="url" name="link" value="${e(link)}" maxlength="2000" placeholder="https://"></label>
+        ${editing ? "" : whereChips(where)}
+        ${where === "chat" ? "" : `<div class="pin-row"><button type="button" class="chip" data-pin aria-pressed="${pinned}">Pin to top</button><p class="hint">Keeps this post above the others on the Study board.</p></div>`}`;
+      }
+    }
+    wordsBox.hidden = !standalone && type !== "note";
+    addWord.hidden = standalone || type !== "note";
+    submit.textContent = standalone ? "Add" : editing ? "Save changes" : type === "note" ? "Post note" : "Post";
+  };
+  paint();
+  form.addEventListener("input",event => { capture(); editorChanged = true; clearInvalid(event); });
+  form.addEventListener("change",event => {
+    const input = event.target;
+    if (input.name === "subject") { capture(); subject = input.value; paint(); }
+    if (input.name === "where") { capture(); where = input.value; paint(); }
+  });
+  form.addEventListener("click",event => {
+    const typeButton = event.target.closest("[data-type]");
+    if (typeButton) {
+      capture();
+      type = typeButton.dataset.type;
+      form.querySelectorAll("[data-type]").forEach(button => button.setAttribute("aria-pressed",button === typeButton));
+      paint();
+    }
+    const pin = event.target.closest("[data-pin]");
+    if (pin) { pinned = !pinned; pin.setAttribute("aria-pressed",pinned); editorChanged = true; }
+  });
   form.onsubmit = async event => {
     event.preventDefault();
-    const formData = new FormData(form);
-    const get = key => String(formData.get(key) ?? "").trim();
-    const summary = get("summary");
-    const reflection = get("reflection");
-    const sentence = get("sentence");
-    const legacyUnchanged = post && !readNotes(post.body) && summary === post.body.trim() && !reflection && !sentence;
-    const body = standalone ? "" : legacyUnchanged ? post.body : notesPrefix + JSON.stringify({summary,reflection,sentence});
-    const entry = {author:selected.author,author_name:selected.author === 0 ? get("author_name") : "",
-      title:get("title"),body,link:get("link"),tag:get("tag"),
-      words:[...form.querySelectorAll("fieldset")].map(field => ({
-        id:field.dataset.wordId,term:field.querySelector('[name="term"]').value.trim(),
-        meaning:field.querySelector('[name="meaning"]').value.trim(),example:field.querySelector('[name="example"]').value.trim()
-      }))};
-    const submit = form.querySelector('[type="submit"]');
+    capture();
+    const guestName = String(form.elements.author_name.value).trim();
     const problems = [];
-    if (selected.author === 0 && !entry.author_name) problems.push(["Enter a display name.",[form.elements.author_name]]);
-    if (!standalone) {
-      const missing = [!entry.title && form.elements.title,!summary && form.elements.summary].filter(Boolean);
-      if (missing.length === 2) problems.push(["Enter a title and summary.",missing]);
-      else if (!entry.title) problems.push(["Enter a title.",[form.elements.title]]);
-      else if (!summary) problems.push(["Enter a summary.",[form.elements.summary]]);
+    if (selected.author === 0 && !guestName) problems.push(["Enter a display name.",[form.elements.author_name]]);
+    let entry = {author:selected.author,author_name:selected.author === 0 ? guestName : "",title:"",body:"",link:"",tag:"",board:"study",words:[]};
+    const wordEntries = () => [...form.querySelectorAll("[data-words] fieldset")].map(field => ({
+      id:field.dataset.wordId,term:field.querySelector('[name="term"]').value.trim(),
+      meaning:field.querySelector('[name="meaning"]').value.trim(),example:field.querySelector('[name="example"]').value.trim()
+    }));
+    if (standalone) entry.words = wordEntries();
+    else if (type === "note") {
+      const fields = SUBJECTS[subject].fields;
+      const sections = fields.map(field => ({label:field.label,text:String(values[field.label] ?? "").trim()}));
+      const missing = [];
+      const missingFields = [];
+      if (!title.trim()) { missing.push("“Title”"); missingFields.push(form.elements.title); }
+      fields.forEach((field,index) => {
+        if (field.required && !sections[index].text) { missing.push(`“${field.label}”`); missingFields.push(form.elements[`field-${index}`]); }
+      });
+      if (missing.length) problems.push([`Fill in ${joinList(missing)}.`,missingFields]);
+      entry = {...entry,title:title.trim(),body:notesPrefix + JSON.stringify({subject,sections:sections.filter(item => item.text)}),link:link.trim(),tag:subject,words:wordEntries()};
+    } else {
+      const text = bodyText.trim();
+      if (!text) problems.push(["Enter a message.",[form.elements.body]]);
+      const derived = [...text.replace(/\s+/g," ")].slice(0,40).join("");
+      entry = {...entry,title:where === "chat" ? derived : title.trim() || derived,body:text,link:link.trim(),tag:where === "study" && pinned ? "Pinned" : "",board:where};
     }
-    const incomplete = [...form.querySelectorAll("fieldset")].flatMap(field => [field.querySelector('[name="term"]'),field.querySelector('[name="meaning"]')]).filter(input => !input.value.trim());
+    const incomplete = [...form.querySelectorAll("[data-words] fieldset")].flatMap(field => [field.querySelector('[name="term"]'),field.querySelector('[name="meaning"]')]).filter(input => !input.value.trim()).filter(() => standalone || type === "note");
     if (incomplete.length) problems.push(["Enter both the word and its meaning.",incomplete]);
     if (entry.link && !safeLink(entry.link)) problems.push(["The reference link must start with https://.",[form.elements.link]]);
-    if ([...body].length > 12000) problems.push(["This is too long to save. Shorten the summary a little.",[form.elements.summary]]);
-    if (problems.length) return showFormError(form,problems.map(problem => problem[0]).join(" "),problems.flatMap(problem => problem[1]));
+    if ([...entry.body].length > 12000) problems.push(["This is too long to save. Shorten it a little.",[form.elements.body ?? form.elements["field-0"]]]);
+    if (problems.length) return showFormError(form,problems.map(problem => problem[0]).join(" "),problems.flatMap(problem => problem[1]).filter(Boolean));
     form.querySelector(".form-error").hidden = true;
     submit.disabled = true;
     try {
-      const token = post ? own[post.id] : crypto.randomUUID() + crypto.randomUUID();
+      const token = editing ? own[post.id] : crypto.randomUUID() + crypto.randomUUID();
       const id = await saveEntry(entry,token,post?.id);
       if (id) {
         own[id] = token;
@@ -569,16 +626,17 @@ function openEditor(standalone, post, source, host, kind) {
       editor.close();
       if (standalone) { period = "all"; wordMember = 0; }
       await refresh();
-      studied();
-      location.hash = standalone ? "words/list" : "post/" + id;
-      flash("Saved.");
+      if (standalone || type === "note") studied();
+      location.hash = standalone ? "words/list" : entry.board === "chat" ? "feed/chat" : "post/" + id;
+      flash(!standalone && type === "post" ? "Posted." : "Saved.");
     } catch (failure) {
       showFormError(form,failure.message);
     } finally { submit.disabled = false; }
   };
+  form.elements.author.onchange = setGuest;
   if (!host) {
     editor.showModal();
-    (form.querySelector('[name="title"]') ?? form.querySelector('[name="term"]'))?.focus();
+    (form.elements.title ?? form.elements.body ?? form.querySelector('[name="term"]'))?.focus();
   }
 }
 function closeEditor() {
