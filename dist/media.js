@@ -348,7 +348,8 @@ function paint() {
   const controls = Object.entries(filters).filter(([id]) => id !== "scraps").map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
   const keepSearchFocus = document.activeElement?.id === "tv-q";
   const caret = keepSearchFocus ? document.activeElement.selectionStart : 0;
-  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "Videos & articles" : filters[section] ?? "Explore"}</h1></div>
+  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "Videos & articles" : filters[section] ?? "Explore"}</h1>${!section ? `<button type="button" class="tv-about-btn" data-about-toggle aria-expanded="${aboutOpen}" aria-controls="tv-about" aria-label="About this list">i</button>` : ""}</div>
+    ${!section ? aboutHtml() : ""}
     ${section === "home" ? `<nav class="tv-filters home-tv-tabs" aria-label="Videos and articles">${controls}</nav>` : ""}
     ${!section ? `<div class="tv-summary" data-summary>${summaryHtml()}</div>` : ""}
     ${!section ? sheetHtml() + dockHtml() + '<div class="sr-only" role="status" aria-live="polite" data-results-live></div>' : ""}
@@ -453,6 +454,28 @@ overlay.addEventListener("close",() => {
 export const TOPICS = ["AI & Tech","Economy & Finance","Trade","Energy & Climate","Health & Bio","Food & Beauty","Education","Culture & Entertainment","Politics & World","Society & Life"];
 const selectedTopics = new Set();
 let sheetOpen = false;
+let aboutOpen = false;
+const spanOf = list => {
+  const times = list.map(item => Date.parse(item.date)).filter(Number.isFinite).sort((a,b) => a - b);
+  return times.length ? `${dateFormat.format(new Date(times[0]))} – ${dateFormat.format(new Date(times.at(-1)))}` : "";
+};
+// Where the list comes from, how far back it goes, and how long it is kept.
+function aboutHtml() {
+  const loaded = (list,word) => list.length ? `${list.length} ${word}${list.length === 1 ? "" : "s"} loaded, ${spanOf(list)}. ` : "";
+  return `<div class="tv-about" id="tv-about" role="region" aria-label="About this list" ${aboutOpen ? "" : "hidden"}><h2>About this list</h2><dl>
+    <dt>Articles</dt><dd>${loaded(news,"article")}BBC World News feed, newest first. BBC keeps only about the last 2 days, so older articles drop off.</dd>
+    <dt>Videos</dt><dd>${loaded(videos,"video")}BBC Learning English on YouTube, newest first. Older videos load as you scroll in Video.</dd>
+    <dt>Search</dt><dd>Looks through BBC’s section feeds, about 280 recent articles going back a couple of months.</dd>
+    <dt>Updated</dt><dd>About every 5 minutes. We don’t store articles. Items you save stay in this browser.</dd></dl></div>`;
+}
+function setAbout(open) {
+  aboutOpen = open;
+  const home = feed?.querySelector(".tv-home");
+  if (!home) return;
+  const panel = home.querySelector("#tv-about");
+  if (panel) panel.hidden = !open;
+  home.querySelector("[data-about-toggle]")?.setAttribute("aria-expanded",open);
+}
 let listView = false;
 let searchQuery = "";
 let searchNews = [];
@@ -578,6 +601,7 @@ function refreshLanding() {
 }
 function setSheet(open) {
   sheetOpen = open;
+  if (open && aboutOpen) setAbout(false);
   const home = feed?.querySelector(".tv-home");
   if (!home) return;
   home.querySelector("#tv-sheet").hidden = !open;
@@ -636,6 +660,10 @@ function landingClick(data) {
     listView = data.viewMode === "list";
     paint();
   }
+  if ("aboutToggle" in data) {
+    if (!aboutOpen && sheetOpen) setSheet(false);
+    setAbout(!aboutOpen);
+  }
   if ("sheetToggle" in data) setSheet(!sheetOpen);
   if ("sheetApply" in data) setSheet(false);
   if (data.topic) {
@@ -676,6 +704,9 @@ document.addEventListener("keydown",event => {
       event.target.value = "";
       searchQuery = "";
       filtersChanged();
+    } else if (aboutOpen && !overlay.open) {
+      setAbout(false);
+      feed.querySelector("[data-about-toggle]")?.focus();
     } else if (sheetOpen && !overlay.open) {
       setSheet(false);
       feed.querySelector(".tv-explore")?.focus();
@@ -689,6 +720,7 @@ document.addEventListener("keydown",event => {
   }
 });
 document.addEventListener("pointerdown",event => {
+  if (aboutOpen && feed?.isConnected && !section && !event.target.closest(".tv-about,.tv-about-btn")) setAbout(false);
   if (sheetOpen && feed?.isConnected && !section && !event.target.closest(".tv-sheet,.tv-dock")) setSheet(false);
 },true);
 // Dim the dock and summary while the pointer is idle so the globe stays the main thing.

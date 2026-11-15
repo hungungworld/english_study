@@ -18,7 +18,7 @@
       ['.tabs a,.tv-seg button', 40, 1],
       ['.tabs button,.filters-right select,[data-board-author]', 32, 1],
       ['.pr-group a,.pr-group button', 32, 1],
-      ['.hero > button,.pr-head > button', 36, 1],
+      ['.hero > button,.pr-head > button,.tv-about-btn', 36, 1],
       ['.chip,.tv-chip', 36, 1],
       ['nav.pager button', 44, 1],
       ['a.home-primary,button.home-ghost', 44, 1],

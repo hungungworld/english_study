@@ -564,3 +564,15 @@
 /* 내 스크랩 포스터 페이지: 검색칸·카드 목록 간격 */
 :root:root:root body .poster-page .pr-body > #scrap-q{width:100%;max-width:var(--ds-sp-8);min-width:240px;margin-bottom:var(--ds-sp-5)}
 :root:root:root body .poster-page .pr-body > .tv-grid{margin-top:0}
+
+/* ---- Explore: "About this list" button (36px, next to the title) and its panel ---- */
+:root:root:root body.media-mode .tv-intro{display:flex;align-items:center;gap:var(--ds-sp-2)}
+:root:root:root body.media-mode .tv-intro .tv-about-btn{pointer-events:auto;width:var(--ds-h-chip);height:var(--ds-h-chip);min-height:var(--ds-h-chip);padding:0;border:1px solid rgba(241,239,233,.5);border-radius:var(--ds-radius);background:rgba(17,17,17,.87);color:var(--ds-on-dark);font:500 var(--ds-fs-ui)/1 var(--ds-sans);display:inline-flex;align-items:center;justify-content:center}
+:root:root:root body.media-mode .tv-intro .tv-about-btn:hover,:root:root:root body.media-mode .tv-intro .tv-about-btn[aria-expanded=true]{background:var(--ds-on-dark);color:var(--ds-ink)}
+:root:root:root body.media-mode .tv-about{position:fixed;z-index:4;top:calc(var(--ds-sp-4) + var(--ds-h-chip) + var(--ds-sp-2));left:50%;transform:translateX(-50%);width:min(560px,calc(100vw - 2 * var(--ds-sp-4)));max-height:calc(100vh - 160px);overflow:auto;padding:var(--ds-sp-4);background:rgba(17,17,17,.92);border:1px solid rgba(241,239,233,.5);border-radius:var(--ds-radius);color:var(--ds-on-dark)}
+:root:root:root body.media-mode .tv-about[hidden]{display:none}
+:root:root:root body.media-mode .tv-about h2{font-size:var(--ds-fs-body);line-height:1.35;font-weight:700;margin:0 0 var(--ds-sp-3);color:var(--ds-on-dark)}
+:root:root:root body.media-mode .tv-about dl{margin:0;display:grid;grid-template-columns:88px minmax(0,1fr);gap:var(--ds-sp-3) var(--ds-sp-4)}
+:root:root:root body.media-mode .tv-about dt{font-size:var(--ds-fs-ui);line-height:1.6;color:var(--ds-on-dark-muted)}
+:root:root:root body.media-mode .tv-about dd{margin:0;font-size:var(--ds-fs-ui);line-height:1.6;color:var(--ds-on-dark-2)}
+@media (max-width:560px){:root:root:root body.media-mode .tv-about dl{grid-template-columns:minmax(0,1fr)}:root:root:root body.media-mode .tv-about dt{margin-bottom:calc(-1 * var(--ds-sp-2))}}
