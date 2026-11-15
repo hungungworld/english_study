@@ -14,6 +14,7 @@ let notice = "";
 let news = [];
 let videos = [];
 let ready = false;
+let loadedAt = 0;
 let videoConfigured = false;
 let newsError = false;
 let videoError = false;
@@ -236,6 +237,7 @@ async function loadFirst() {
       videoConfigured = v.value.configured;
     }
     ready = true;
+    loadedAt = Date.now();
   }).finally(() => { pending = undefined; paint(); });
   paint();
   return pending;
@@ -528,6 +530,13 @@ function dockHtml() {
   const count = filterCount();
   return `<nav class="tv-dock" aria-label="Explore menu"><button type="button" class="tv-explore" data-sheet-toggle aria-expanded="${sheetOpen}" aria-controls="tv-sheet">Search${count ? `<span class="badge" aria-label="${count} filters applied">${count}</span>` : ""}</button><a href="#home">Home</a><a href="#scraps">Saved</a></nav>`;
 }
+// "Loaded from BBC · updated 3 min ago": says the list really came from the feeds, and how fresh it is. Hidden while loading or after an error.
+function freshText() {
+  if (!ready || !loadedAt || newsError || videoError) return "";
+  const minutes = Math.floor((Date.now() - loadedAt) / 60000);
+  const ago = minutes < 1 ? "just now" : minutes < 60 ? `${minutes} min ago` : `${Math.floor(minutes / 60)} hr ago`;
+  return `<span class="ic check" aria-hidden="true"></span>Loaded from BBC · updated ${ago}`;
+}
 function sheetHtml() {
   const counts = topicCounts();
   return `<div class="tv-sheet" id="tv-sheet" role="dialog" aria-label="Search" ${sheetOpen ? "" : "hidden"}>
@@ -536,6 +545,7 @@ function sheetHtml() {
     <div class="tv-sheet-row"><div class="tv-seg" role="group" aria-label="Type">${typeControls()}</div><button type="button" class="tv-link" data-reset-filters>Reset</button></div>
     <div class="tv-topics" role="group" aria-label="Topics">${TOPICS.map(topic =>
       `<button type="button" class="tv-chip${counts[topic] ? "" : " is-zero"}" data-topic="${topic}" aria-pressed="${selectedTopics.has(topic)}">${topic}<small>${counts[topic]}</small></button>`).join("")}</div>
+    <p class="tv-fresh" data-fresh>${freshText()}</p>
     <button type="button" class="tv-apply" data-sheet-apply>${applyLabel()}</button>
   </div>`;
 }
@@ -605,6 +615,7 @@ function setSheet(open) {
   const home = feed?.querySelector(".tv-home");
   if (!home) return;
   home.querySelector("#tv-sheet").hidden = !open;
+  if (open) home.querySelector("[data-fresh]").innerHTML = freshText();
   home.querySelector(".tv-explore").setAttribute("aria-expanded",open);
   if (open) home.querySelector("#tv-q").focus();
   else document.body.classList.remove("ui-idle");
@@ -1009,3 +1020,10 @@ export function mediaClick(button) {
     loadFirst();
   }
 }
+// A mouse wheel over a chip row scrolls it sideways (the row has no scrollbar).
+document.addEventListener("wheel",event => {
+  const row = event.target.closest?.(".tv-topics,.scrap-topics");
+  if (!row || row.scrollWidth <= row.clientWidth || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+  row.scrollLeft += event.deltaY;
+  event.preventDefault();
+},{passive:false});

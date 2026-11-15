@@ -392,7 +392,7 @@ function renderPost(id) {
   const words = board.words.filter(word => word.post_id === id);
   const link = safeLink(post.link);
   const notes = readNotes(post.body);
-  const body = notes ? `<div class="study-notes">${notes.sections.map(item => `<section><h2>${e(item.label)}</h2>${isQuote(notes.subject,item.label) ? `<blockquote lang="en">${e(item.text)}</blockquote>` : `<p class="prose">${e(item.text)}</p>`}</section>`).join("")}</div>` : `<div class="prose"><p>${e(post.body)}</p></div>`;
+  const body = notes ? `<div class="study-notes">${notes.sections.map(item => `<section>${item.label ? `<h2>${e(item.label)}</h2>` : ""}${isQuote(notes.subject,item.label) ? `<blockquote lang="en">${e(item.text)}</blockquote>` : `<p class="prose">${e(item.text)}</p>`}</section>`).join("")}</div>` : `<div class="prose"><p>${e(post.body)}</p></div>`;
   const chatPost = boardKind(post) === "chat";
   return `<a class="back" href="${chatPost ? "#feed/chat" : "#feed"}"><span class="ar l" aria-hidden="true"></span>${chatPost ? "Free board" : "Study board"}</a><article class="card">${chatPost ? "" : `<h1>${isPinned(post) ? pinIcon : ""}${e(post.title)}</h1>`}${meta(post)}${body}
   <div class="post-actions">${reactionButton(post,true)}<a class="comment-link" href="#post/${e(post.id)}/comment"><span class="ic chat" aria-hidden="true"></span>Comment · ${commentCount(post)}</a></div>
