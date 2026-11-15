@@ -2,8 +2,8 @@ import {readLocal,writeLocal} from "./data.js";
 import {pagerHtml,pageCount,PER_PAGE} from "./pager.js";
 
 const LIMIT = 12;
-const filters = {all:"전체",news:"뉴스",video:"영상",scraps:"내 스크랩"};
-const dateFormat = new Intl.DateTimeFormat("ko-KR",{month:"short",day:"numeric",timeZone:"Asia/Seoul"});
+const filters = {all:"All",news:"News",video:"Video",scraps:"Saved"};
+const dateFormat = new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",timeZone:"Asia/Seoul"});
 const escape = value => String(value ?? "").replace(/[&<>"']/g,char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[char]);
 let feed;
 let observer;
@@ -48,11 +48,11 @@ function scrapSlice() {
 }
 function scrapFilterHtml() {
   const counts = TOPICS.map(topic => [topic,scraps.filter(item => (item.topics ?? []).includes(topic)).length]).filter(([,count]) => count);
-  return `<div class="scrap-filters"><div class="scrap-row"><input id="scrap-q" type="search" placeholder="스크랩 검색" aria-label="스크랩 검색" autocomplete="off" maxlength="60">
-    <div class="tabs" aria-label="유형">${[["all","전체"],["news","뉴스"],["video","영상"]].map(([id,label]) =>
+  return `<div class="scrap-filters"><div class="scrap-row"><input id="scrap-q" type="search" placeholder="Search saved" aria-label="Search saved" autocomplete="off" maxlength="60">
+    <div class="tabs" aria-label="Type">${[["all","All"],["news","News"],["video","Video"]].map(([id,label]) =>
       `<button type="button" data-scrap-type="${id}" aria-pressed="${scrapType === id}">${label}</button>`).join("")}</div>
-    <span class="count" data-scrap-count>${scrapFiltered().length}개</span><button type="button" data-scrap-reset>초기화</button></div>
-    ${counts.length ? `<div class="scrap-topics" role="group" aria-label="주제">${counts.map(([topic,count]) =>
+    <span class="count" data-scrap-count>${scrapFiltered().length}</span><button type="button" data-scrap-reset>Reset</button></div>
+    ${counts.length ? `<div class="scrap-topics" role="group" aria-label="Topics">${counts.map(([topic,count]) =>
       `<button type="button" class="chip" data-scrap-topic="${topic}" aria-pressed="${scrapTopics.has(topic)}">${topic}<small>${count}</small></button>`).join("")}</div>` : ""}</div>`;
 }
 // Re-draws the cards, pager and counts only, so typing in the search box keeps its focus.
@@ -64,9 +64,9 @@ function refreshScraps() {
   home.querySelector(".tv-grid").innerHTML = visible.map(card).join("");
   home.querySelectorAll(".tv-message").forEach(note => note.remove());
   if (!visible.length) home.querySelector(".tv-grid").insertAdjacentHTML("afterend",
-    `<p class="tv-message">${scraps.length ? "조건에 맞는 스크랩이 없어요." : "아직 스크랩한 자료가 없어요. 둘러보기에서 책갈피 버튼을 눌러 저장해 보세요."}</p>`);
+    `<p class="tv-message">${scraps.length ? "No saved items match." : "Nothing saved yet. Use the bookmark button in Explore to save items."}</p>`);
   const countEl = home.querySelector("[data-scrap-count]");
-  if (countEl) countEl.textContent = total + "개";
+  if (countEl) countEl.textContent = String(total);
   home.querySelectorAll("[data-scrap-type]").forEach(button => button.setAttribute("aria-pressed",button.dataset.scrapType === scrapType));
   home.querySelectorAll("[data-scrap-topic]").forEach(button => button.setAttribute("aria-pressed",scrapTopics.has(button.dataset.scrapTopic)));
   home.querySelector(".tv-footer").innerHTML = pagerHtml("scrap",scrapPage,pageCount(total));
@@ -209,14 +209,14 @@ function screen(item, detail = false) {
 }
 function card(item) {
   return `<button type="button" class="tv-card" lang="en" data-media="${escape(item.id)}" aria-label="${escape(item.title)}">
-    ${screen(item)}<span class="tv-label" lang="ko"><span>${escape(item.source)}</span><span>${date(item)}</span></span>
+    ${screen(item)}<span class="tv-label" lang="en"><span>${escape(item.source)}</span><span>${date(item)}</span></span>
     <strong class="tv-title" lang="en">${escape(item.title)}</strong></button>`;
 }
 // 외부 자료(뉴스·영상) 제목 앞뒤의 이모지는 잉크·종이 두 색 디자인과 맞지 않아 화면에서만 지운다.
 export const cleanTitle = (title = "") => String(title).replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\u20e3\u200d\ufe0f\u{1F3FB}-\u{1F3FF}]+/gu,"").replace(/\s{2,}/g," ").trim();
 async function get(path) {
   const response = await fetch(path);
-  if (!response.ok) throw new Error("자료를 불러오지 못했어요.");
+  if (!response.ok) throw new Error("Could not load items.");
   const data = await response.json();
   if (Array.isArray(data.items)) data.items = data.items.map(item => ({...item,title:cleanTitle(item.title)}));
   return data;
@@ -258,7 +258,7 @@ async function more() {
     if (current !== generation) return;
     const shown = new Set(visible.map(item => item.id));
     visible.push(...items().filter(item => !shown.has(item.id)).slice(0,LIMIT));
-  }).catch(() => { notice = "다음 영상을 불러오지 못했어요."; }).finally(() => {
+  }).catch(() => { notice = "Could not load the next videos."; }).finally(() => {
     pending = undefined;
     if (current === generation) appendCards();
     else paint();
@@ -284,12 +284,12 @@ function paintFooter() {
     return;
   }
   if (section === "home") {
-    foot.innerHTML = pending ? "불러오는 중…" : '<a href="#videos">영상 더 보기<span class="ar ne" aria-hidden="true"></span></a><a href="#news">기사 더 보기<span class="ar ne" aria-hidden="true"></span></a>';
+    foot.innerHTML = pending ? "Loading…" : '<a href="#videos">More videos<span class="ar ne" aria-hidden="true"></span></a><a href="#news">More articles<span class="ar ne" aria-hidden="true"></span></a>';
     return;
   }
   const moreAvailable = items().length > visible.length || (["all","video"].includes(filter) && next);
-  foot.innerHTML = pending ? "불러오는 중…" : notice ? `${notice} <button data-more>다시 시도</button>` :
-    moreAvailable ? '<button data-more>더 보기</button>' : visible.length ? "지금 올라온 자료를 모두 봤어요." : "";
+  foot.innerHTML = pending ? "Loading…" : notice ? `${notice} <button data-more>Try again</button>` :
+    moreAvailable ? '<button data-more>Load more</button>' : visible.length ? "You have seen everything available." : "";
   if (!pending && !notice && moreAvailable && "IntersectionObserver" in window) {
     observer = new IntersectionObserver(entries => {
       if (entries.some(entry => entry.isIntersecting)) more();
@@ -303,22 +303,22 @@ function scrapsPage() {
   const now = new Date(Date.now() + 9 * 3600000);
   const many = scraps.length >= 6;
   const counts = TOPICS.map(topic => [topic,scraps.filter(item => (item.topics ?? []).includes(topic)).length]).filter(([,count]) => count);
-  const kinds = [["all","전체"],["news","뉴스"],["video","영상"]].map(([id,label]) => `<button type="button" data-scrap-type="${id}" aria-pressed="${scrapType === id}">${label}</button>`).join("");
+  const kinds = [["all","All"],["news","News"],["video","Video"]].map(([id,label]) => `<button type="button" data-scrap-type="${id}" aria-pressed="${scrapType === id}">${label}</button>`).join("");
   const topics = counts.map(([topic,count]) => `<button type="button" data-scrap-topic="${topic}" aria-pressed="${scrapTopics.has(topic)}">${topic} ${count}</button>`).join("");
-  const empty = !visible.length ? `<p class="tv-message">${scraps.length ? "조건에 맞는 스크랩이 없어요." : "아직 스크랩한 자료가 없어요. 둘러보기에서 책갈피 버튼을 눌러 저장해 보세요."}</p>` : "";
+  const empty = !visible.length ? `<p class="tv-message">${scraps.length ? "No saved items match." : "Nothing saved yet. Use the bookmark button in Explore to save items."}</p>` : "";
   return `<section class="tv-home"><div class="poster-page">
-    <header class="pr-head"><div><h1>내 스크랩</h1><p>저장해 둔 기사와 영상</p></div></header>
-    <aside class="pr-rail" aria-label="스크랩 정보와 필터">
+    <header class="pr-head"><div><h1>Saved</h1><p>Articles and videos you saved</p></div></header>
+    <aside class="pr-rail" aria-label="Saved info and filters">
       <div class="pr-rail-top"><div class="pr-date" aria-hidden="true">${MONTHS_EN[now.getUTCMonth()]} ${now.getUTCDate()}<span>${now.getUTCFullYear()}</span></div></div>
       <div class="pr-rail-bottom">
-        <div class="pr-group"><b>스크랩</b><span data-scrap-count>${scrapFiltered().length}개</span></div>
-        ${many ? `<div class="pr-group" role="group" aria-label="종류"><b>종류</b>${kinds}</div>
-        ${topics ? `<div class="pr-group" role="group" aria-label="주제"><b>주제</b>${topics}</div>` : ""}
-        <div class="pr-group"><button type="button" data-scrap-reset>초기화</button></div>` : ""}
+        <div class="pr-group"><b>Saved</b><span data-scrap-count>${scrapFiltered().length}</span></div>
+        ${many ? `<div class="pr-group" role="group" aria-label="Kind"><b>Kind</b>${kinds}</div>
+        ${topics ? `<div class="pr-group" role="group" aria-label="Topics"><b>Topics</b>${topics}</div>` : ""}
+        <div class="pr-group"><button type="button" data-scrap-reset>Reset</button></div>` : ""}
       </div>
     </aside>
     <div class="pr-body">
-      ${many ? '<input id="scrap-q" type="search" placeholder="스크랩 검색" aria-label="스크랩 검색" autocomplete="off" maxlength="60">' : ""}
+      ${many ? '<input id="scrap-q" type="search" placeholder="Search saved" aria-label="Search saved" autocomplete="off" maxlength="60">' : ""}
       <div class="tv-grid">${visible.map(card).join("")}</div>
       ${empty}
       <div class="tv-footer" role="status"></div>
@@ -341,21 +341,21 @@ function paint() {
       : items().slice(0,section === "home" ? 6 : LIMIT);
   }
   const messages = section === "scraps" ? [] : [
-    filter !== "video" && newsError ? "BBC 뉴스를 불러오지 못했어요." : "",
-    filter !== "news" && videoError ? "영상을 불러오지 못했어요." : "",
-    ready && filter === "video" && !videoConfigured && !videoError ? "영상은 지금 준비 중이에요." : ""
+    filter !== "video" && newsError ? "Could not load BBC News." : "",
+    filter !== "news" && videoError ? "Could not load videos." : "",
+    ready && filter === "video" && !videoConfigured && !videoError ? "Videos are not available yet." : ""
   ].filter(Boolean);
   const controls = Object.entries(filters).filter(([id]) => id !== "scraps").map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
   const keepSearchFocus = document.activeElement?.id === "tv-q";
   const caret = keepSearchFocus ? document.activeElement.selectionStart : 0;
-  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "영상·기사" : filters[section] ?? "둘러보기"}</h1></div>
-    ${section === "home" ? `<nav class="tv-filters home-tv-tabs" aria-label="영상 및 기사">${controls}</nav>` : ""}
+  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "Videos & articles" : filters[section] ?? "Explore"}</h1></div>
+    ${section === "home" ? `<nav class="tv-filters home-tv-tabs" aria-label="Videos and articles">${controls}</nav>` : ""}
     ${!section ? `<div class="tv-summary" data-summary>${summaryHtml()}</div>` : ""}
     ${!section ? sheetHtml() + dockHtml() + '<div class="sr-only" role="status" aria-live="polite" data-results-live></div>' : ""}
-    ${section === "scraps" ? `<a class="back" href="#explore"><span class="ar l" aria-hidden="true"></span>둘러보기</a>${scraps.length >= 6 ? scrapFilterHtml() : ""}` : ""}
-    ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
+    ${section === "scraps" ? `<a class="back" href="#explore"><span class="ar l" aria-hidden="true"></span>Explore</a>${scraps.length >= 6 ? scrapFilterHtml() : ""}` : ""}
+    ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>Try again</button></div>` : ""}
     ${section ? `<div class="tv-grid">${visible.map(card).join("")}</div>` : `<div class="tv-view" data-view data-mode="${resultsActive() ? "results" : "globe"}">${viewInner()}</div>`}
-    ${(ready || section === "scraps") && !visible.length && !messages.length && (section || !resultsActive()) ? `<p class="tv-message">${section === "scraps" ? "아직 스크랩한 자료가 없어요. 둘러보기에서 책갈피 버튼을 눌러 저장해 보세요." : "표시할 자료가 없어요."}</p>` : ""}
+    ${(ready || section === "scraps") && !visible.length && !messages.length && (section || !resultsActive()) ? `<p class="tv-message">${section === "scraps" ? "Nothing saved yet. Use the bookmark button in Explore to save items." : "No items to show."}</p>` : ""}
     <div class="tv-footer" role="status"></div></section>`;
   paintFooter();
   bendWall();
@@ -374,14 +374,14 @@ function paint() {
 }
 function detail(item) {
   const saved = scraps.some(entry => scrapKey(entry) === scrapKey(item));
-  return `<div class="tv-stage"><section class="tv-detail"><button type="button" class="tv-close" aria-label="닫기">✕</button>
+  return `<div class="tv-stage"><section class="tv-detail"><button type="button" class="tv-close" aria-label="Close">✕</button>
     ${item.type === "video" ? `<iframe class="tv-player" title="${escape(item.title)}" src="https://www.youtube-nocookie.com/embed/${escape(item.id)}" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>` : screen(item,true)}
     <div class="tv-detail-copy"><p class="tv-label">${escape(item.source)} · ${date(item)}</p>
     <h1 lang="en">${escape(item.title)}</h1>
     ${item.summary ? `<p class="tv-summary" lang="en">${escape(item.summary)}</p>` : ""}
-    <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "YouTube에서 열기" : "BBC 원문 읽기"}<span class="ar ne" aria-hidden="true"></span></a>
-    <button type="button" class="tv-action" data-write-source>＋ 이 자료로 노트 쓰기</button>
-    <button type="button" class="tv-action" data-scrap aria-label="스크랩" aria-pressed="${saved}" title="${saved ? "스크랩 해제" : "스크랩"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div></section><aside class="tv-writer" aria-label="노트 쓰기" hidden></aside></div>`;
+    <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "Open on YouTube" : "Read on BBC"}<span class="ar ne" aria-hidden="true"></span></a>
+    <button type="button" class="tv-action" data-write-source>＋ Write a note on this item</button>
+    <button type="button" class="tv-action" data-scrap aria-label="Save" aria-pressed="${saved}" title="${saved ? "Remove from saved" : "Save"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div></section><aside class="tv-writer" aria-label="Write a note" hidden></aside></div>`;
 }
 function showDetail(item, origin) {
   selectedItem = item;
@@ -425,7 +425,7 @@ overlay.addEventListener("click",event => {
     scraps = saved ? scraps.filter(item => scrapKey(item) !== key) : [selectedItem,...scraps];
     writeLocal("media-scraps",scraps);
     scrapButton.setAttribute("aria-pressed",String(!saved));
-    scrapButton.title = saved ? "스크랩" : "스크랩 해제";
+    scrapButton.title = saved ? "Save" : "Remove from saved";
     if (section === "scraps") {
       visible = scraps.slice(0,Math.max(visible.length,LIMIT));
       paint();
@@ -450,7 +450,7 @@ overlay.addEventListener("close",() => {
 // Rest state: only the dock is visible. "탐색" opens a sheet (search, type, topics);
 // applying it closes the sheet and leaves a one-line summary of what is active.
 // Keyword or topic filters switch the globe to a result list; type alone keeps the globe.
-export const TOPICS = ["AI·테크","경제·금융","무역","에너지·기후","헬스·바이오","식품·뷰티","교육","엔터·문화","정치·국제","사회·생활"];
+export const TOPICS = ["AI & Tech","Economy & Finance","Trade","Energy & Climate","Health & Bio","Food & Beauty","Education","Culture & Entertainment","Politics & World","Society & Life"];
 const selectedTopics = new Set();
 let sheetOpen = false;
 let listView = false;
@@ -495,7 +495,7 @@ function filterCount() {
   return (searchTerms().length ? 1 : 0) + selectedTopics.size + (filter !== "all" ? 1 : 0);
 }
 function applyLabel() {
-  return resultsActive() ? `결과 ${landingResults().length}개 보기` : `자료 ${items().length}개 보기`;
+  return resultsActive() ? `Show ${landingResults().length} results` : `Show ${items().length} items`;
 }
 function typeControls() {
   return Object.entries(filters).filter(([id]) => id !== "scraps")
@@ -503,15 +503,15 @@ function typeControls() {
 }
 function dockHtml() {
   const count = filterCount();
-  return `<nav class="tv-dock" aria-label="둘러보기 메뉴"><button type="button" class="tv-explore" data-sheet-toggle aria-expanded="${sheetOpen}" aria-controls="tv-sheet">검색·필터${count ? `<span class="badge" aria-label="적용된 필터 ${count}개">${count}</span>` : ""}</button><a href="#home">홈</a><a href="#scraps">내 스크랩</a></nav>`;
+  return `<nav class="tv-dock" aria-label="Explore menu"><button type="button" class="tv-explore" data-sheet-toggle aria-expanded="${sheetOpen}" aria-controls="tv-sheet">Search & filter${count ? `<span class="badge" aria-label="${count} filters applied">${count}</span>` : ""}</button><a href="#home">Home</a><a href="#scraps">Saved</a></nav>`;
 }
 function sheetHtml() {
   const counts = topicCounts();
-  return `<div class="tv-sheet" id="tv-sheet" role="dialog" aria-label="검색·필터" ${sheetOpen ? "" : "hidden"}>
-    <div class="dialog-head"><h2>검색·필터</h2><button type="button" data-sheet-toggle data-close aria-label="검색·필터 닫기">✕</button></div>
-    <form role="search" data-tv-search><input id="tv-q" type="search" name="q" placeholder="예: climate, AI" aria-keyshortcuts="/" autocomplete="off" enterkeyhint="search" aria-label="뉴스와 영상 검색" maxlength="60"></form>
-    <div class="tv-sheet-row"><div class="tv-seg" role="group" aria-label="유형">${typeControls()}</div><button type="button" class="tv-link" data-reset-filters>초기화</button></div>
-    <div class="tv-topics" role="group" aria-label="주제">${TOPICS.map(topic =>
+  return `<div class="tv-sheet" id="tv-sheet" role="dialog" aria-label="Search & filter" ${sheetOpen ? "" : "hidden"}>
+    <div class="dialog-head"><h2>Search & filter</h2><button type="button" data-sheet-toggle data-close aria-label="Close search and filter">✕</button></div>
+    <form role="search" data-tv-search><input id="tv-q" type="search" name="q" placeholder="e.g. climate, AI" aria-keyshortcuts="/" autocomplete="off" enterkeyhint="search" aria-label="Search news and videos" maxlength="60"></form>
+    <div class="tv-sheet-row"><div class="tv-seg" role="group" aria-label="Type">${typeControls()}</div><button type="button" class="tv-link" data-reset-filters>Reset</button></div>
+    <div class="tv-topics" role="group" aria-label="Topics">${TOPICS.map(topic =>
       `<button type="button" class="tv-chip${counts[topic] ? "" : " is-zero"}" data-topic="${topic}" aria-pressed="${selectedTopics.has(topic)}">${topic}<small>${counts[topic]}</small></button>`).join("")}</div>
     <button type="button" class="tv-apply" data-sheet-apply>${applyLabel()}</button>
   </div>`;
@@ -519,20 +519,20 @@ function sheetHtml() {
 function summaryHtml() {
   if (!searchTerms().length && !selectedTopics.size && filter === "all") return "";
   const pills = [];
-  if (searchTerms().length) pills.push(`<span class="tv-pill">“${escape(searchQuery.trim())}” <button type="button" data-remove-query aria-label="검색어 해제">✕</button></span>`);
-  for (const topic of selectedTopics) pills.push(`<span class="tv-pill">${escape(topic)} <button type="button" data-remove-topic="${escape(topic)}" aria-label="${escape(topic)} 해제">✕</button></span>`);
-  if (filter !== "all") pills.push(`<span class="tv-pill">${filters[filter]} <button type="button" data-remove-type aria-label="유형 해제">✕</button></span>`);
+  if (searchTerms().length) pills.push(`<span class="tv-pill">“${escape(searchQuery.trim())}” <button type="button" data-remove-query aria-label="Clear search">✕</button></span>`);
+  for (const topic of selectedTopics) pills.push(`<span class="tv-pill">${escape(topic)} <button type="button" data-remove-topic="${escape(topic)}" aria-label="Remove ${escape(topic)}">✕</button></span>`);
+  if (filter !== "all") pills.push(`<span class="tv-pill">${filters[filter]} <button type="button" data-remove-type aria-label="Clear type">✕</button></span>`);
   const total = resultsActive() ? landingResults().length : items().length;
-  pills.push(`<span class="tv-pill">결과 ${total}개${searchState === "loading" ? " · BBC 기사 찾는 중…" : searchState === "error" ? " · BBC 검색에 실패했어요. 불러온 자료만 보여드려요." : ""}</span>`);
-  pills.push('<span class="tv-pill"><button type="button" data-reset-filters>초기화</button></span>');
+  pills.push(`<span class="tv-pill">${total} ${total === 1 ? "result" : "results"}${searchState === "loading" ? " · Searching BBC…" : searchState === "error" ? " · BBC search failed. Showing loaded items only." : ""}</span>`);
+  pills.push('<span class="tv-pill"><button type="button" data-reset-filters>Reset</button></span>');
   return pills.join("");
 }
 function viewInner() {
-  if (!resultsActive()) return '<div class="globe-stage" role="group" tabindex="0" aria-label="둘러보기 지구본. 방향키로 돌릴 수 있어요"><div class="globe-world"></div></div>';
+  if (!resultsActive()) return '<div class="globe-stage" role="group" tabindex="0" aria-label="Explore globe. Rotate it with the arrow keys"><div class="globe-world"></div></div>';
   const list = landingResults();
   if (!list.length) {
-    return `<div class="tv-results"><div class="tv-empty"><p>${searchState === "loading" ? "BBC 기사까지 찾는 중이에요…" : "결과가 없어요."}</p>${searchState === "loading" ? "" :
-      '<p>다른 키워드를 쓰거나 필터를 초기화해 보세요.</p><button type="button" data-reset-filters>필터 초기화</button>'}</div></div>`;
+    return `<div class="tv-results"><div class="tv-empty"><p>${searchState === "loading" ? "Searching BBC too…" : "No results."}</p>${searchState === "loading" ? "" :
+      '<p>Try another keyword or reset the filters.</p><button type="button" data-reset-filters>Reset filters</button>'}</div></div>`;
   }
   return `<div class="tv-results">${list.slice(0,60).map(card).join("")}</div>`;
 }
@@ -544,7 +544,7 @@ function announceResults() {
   announceTimer = setTimeout(() => {
     const live = feed?.querySelector("[data-results-live]");
     if (!live || searchState === "loading") return;
-    live.textContent = resultsActive() ? `결과 ${landingResults().length}개` : "";
+    live.textContent = resultsActive() ? `${landingResults().length} results` : "";
   },700);
 }
 function refreshLanding() {
@@ -565,7 +565,7 @@ function refreshLanding() {
   if (count) {
     if (!badge) { badge = document.createElement("span"); badge.className = "badge"; explore.append(badge); }
     badge.textContent = count;
-    badge.setAttribute("aria-label",`적용된 필터 ${count}개`);
+    badge.setAttribute("aria-label",`${count} filters applied`);
   } else badge?.remove();
   const view = home.querySelector("[data-view]");
   const mode = resultsActive() ? "results" : "globe";
@@ -914,7 +914,7 @@ export function renderMedia(root, key, view = "") {
     if (!ready) loadFirst().then(() => {
       if (feed?.isConnected && location.hash.startsWith("#tv/")) renderMedia(feed,key,view);
     });
-    else feed.querySelector(".tv-home").insertAdjacentHTML("afterbegin",'<p class="tv-message">이 자료를 찾을 수 없어요.</p>');
+    else feed.querySelector(".tv-home").insertAdjacentHTML("afterbegin",'<p class="tv-message">This item could not be found.</p>');
   }
 }
 export function setLandingFilter(value) {

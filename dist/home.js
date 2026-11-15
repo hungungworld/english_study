@@ -15,22 +15,22 @@ let prefsOpen = false;
 const getPrefs = () => { const saved = readLocal("home-topics",[]); return Array.isArray(saved) ? saved.filter(topic => TOPICS.includes(topic)) : []; };
 function prefsHtml() {
   const prefs = getPrefs();
-  return `<button type="button" class="pp-gear" data-prefs-toggle aria-haspopup="dialog" aria-expanded="${prefsOpen}" aria-label="기사 설정${prefs.length ? ` (주제 ${prefs.length}개 선택됨)` : ""}" data-tip="기사 설정"><span class="ic gear" aria-hidden="true"></span></button>
+  return `<button type="button" class="pp-gear" data-prefs-toggle aria-haspopup="dialog" aria-expanded="${prefsOpen}" aria-label="Article settings${prefs.length ? ` (${prefs.length} ${prefs.length === 1 ? "topic" : "topics"} selected)` : ""}" data-tip="Article settings"><span class="ic gear" aria-hidden="true"></span></button>
   <div class="pp-prefs" role="dialog" aria-labelledby="prefs-title" ${prefsOpen ? "" : "hidden"}>
-    <div class="dialog-head"><h2 id="prefs-title">내 관심 기사</h2><button type="button" data-prefs-toggle data-close aria-label="관심 기사 설정 닫기">✕</button></div>
-    <p class="hint" aria-live="polite">${prefs.length ? `주제 ${prefs.length}개 선택됨 · 홈의 TV와 아래 띠에 먼저 나와요.` : "주제를 고르면 그 기사가 홈의 TV와 아래 띠에 먼저 나와요. 이 브라우저에만 저장돼요."}</p>
-    <div class="pp-prefs-topics" role="group" aria-label="주제">${TOPICS.map(topic => `<button type="button" class="chip" data-pref-topic="${escape(topic)}" aria-pressed="${prefs.includes(topic)}">${escape(topic)}</button>`).join("")}</div>
-    <div class="row"><button type="button" data-prefs-reset>초기화</button></div>
+    <div class="dialog-head"><h2 id="prefs-title">My topics</h2><button type="button" data-prefs-toggle data-close aria-label="Close article settings">✕</button></div>
+    <p class="hint" aria-live="polite">${prefs.length ? `${prefs.length} ${prefs.length === 1 ? "topic" : "topics"} selected · shown first on the home TV and the strip below.` : "Pick topics and those articles show first on the home TV and the strip below. Saved in this browser only."}</p>
+    <div class="pp-prefs-topics" role="group" aria-label="Topics">${TOPICS.map(topic => `<button type="button" class="chip" data-pref-topic="${escape(topic)}" aria-pressed="${prefs.includes(topic)}">${escape(topic)}</button>`).join("")}</div>
+    <div class="row"><button type="button" data-prefs-reset>Reset</button></div>
   </div>`;
 }
 const DAY = 86400000;
-const compact = new Intl.NumberFormat("ko-KR",{notation:"compact"}).format;
+const compact = new Intl.NumberFormat("en-US",{notation:"compact"}).format;
 
 function screenHtml(screen,index) {
   const clip = screen.poly.map(([x,y]) => `${x}% ${y}%`).join(",");
   return `<a class="pile-screen is-static" data-pile="${index}" href="#explore"
     style="left:${screen.x*100}%;top:${screen.y*100}%;width:${screen.w*100}%;height:${screen.h*100}%;clip-path:polygon(${clip})"
-    aria-label="신호를 기다리는 TV"><span class="ps-img"></span><span class="ps-static" aria-hidden="true"></span></a>`;
+    aria-label="TV waiting for a signal"><span class="ps-img"></span><span class="ps-static" aria-hidden="true"></span></a>`;
 }
 function setNow(screen) {
   const line = screen.closest(".tv-pile")?.querySelector(".pile-now");
@@ -45,14 +45,14 @@ function template() {
   return `<section class="home-scene" aria-labelledby="home-title">
     <div class="home-copy">
       <h1 id="home-title" lang="en">axciting</h1>
-      <p>영어 기사와 영상을 보고,<br>기억하고 싶은 문장을 남겨요.</p>
+      <p>Read English articles and watch videos,<br>and keep the sentences you want to remember.</p>
       <div class="home-actions">
-        <a class="home-primary" href="#explore">둘러보기<span class="ar r" aria-hidden="true"></span></a>
+        <a class="home-primary" href="#explore">Explore<span class="ar r" aria-hidden="true"></span></a>
       </div>
-      <nav class="home-links" aria-label="바로 가기"><a href="#feed">게시판</a><a href="#words">단어장</a><a href="#scraps">내 스크랩</a></nav>
+      <nav class="home-links" aria-label="Shortcuts"><a href="#feed">Board</a><a href="#words">Vocab</a><a href="#scraps">Saved</a></nav>
     </div>
     <div class="tv-pile" style="--pile-aspect:${ASPECT}">
-      <img class="tv-pile-img" src="./img/tv-pile.jpg" alt="낡은 아날로그 TV 네 대가 쌓여 있는 모습" width="880" height="1168" fetchpriority="high">
+      <img class="tv-pile-img" src="./img/tv-pile.jpg" alt="Four old analog TVs stacked on top of each other" width="880" height="1168" fetchpriority="high">
       ${SCREENS.map(screenHtml).join("")}
       <p class="pile-now" aria-live="polite"></p>
     </div>
@@ -84,12 +84,12 @@ async function show(screen,item) {
   screen.classList.add("is-static");
   const url = await thumbnail(item);
   screen.href = "#tv/" + encodeURIComponent(item.id);
-  screen.setAttribute("aria-label",`${item.title} 열기`);
+  screen.setAttribute("aria-label",`Open ${item.title}`);
   screen.dataset.item = item.id;
   screen.dataset.kind = item.type;
-  screen.title = item.title + (item.views ? ` · 조회 ${compact(item.views)}` : "");
+  screen.title = item.title + (item.views ? ` · ${compact(item.views)} views` : "");
   screen.querySelector(".ps-img").style.backgroundImage = url ? `url("${url}")` : "";
-  screen.dataset.cap = `${item.type === "video" ? "영어 영상" : "BBC 뉴스"}${item.views ? ` · 조회 ${compact(item.views)}` : ""}|${item.title}|${item.topics?.[0] ?? ""}`;
+  screen.dataset.cap = `${item.type === "video" ? "English video" : "BBC News"}${item.views ? ` · ${compact(item.views)} views` : ""}|${item.title}|${item.topics?.[0] ?? ""}`;
   setTimeout(() => screen.classList.remove("is-static"),260);
 }
 // The four TVs: newest news, most-viewed recent video, second news, second video.
@@ -120,36 +120,36 @@ function fillPoster(root,ctx) {
   const news = pool.filter(item => item.type === "news").slice(0,2);
   const picks = (pool.length > 9 ? pool.slice(4,9) : pool.slice(0,5));
   const link = item => `#tv/${encodeURIComponent(item.id)}`;
-  const posts = ctx.loading ? '<p>불러오는 중이에요.</p>' : ctx.error ? `<p>${escape(ctx.error)}</p>` :
+  const posts = ctx.loading ? '<p>Loading…</p>' : ctx.error ? `<p>${escape(ctx.error)}</p>` :
     ctx.posts.length ? ctx.posts.map(post => `<p><a href="#post/${escape(post.id)}">${escape(post.title)}</a><br>${escape(post.by)} · ${escape(post.date)}</p>`).join("") :
-    '<p>아직 올라온 노트가 없어요.</p>';
-  const newsHtml = news.length ? news.map(item => `<p><a href="${link(item)}">${escape(item.title)}</a></p>`).join("") : '<p>자료를 불러오는 중이에요.</p>';
+    '<p>No notes yet.</p>';
+  const newsHtml = news.length ? news.map(item => `<p><a href="${link(item)}">${escape(item.title)}</a></p>`).join("") : '<p>Loading items…</p>';
   const words = ctx.loading ? '<div><span>…</span></div>' : ctx.words.length ?
     ctx.words.map(word => `<div><span lang="en">${escape(word.term)}</span><small>${escape(word.meaning)}</small></div>`).join("") :
-    '<div><span>—</span><small>아직 단어가 없어요</small></div>';
+    '<div><span>—</span><small>No words yet</small></div>';
   paper.innerHTML = `
     <div class="pp-rail">
       <div class="pp-rail-top">
-        <p><span class="pp-k">이번 주 노트</span>조원 ${ctx.memberCount}명<br>노트 ${ctx.postCount}개<br>단어 ${ctx.wordCount}개</p>
-        <p><span class="pp-k">출처</span>BBC News<br>BBC Learning English</p>
+        <p><span class="pp-k">This week</span>${ctx.memberCount} members<br>${ctx.postCount} notes<br>${ctx.wordCount} words</p>
+        <p><span class="pp-k">Sources</span>BBC News<br>BBC Learning English</p>
       </div>
       <div class="pp-dates">${escape(ctx.today.label)}<span>${ctx.today.year}</span></div>
-      <div class="pp-rail-foot">${ctx.shared ? "" : '<p class="pp-note">체험 모드<br>예시 데이터예요.</p>'}</div>
+      <div class="pp-rail-foot">${ctx.shared ? "" : '<p class="pp-note">Demo mode<br>Sample data.</p>'}</div>
     </div>
     <div class="pp-main">
       <div class="pp-main-head">
-        <h2 id="paper-title" class="pp-title">이번 주<br>영어 공부</h2>
-        <p class="pp-sub">기사와 영상을 보고, 기억하고 싶은 문장을 한 줄씩 남겨요.</p>
+        <h2 id="paper-title" class="pp-title">This week<br>in English</h2>
+        <p class="pp-sub">Read articles, watch videos, and leave one sentence each that you want to remember.</p>
       </div>
       <div class="pp-cols">
-        <div><h3>최근 노트</h3>${posts}<a class="pp-more" href="#feed">노트 더 보기<span class="ar ne" aria-hidden="true"></span></a></div>
-        <div><h3>새로 올라온 뉴스</h3>${newsHtml}<a class="pp-more" href="#explore">뉴스 더 보기<span class="ar ne" aria-hidden="true"></span></a></div>
+        <div><h3>Recent notes</h3>${posts}<a class="pp-more" href="#feed">More notes<span class="ar ne" aria-hidden="true"></span></a></div>
+        <div><h3>New news</h3>${newsHtml}<a class="pp-more" href="#explore">More news<span class="ar ne" aria-hidden="true"></span></a></div>
       </div>
-      <div class="pp-words"><h3>이번 주 단어</h3>${words}<a class="pp-more" href="#words/list">단어 목록 열기<span class="ar ne" aria-hidden="true"></span></a></div>
+      <div class="pp-words"><h3>Words this week</h3>${words}<a class="pp-more" href="#words/list">Open word list<span class="ar ne" aria-hidden="true"></span></a></div>
     </div>
     <p class="strip-now" aria-hidden="true"></p>
     ${prefsHtml()}
-    <div class="pp-strip" aria-label="이번 주 뉴스와 영상">${picks.map(item =>
+    <div class="pp-strip" aria-label="This week’s news and videos">${picks.map(item =>
       `<a href="${link(item)}" aria-label="${escape(item.title)}" data-title="${escape(item.title)}"${item.topics?.[0] ? ` data-tag="${escape(item.topics[0])}"` : ""}><img src="${escape(item.type === "video" ? (item.image || "").replace("hqdefault","mqdefault") : upgrade(item.image))}" data-fallback="${escape(item.image)}" alt="" loading="lazy"></a>`).join("")}</div>`;
 }
 export function leaveHome() {
@@ -232,7 +232,7 @@ function applyPicks(root) {
     fillPoster(root,lastCtx);
     root.querySelectorAll(".pile-screen").forEach((screen,index) => {
       if (picks[index]) show(screen,picks[index]);
-      else screen.dataset.cap = "|신호 없음";
+      else screen.dataset.cap = "|No signal";
       if (screen.dataset.bound) return;
       screen.dataset.bound = "1";
       screen.addEventListener("pointerenter",() => setNow(screen));

@@ -16,7 +16,7 @@ export function pagerHtml(key, page, pages) {
     numbers.push(pages);
   }
   const button = (label, target, extra = "") => `<button type="button" data-page-key="${key}" data-page="${target}" ${extra}>${label}</button>`;
-  return `<nav class="pager" aria-label="페이지 이동">${button("이전",page - 1,page === 1 ? "disabled" : "")}${numbers.map(number =>
+  return `<nav class="pager" aria-label="Pages">${button("Previous",page - 1,page === 1 ? "disabled" : "")}${numbers.map(number =>
     number === "…" ? '<span class="gap" aria-hidden="true">…</span>' :
-    button(number,number,number === page ? 'aria-current="page"' : `aria-label="${number}쪽"`)).join("")}${button("다음",page + 1,page === pages ? "disabled" : "")}</nav>`;
+    button(number,number,number === page ? 'aria-current="page"' : `aria-label="Page ${number}"`)).join("")}${button("Next",page + 1,page === pages ? "disabled" : "")}</nav>`;
 }

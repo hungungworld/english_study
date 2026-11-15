@@ -15,20 +15,20 @@ function https(value) {
     return url.protocol === "https:" ? url.href : "";
   } catch { return ""; }
 }
-// Topic tags (산업·분야). BBC has no industry taxonomy, so each item gets the topics
+// Topic tags (industry and field). BBC has no industry taxonomy, so each item gets the topics
 // whose keywords appear in its title/summary, plus the topic of the BBC section feed
 // it came from when that section is unambiguous. It is an approximation by design.
 const TOPIC_RULES = [
-  ["AI·테크",/\b(ai|artificial intelligence|chatbots?|chips?|chipmakers?|semiconductors?|software|tech|technology|cyber\w*|robots?|data cent(?:er|re)s?|algorithms?|apps?|startups?|openai|nvidia|quantum|internet|smartphones?|google|apple|microsoft|tiktok)\b/i],
-  ["경제·금융",/\b(econom\w*|inflation|interest rates?|central bank|banks?|stocks?|markets?|invest\w*|financ\w*|budget|tax(?:es)?|recession|gdp|currency|dollar|profits?|shares|bonds?|mortgages?|debt|pensions?)\b/i],
-  ["무역",/\b(tariffs?|trade|trading|exports?|imports?|shipping|supply chains?|customs|sanctions?|duty|duties|embargo)\b/i],
-  ["에너지·기후",/\b(climate|energy|oil|gas|solar|wind farms?|renewables?|emissions?|carbon|coal|nuclear|electric|batter(?:y|ies)|power plants?|weather|floods?|heatwaves?|wildfires?|cop\d*|net zero)\b/i],
-  ["헬스·바이오",/\b(health\w*|vaccines?|cancer|diseases?|hospitals?|nhs|drugs?|medic\w*|virus|flu|covid|doctors?|patients?|surgery|mental|biotech|gene\w*|dementia|obesity)\b/i],
-  ["식품·뷰티",/\b(food|foods|restaurants?|menus?|chefs?|cook\w*|recipes?|diets?|vegan|plant-based|coffee|tea|wine|beauty|skincare|cosmetics?|makeup|fashion|perfume|snacks?|bakery|farm\w*|supermarkets?|grocer\w*)\b/i],
-  ["교육",/\b(schools?|universit\w*|students?|teachers?|education|exams?|colleges?|curriculum|degrees?|pupils?|classroom|tuition)\b/i],
-  ["엔터·문화",/\b(films?|movies?|music|albums?|concerts?|festivals?|actors?|actress|singers?|theatre|theater|netflix|books?|novels?|museums?|celebrit\w*|oscars?|podcasts?|artists?|exhibitions?|bbc sounds)\b/i],
-  ["정치·국제",/\b(elections?|president|prime minister|ministers?|government|parliament|vote\w*|war|ukraine|gaza|israel|russia|china|trump|summit|diplomat\w*|military|treaty|nato|un|eu)\b/i],
-  ["사회·생활",/\b(crime|police|court|family|families|housing|rent|community|protests?|charity|migrants?|immigration|lifestyle|homes?|jobs?|workers?|wages?|neighbou?rs?|cost of living)\b/i]
+  ["AI & Tech",/\b(ai|artificial intelligence|chatbots?|chips?|chipmakers?|semiconductors?|software|tech|technology|cyber\w*|robots?|data cent(?:er|re)s?|algorithms?|apps?|startups?|openai|nvidia|quantum|internet|smartphones?|google|apple|microsoft|tiktok)\b/i],
+  ["Economy & Finance",/\b(econom\w*|inflation|interest rates?|central bank|banks?|stocks?|markets?|invest\w*|financ\w*|budget|tax(?:es)?|recession|gdp|currency|dollar|profits?|shares|bonds?|mortgages?|debt|pensions?)\b/i],
+  ["Trade",/\b(tariffs?|trade|trading|exports?|imports?|shipping|supply chains?|customs|sanctions?|duty|duties|embargo)\b/i],
+  ["Energy & Climate",/\b(climate|energy|oil|gas|solar|wind farms?|renewables?|emissions?|carbon|coal|nuclear|electric|batter(?:y|ies)|power plants?|weather|floods?|heatwaves?|wildfires?|cop\d*|net zero)\b/i],
+  ["Health & Bio",/\b(health\w*|vaccines?|cancer|diseases?|hospitals?|nhs|drugs?|medic\w*|virus|flu|covid|doctors?|patients?|surgery|mental|biotech|gene\w*|dementia|obesity)\b/i],
+  ["Food & Beauty",/\b(food|foods|restaurants?|menus?|chefs?|cook\w*|recipes?|diets?|vegan|plant-based|coffee|tea|wine|beauty|skincare|cosmetics?|makeup|fashion|perfume|snacks?|bakery|farm\w*|supermarkets?|grocer\w*)\b/i],
+  ["Education",/\b(schools?|universit\w*|students?|teachers?|education|exams?|colleges?|curriculum|degrees?|pupils?|classroom|tuition)\b/i],
+  ["Culture & Entertainment",/\b(films?|movies?|music|albums?|concerts?|festivals?|actors?|actress|singers?|theatre|theater|netflix|books?|novels?|museums?|celebrit\w*|oscars?|podcasts?|artists?|exhibitions?|bbc sounds)\b/i],
+  ["Politics & World",/\b(elections?|president|prime minister|ministers?|government|parliament|vote\w*|war|ukraine|gaza|israel|russia|china|trump|summit|diplomat\w*|military|treaty|nato|un|eu)\b/i],
+  ["Society & Life",/\b(crime|police|court|family|families|housing|rent|community|protests?|charity|migrants?|immigration|lifestyle|homes?|jobs?|workers?|wages?|neighbou?rs?|cost of living)\b/i]
 ];
 function topicsFor(text, hint = []) {
   const found = new Set(hint);
@@ -58,13 +58,13 @@ async function upstream(url) {
 }
 // Search needs no API: BBC publishes one public RSS feed per section, so we read
 // them all, drop duplicates, and match the query against title and summary.
-const SEARCH_FEEDS = [["world",[]],["technology",["AI·테크"]],["science_and_environment",[]],["health",["헬스·바이오"]],
-  ["business",["경제·금융"]],["entertainment_and_arts",["엔터·문화"]],["education",["교육"]],["uk",[]],
+const SEARCH_FEEDS = [["world",[]],["technology",["AI & Tech"]],["science_and_environment",[]],["health",["Health & Bio"]],
+  ["business",["Economy & Finance"]],["entertainment_and_arts",["Culture & Entertainment"]],["education",["Education"]],["uk",[]],
   ["world/us_and_canada",[]],["world/asia",[]],["world/europe",[]]]
   .map(([name,hint]) => ["https://feeds.bbci.co.uk/news/" + name + "/rss.xml",hint]);
 async function search(query, wanted = []) {
   const results = await Promise.allSettled(SEARCH_FEEDS.map(async ([url,hint]) => parseNews(await (await upstream(url)).text(),true,hint)));
-  if (!results.some(result => result.status === "fulfilled")) return Response.json({error:"콘텐츠를 불러오지 못했어요."},{status:502});
+  if (!results.some(result => result.status === "fulfilled")) return Response.json({error:"Could not load content."},{status:502});
   const unique = new Map();
   for (const result of results) {
     if (result.status === "fulfilled") for (const item of result.value) if (!unique.has(item.id)) unique.set(item.id,item);
@@ -125,7 +125,7 @@ async function media(request, env, context, path, cursor) {
     if (cache && context && data.configured !== false) context.waitUntil(cache.put(cacheKey,response.clone()).catch(() => {}));
     return response;
   } catch {
-    return Response.json({error:"콘텐츠를 불러오지 못했어요."},{status:502});
+    return Response.json({error:"Could not load content."},{status:502});
   }
 }
 export function handler(assets) {
@@ -137,7 +137,7 @@ export function handler(assets) {
       const wanted = (url.searchParams.get("topics") ?? "").split(",").map(topic => topic.trim()).filter(Boolean).slice(0,10);
       if ((query && (query.length < 2 || query.length > 60)) || (!query && !wanted.length)) return new Response(null,{status:400});
       try { return await search(query,wanted); }
-      catch { return Response.json({error:"콘텐츠를 불러오지 못했어요."},{status:502}); }
+      catch { return Response.json({error:"Could not load content."},{status:502}); }
     }
     if (["/api/news","/api/videos"].includes(url.pathname)) {
       const cursor = url.searchParams.get("cursor") ?? "";
