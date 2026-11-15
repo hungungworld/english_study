@@ -699,3 +699,19 @@
   :root:root:root body .home-scene .tv-pile{position:relative;left:auto;bottom:auto;align-self:flex-start;margin:auto 0 0 var(--ds-sp-2);height:min(30svh,200px);max-width:none;flex:none}
   :root:root:root body .home-scene .scroll-glow{left:52%;right:0}
 }
+
+/* ---- The article summary inside the item dialog is a normal paragraph.
+   `.tv-summary` is also the class of the Explore filter pills, which are fixed to the top of the screen; that rule must not catch the paragraph. ---- */
+:root:root:root body #tv-overlay .tv-detail-copy .tv-summary{position:static;top:auto;left:auto;transform:none;z-index:auto;display:block;max-width:none;pointer-events:auto;opacity:1;flex-wrap:nowrap;gap:0;color:var(--ds-on-dark-2)}
+:root:root:root body.study-mode #tv-overlay .tv-detail-copy .tv-summary{color:var(--ds-ink-2)}
+
+/* ---- Phones (≤700px): the hover captions on home follow the same places as on the web ---- */
+@media (max-width:700px){
+  /* TV stack: the caption opens to the right of the stack, level with its bottom */
+  :root:root:root body .home-scene .tv-pile .pile-now{left:calc(100% + var(--ds-sp-3));right:auto;bottom:var(--ds-sp-2);width:min(172px,46vw);-webkit-line-clamp:5}
+  /* News strip: the caption sits in the flow right above the strip, with its height reserved so nothing jumps */
+  :root:root:root body .home-paper .strip-now{display:-webkit-box;order:7;position:static;width:auto;min-height:calc(var(--ds-fs-caption) * 1.4 * 3);margin:0 0 calc(-1 * var(--ds-sp-4));-webkit-line-clamp:3}
+  :root:root:root body .home-paper .pp-strip{order:8}
+  :root:root:root body .home-paper .pp-gear{order:9}
+  :root:root:root body .home-paper .pp-prefs{order:10}
+}
