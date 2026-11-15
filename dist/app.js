@@ -449,11 +449,95 @@ function renderQuiz() {
 }
 function wordFields(word = {}, removable = true) {
   return `<fieldset class="word-fields" data-word-id="${e(word.id)}">
-  <label>English word or phrase<input name="term" required maxlength="120" value="${e(word.term)}"></label>
-  <label>Korean meaning<input name="meaning" required maxlength="300" value="${e(word.meaning)}"></label>
-  <label>Example (optional)<input name="example" maxlength="600" value="${e(word.example)}"></label>
+  <label>English word or phrase<input name="term" required maxlength="120" autocomplete="off" placeholder="e.g. christmas" value="${e(word.term)}"></label>
+  <div class="suggest" data-suggest role="group" aria-label="Suggested words"></div>
+  <p class="hint" data-define lang="en" hidden></p>
+  <label>Korean meaning<input name="meaning" required maxlength="300" autocomplete="off" value="${e(word.meaning)}"></label>
+  <p class="hint" data-fill-meaning hidden>Suggested · edit if needed</p>
+  <label>Example (optional)<input name="example" maxlength="600" autocomplete="off" value="${e(word.example)}"></label>
+  <p class="hint" data-fill-example hidden>Suggested · edit if needed</p>
   ${removable ? '<button type="button" data-remove-word>Remove word</button>' : ""}</fieldset>`;
 }
+// ---- Word lookup: suggested words while typing, then a suggested Korean meaning and example that stay editable ----
+// Free services, only the typed word is sent: Datamuse (suggestions), Free Dictionary (English definition and example), MyMemory (Korean).
+const lookupCache = new Map();
+const getJson = async url => {
+  const response = await fetch(url,{signal:AbortSignal.timeout(6000)});
+  if (!response.ok) throw new Error(String(response.status));
+  return response.json();
+};
+const suggestWords = async text => (await getJson(`https://api.datamuse.com/sug?s=${encodeURIComponent(text)}&max=6`)).map(item => item.word).filter(word => word.toLowerCase() !== text.toLowerCase());
+async function lookupWord(term) {
+  const key = term.toLowerCase().replace(/\s+/g," ");
+  if (lookupCache.has(key)) return lookupCache.get(key);
+  const [dictionary,translation] = await Promise.allSettled([
+    getJson(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(key)}`),
+    getJson(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(key)}&langpair=en|ko`)]);
+  const meaning = dictionary.status === "fulfilled" ? dictionary.value[0]?.meanings?.[0] : null;
+  let korean = translation.status === "fulfilled" ? String(translation.value?.responseData?.translatedText ?? "").trim() : "";
+  // The free translator sometimes answers a plain word with a whole sentence; only short Korean answers are used.
+  const parts = korean.split(/\s+/).length;
+  if (/[A-Za-z]{3,}/.test(korean) || parts > key.split(" ").length + 1 || korean.length > 14) korean = "";
+  const result = {korean,definition:meaning ? `${meaning.partOfSpeech}: ${meaning.definitions[0].definition}` : "",
+    example:dictionary.status === "fulfilled" ? dictionary.value[0]?.meanings?.flatMap(item => item.definitions).find(item => item.example)?.example ?? "" : ""};
+  // A failed translation is not remembered, so the next try can succeed.
+  if (translation.status === "fulfilled") lookupCache.set(key,result);
+  return result;
+}
+async function fillWord(box, term) {
+  try {
+    const found = await lookupWord(term);
+    if (box.querySelector('[name="term"]').value.trim().toLowerCase() !== term.toLowerCase()) return;
+    const define = box.querySelector("[data-define]");
+    define.textContent = found.definition;
+    define.hidden = !found.definition;
+    for (const [name,value,note] of [["meaning",found.korean,"[data-fill-meaning]"],["example",found.example,"[data-fill-example]"]]) {
+      const input = box.querySelector(`[name="${name}"]`);
+      // A value this lookup filled earlier is replaced by the next lookup; anything the person typed is never touched.
+      if (input.dataset.touched || (input.value && input.dataset.auto !== "1")) continue;
+      input.value = value;
+      input.dataset.auto = value ? "1" : "";
+      box.querySelector(note).hidden = !value;
+    }
+  } catch { /* A failed lookup just leaves the fields as they are. */ }
+}
+const wordTimers = new WeakMap();
+document.addEventListener("input",event => {
+  const input = event.target;
+  if (!input.matches?.(".word-fields input")) return;
+  const box = input.closest(".word-fields");
+  if (input.name === "meaning" || input.name === "example") {
+    if (event.isTrusted) { input.dataset.touched = "1"; box.querySelector(`[data-fill-${input.name}]`).hidden = true; }
+    return;
+  }
+  if (input.name !== "term") return;
+  clearTimeout(wordTimers.get(box));
+  const text = input.value.trim();
+  const chips = box.querySelector("[data-suggest]");
+  if (text.length < 2) { chips.replaceChildren(); return; }
+  wordTimers.set(box,setTimeout(async () => {
+    try {
+      const list = await suggestWords(text);
+      if (input.value.trim() === text) chips.replaceChildren(...list.map(word => {
+        const chip = document.createElement("button");
+        chip.type = "button"; chip.className = "chip"; chip.dataset.suggestWord = word; chip.textContent = word;
+        return chip;
+      }));
+    } catch { chips.replaceChildren(); }
+    fillWord(box,text);
+  },450));
+});
+document.addEventListener("click",event => {
+  const chip = event.target.closest?.("[data-suggest-word]");
+  if (!chip) return;
+  const box = chip.closest(".word-fields");
+  const input = box.querySelector('[name="term"]');
+  input.value = chip.dataset.suggestWord;
+  box.querySelector("[data-suggest]").replaceChildren();
+  editorChanged = true;
+  fillWord(box,input.value.trim());
+  box.querySelector('[name="meaning"]').focus();
+});
 // Forms use novalidate: each problem is named, tied to its field (aria-invalid +
 // aria-describedby) and the first field is focused, so errors are clear to everyone.
 function showFormError(form, message, fields = []) {

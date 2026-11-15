@@ -1026,3 +1026,29 @@ document.addEventListener("wheel",event => {
   row.scrollLeft += event.deltaY;
   event.preventDefault();
 },{passive:false});
+// Chip rows can also be dragged with the mouse (the thin scrollbar is hard to grab). A drag never counts as a click on a chip.
+let dragRow = null, dragX = 0, dragLeft = 0, dragMoved = false;
+document.addEventListener("pointerdown",event => {
+  if (event.pointerType !== "mouse" || event.button !== 0) return;
+  const row = event.target.closest?.(".tv-topics,.scrap-topics");
+  if (!row || row.scrollWidth <= row.clientWidth) return;
+  dragRow = row; dragX = event.clientX; dragLeft = row.scrollLeft; dragMoved = false;
+});
+document.addEventListener("pointermove",event => {
+  if (!dragRow) return;
+  const dx = event.clientX - dragX;
+  if (!dragMoved && Math.abs(dx) > 5) { dragMoved = true; dragRow.classList.add("is-dragging"); }
+  if (dragMoved) dragRow.scrollLeft = dragLeft - dx;
+});
+const endDrag = () => {
+  if (!dragRow) return;
+  const row = dragRow;
+  dragRow = null;
+  row.classList.remove("is-dragging");
+  if (!dragMoved) return;
+  const stop = event => event.stopPropagation();
+  row.addEventListener("click",stop,{capture:true,once:true});
+  setTimeout(() => row.removeEventListener("click",stop,true),0);
+};
+document.addEventListener("pointerup",endDrag);
+document.addEventListener("pointercancel",endDrag);
