@@ -146,6 +146,20 @@
       if (kind) add('spacing-' + kind, a, 'with ' + desc(b) + ' = ' + gap + 'px (min ' + SPEC.minGap + ')');
     }
 
+    // text stacked right above a control: DESIGN.md 5 wants at least 16px between a line of text and the button, link-button or field under it
+    const stackControls = all.filter(e => e.matches('button,a.tv-out,a.home-primary,input:not([type=hidden]):not([type=checkbox]):not([type=radio]),select,textarea') && !inMedia(e) && !e.closest('.tv-pill,.pp-vert,.tabs,.tv-seg,.pr-group,.chip-radio,.pager,.tv-dock,.top,.tv-sheet-row,.scrap-topics,.tv-topics,.pp-prefs-topics,.week-dots,.tag-options'));
+    const stackText = all.filter(e => !inMedia(e) && !e.closest('button,a,label,legend,option,.pr-group,.sr-only') && !e.matches('label,legend,b,.pp-k,.sr-only') && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()));
+    for (const c of stackControls) {
+      const rc = c.getBoundingClientRect();
+      for (const t of stackText) {
+        if (t.contains(c) || c.contains(t)) continue;
+        const rt = t.getBoundingClientRect();
+        const overlap = Math.min(rt.right, rc.right) - Math.max(rt.left, rc.left);
+        const gap = rc.top - rt.bottom;
+        if (overlap > 8 && gap >= -1 && gap < 15.5) add('text-control-gap', c, Math.round(gap) + 'px under "' + t.textContent.trim().replace(/\s+/g, ' ').slice(0, 24) + '" (min 16)');
+      }
+    }
+
     // text blocks that collide
     const texts = all.filter(e => !inMedia(e) && !e.matches('button,a,option,select,textarea,input,.tv-intro h1,.tv-summary') && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()));
     for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) {
