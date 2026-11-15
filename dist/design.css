@@ -379,7 +379,7 @@
 @media(max-width:900px){:root:root:root body .pr-date{display:block;flex-basis:100%}}
 
 /* ---- 홈: 내 관심 기사 설정 (톱니바퀴) ---- */
-:root:root:root body .ic.gear{margin:0;--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.3' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='8' r='2.3'/%3E%3Cpath d='M6.8 1.5h2.4l.4 1.7 1.2.5 1.5-.9 1.7 1.7-.9 1.5.5 1.2 1.7.4v2.4l-1.7.4-.5 1.2.9 1.5-1.7 1.7-1.5-.9-1.2.5-.4 1.7H6.8l-.4-1.7-1.2-.5-1.5.9-1.7-1.7.9-1.5-.5-1.2-1.7-.4V6.8l1.7-.4.5-1.2-.9-1.5 1.7-1.7 1.5.9 1.2-.5z'/%3E%3C/svg%3E")}
+:root:root:root body .ic.gear{margin:0;--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.3' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='8' r='2.3'/%3E%3Cpath transform='translate(0 -.8)' d='M6.8 1.5h2.4l.4 1.7 1.2.5 1.5-.9 1.7 1.7-.9 1.5.5 1.2 1.7.4v2.4l-1.7.4-.5 1.2.9 1.5-1.7 1.7-1.5-.9-1.2.5-.4 1.7H6.8l-.4-1.7-1.2-.5-1.5.9-1.7-1.7.9-1.5-.5-1.2-1.7-.4V6.8l1.7-.4.5-1.2-.9-1.5 1.7-1.7 1.5.9 1.2-.5z'/%3E%3C/svg%3E")}
 :root:root:root body .home-paper .pp-gear{position:absolute;z-index:4;left:var(--ds-sp-4);bottom:var(--ds-sp-4);width:var(--ds-h-button);height:var(--ds-h-button);min-height:var(--ds-h-button);padding:0;border:1px solid var(--ds-line);border-radius:var(--ds-radius);background:var(--ds-paper);color:var(--ds-ink)}
 :root:root:root body .home-paper .pp-gear[aria-expanded=true]{background:var(--ds-ink);color:var(--ds-paper);border-color:var(--ds-ink)}
 :root:root:root body .home-paper .strip-now{bottom:calc(var(--ds-sp-4) + var(--ds-h-button) + var(--ds-sp-2))}
