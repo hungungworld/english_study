@@ -62,6 +62,7 @@ function flash(message) {
   clearTimeout(noticeTimer);
   noticeTimer = setTimeout(() => { notice.textContent = ""; }, 4000);
 }
+window.addEventListener("sync-failed",() => flash("공유 저장소에 저장하지 못했어요. 인터넷 연결을 확인해 주세요."));
 function safeLink(value) {
   try {
     const url = new URL(value);

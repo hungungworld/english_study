@@ -44,8 +44,33 @@ export async function addMember(email,password,name) {
   const {access_token} = await response.json();
   return rpc("study_add_member",{member_name:name},access_token);
 }
+const isUuid = id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id));
+// Writes to the shared database run in the background; the screen uses the local copy right away.
+const push = (name, payload) => {
+  if (!shared) return;
+  rpc(name, payload).catch(() => window.dispatchEvent(new CustomEvent("sync-failed")));
+};
+const union = (a = [], b = []) => [...new Set([...a, ...b])].sort().slice(-60);
+function mergeStreaks(remote) {
+  const local = readLocal("streak", {});
+  for (const [member, theirs] of Object.entries(remote)) {
+    const mine = local[member];
+    if (!mine) { local[member] = {...blankStudy(), ...theirs}; continue; }
+    const last = state => [...state.days, ...state.saved].sort().pop() ?? "";
+    // Days are combined; hearts come from whichever side studied most recently.
+    const newer = last(theirs) > last(mine) || (last(theirs) === last(mine) && theirs.days.length > mine.days.length) ? theirs : mine;
+    local[member] = {days:union(mine.days, theirs.days), saved:union(mine.saved, theirs.saved), awarded:union(mine.awarded, theirs.awarded), hearts:newer.hearts ?? 0};
+  }
+  writeLocal("streak", local);
+}
 export async function loadBoard() {
-  return shared ? rpc("study_board") : demo;
+  if (!shared) return demo;
+  const board = await rpc("study_board");
+  // Older databases do not return these yet; the local copies keep working.
+  if (board.reactions) writeLocal("reactions", board.reactions);
+  if (board.comments) writeLocal("comments", board.comments);
+  if (board.streaks) mergeStreaks(board.streaks);
+  return board;
 }
 export async function saveEntry(entry, token, id) {
   if (shared) return rpc("study_save", {entry, edit_token:token, post_key:id ?? null});
@@ -73,7 +98,7 @@ export async function removePost(id, token) {
   writeLocal("demo", demo);
 }
 
-// ---- 엄지척 반응, 연속 학습일, 하트 (이 브라우저에 저장) ----
+// ---- 엄지척 반응, 연속 학습일, 하트 (공유 모드에서는 Supabase에 저장) ----
 const dayMs = 86400000;
 export const dayKey = (ms = Date.now()) => new Date(ms + 9 * 3600000).toISOString().slice(0,10);
 const shiftDay = (key, n) => new Date(Date.parse(key + "T00:00:00Z") + n * dayMs).toISOString().slice(0,10);
@@ -105,6 +130,7 @@ export function recordStudy(member) {
     Object.assign(state,{days:state.days.slice(-60),saved:state.saved.slice(-60),awarded:state.awarded.slice(-60)});
     all[member] = state;
     writeLocal("streak",all);
+    push("study_streak_save",{member_no:member,new_state:state});
   }
   return {...result,streak:streakOf(state,today),hearts:state.hearts};
 }
@@ -115,18 +141,23 @@ export function toggleReaction(postId, member) {
   if (list.has(member)) list.delete(member); else list.add(member);
   all[postId] = [...list];
   writeLocal("reactions",all);
+  if (isUuid(postId)) push("study_react",{post_key:postId,member_no:member});
   return all;
 }
 
-// ---- 댓글 (이 브라우저에 저장) ----
+// ---- 댓글 (공유 모드에서는 Supabase에 저장) ----
 export const readComments = () => readLocal("comments",{});
 export function addComment(postId, member, text) {
   const all = readComments();
-  all[postId] = [...(all[postId] ?? []), {id:crypto.randomUUID(),member,text,at:new Date().toISOString()}];
+  const comment = {id:crypto.randomUUID(),member,text,at:new Date().toISOString()};
+  all[postId] = [...(all[postId] ?? []), comment];
   writeLocal("comments",all);
+  if (isUuid(postId)) push("study_comment_add",{comment_id:comment.id,post_key:postId,member_no:member,comment_text:text});
 }
 export function removeComment(postId, commentId) {
   const all = readComments();
+  const removed = (all[postId] ?? []).find(item => item.id === commentId);
   all[postId] = (all[postId] ?? []).filter(item => item.id !== commentId);
   writeLocal("comments",all);
+  if (removed && isUuid(commentId)) push("study_comment_remove",{comment_id:commentId,member_no:removed.member});
 }

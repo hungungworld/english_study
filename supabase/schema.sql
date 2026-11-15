@@ -9,7 +9,8 @@ alter table public.study_members enable row level security;
 alter table public.study_admins enable row level security;
 revoke all on public.study_members, public.study_admins from public, anon, authenticated;
 insert into public.study_members (id, name)
-select id, '조원 ' || id from generate_series(1,6) id on conflict (id) do nothing;
+values (1,'권혁주'),(2,'이상협'),(3,'이현경'),(4,'장희주'),(5,'채주현'),(6,'최가은')
+on conflict (id) do nothing;
 select setval(pg_get_serial_sequence('public.study_members','id'), (select max(id) from public.study_members));
 
 create or replace function public.study_add_member(member_name text)
@@ -61,14 +62,98 @@ alter table public.study_posts enable row level security;
 alter table public.study_words enable row level security;
 revoke all on public.study_posts, public.study_words from public, anon, authenticated;
 
+create table if not exists public.study_reactions (
+  post_id uuid not null references public.study_posts(id) on delete cascade,
+  member integer not null references public.study_members(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (post_id, member)
+);
+create table if not exists public.study_comments (
+  id uuid primary key,
+  post_id uuid not null references public.study_posts(id) on delete cascade,
+  member integer not null references public.study_members(id) on delete cascade,
+  body text not null check (length(trim(body)) between 1 and 500),
+  created_at timestamptz not null default now()
+);
+create table if not exists public.study_streaks (
+  member integer primary key references public.study_members(id) on delete cascade,
+  state jsonb not null check (length(state::text) < 4000),
+  updated_at timestamptz not null default now()
+);
+create index if not exists study_comments_post_id on public.study_comments(post_id);
+alter table public.study_reactions enable row level security;
+alter table public.study_comments enable row level security;
+alter table public.study_streaks enable row level security;
+revoke all on public.study_reactions, public.study_comments, public.study_streaks from public, anon, authenticated;
+
 create or replace function public.study_board()
 returns jsonb language sql stable security definer set search_path = ''
 as $$
   select jsonb_build_object(
     'members', coalesce((select jsonb_agg(to_jsonb(m) order by m.id) from public.study_members m), '[]'::jsonb),
     'posts', coalesce((select jsonb_agg(to_jsonb(p) - 'token_hash' order by p.created_at desc) from public.study_posts p), '[]'::jsonb),
-    'words', coalesce((select jsonb_agg(to_jsonb(w) order by w.created_at desc) from public.study_words w), '[]'::jsonb)
+    'words', coalesce((select jsonb_agg(to_jsonb(w) order by w.created_at desc) from public.study_words w), '[]'::jsonb),
+    'reactions', coalesce((select jsonb_object_agg(r.post_id, r.members) from (
+        select post_id, jsonb_agg(member order by created_at) as members from public.study_reactions group by post_id) r), '{}'::jsonb),
+    'comments', coalesce((select jsonb_object_agg(c.post_id, c.items) from (
+        select post_id, jsonb_agg(jsonb_build_object('id', id, 'member', member, 'text', body, 'at', created_at) order by created_at) as items
+        from public.study_comments group by post_id) c), '{}'::jsonb),
+    'streaks', coalesce((select jsonb_object_agg(member::text, state) from public.study_streaks), '{}'::jsonb)
   );
+$$;
+
+-- 응원: 한 번 누르면 켜지고, 다시 누르면 꺼집니다.
+create or replace function public.study_react(post_key uuid, member_no integer)
+returns boolean language plpgsql security definer set search_path = ''
+as $$
+begin
+  if not exists (select 1 from public.study_members where id = member_no)
+     or not exists (select 1 from public.study_posts where id = post_key) then
+    raise exception 'Invalid input';
+  end if;
+  delete from public.study_reactions where post_id = post_key and member = member_no;
+  if found then return false; end if;
+  insert into public.study_reactions(post_id, member) values(post_key, member_no);
+  return true;
+end;
+$$;
+
+create or replace function public.study_comment_add(comment_id uuid, post_key uuid, member_no integer, comment_text text)
+returns uuid language plpgsql security definer set search_path = ''
+as $$
+begin
+  if not exists (select 1 from public.study_members where id = member_no)
+     or not exists (select 1 from public.study_posts where id = post_key)
+     or coalesce(length(trim(comment_text)), 0) not between 1 and 500 then
+    raise exception 'Invalid input';
+  end if;
+  insert into public.study_comments(id, post_id, member, body) values(comment_id, post_key, member_no, trim(comment_text))
+    on conflict (id) do nothing;
+  return comment_id;
+end;
+$$;
+
+create or replace function public.study_comment_remove(comment_id uuid, member_no integer)
+returns boolean language plpgsql security definer set search_path = ''
+as $$
+begin
+  delete from public.study_comments where id = comment_id and member = member_no;
+  return found;
+end;
+$$;
+
+create or replace function public.study_streak_save(member_no integer, new_state jsonb)
+returns boolean language plpgsql security definer set search_path = ''
+as $$
+begin
+  if not exists (select 1 from public.study_members where id = member_no)
+     or jsonb_typeof(new_state) is distinct from 'object' or length(new_state::text) >= 4000 then
+    raise exception 'Invalid input';
+  end if;
+  insert into public.study_streaks(member, state) values(member_no, new_state)
+    on conflict (member) do update set state = excluded.state, updated_at = now();
+  return true;
+end;
 $$;
 
 create or replace function public.study_save(entry jsonb, edit_token text, post_key uuid default null)
@@ -141,7 +226,11 @@ begin
 end;
 $$;
 
-revoke all on function public.study_board(), public.study_save(jsonb,text,uuid), public.study_remove(uuid,text) from public, anon, authenticated;
-grant execute on function public.study_board(), public.study_save(jsonb,text,uuid), public.study_remove(uuid,text) to anon;
+revoke all on function public.study_board(), public.study_save(jsonb,text,uuid), public.study_remove(uuid,text),
+  public.study_react(uuid,integer), public.study_comment_add(uuid,uuid,integer,text), public.study_comment_remove(uuid,integer),
+  public.study_streak_save(integer,jsonb) from public, anon, authenticated;
+grant execute on function public.study_board(), public.study_save(jsonb,text,uuid), public.study_remove(uuid,text),
+  public.study_react(uuid,integer), public.study_comment_add(uuid,uuid,integer,text), public.study_comment_remove(uuid,integer),
+  public.study_streak_save(integer,jsonb) to anon;
 
 commit;
