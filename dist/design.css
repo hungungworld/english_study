@@ -691,3 +691,11 @@
 :root:root:root body #tv-overlay .tv-writer [data-close]:hover:enabled{background:var(--ds-wash);color:var(--ds-ink);border-color:transparent}
 :root:root:root body #tv-overlay .tv-close{background:rgba(17,17,17,.87);color:var(--ds-on-dark);border-color:rgba(241,239,233,.5)}
 :root:root:root body #tv-overlay .tv-close:hover{background:var(--ds-on-dark);color:var(--ds-ink)}
+
+/* ---- Phones (≤700px): the TV stack sits below the copy in the flow, so it can never cover the links ---- */
+@media (max-width:700px){
+  :root:root:root body .home-scene{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:var(--ds-sp-5)}
+  :root:root:root body .home-scene .home-copy{padding:10svh var(--ds-sp-4) 0;width:100%;box-sizing:border-box}
+  :root:root:root body .home-scene .tv-pile{position:relative;left:auto;bottom:auto;align-self:flex-start;margin:auto 0 0 var(--ds-sp-2);height:min(30svh,200px);max-width:none;flex:none}
+  :root:root:root body .home-scene .scroll-glow{left:52%;right:0}
+}
