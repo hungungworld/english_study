@@ -56,6 +56,7 @@ function template() {
       ${SCREENS.map(screenHtml).join("")}
       <p class="pile-now" aria-live="polite"></p>
     </div>
+    <button type="button" class="scroll-glow" data-scroll-down aria-label="Scroll down to this week’s notes"></button>
   </section>`;
 }
 function interleave(news,videos) {
@@ -138,7 +139,7 @@ function fillPoster(root,ctx) {
     </div>
     <div class="pp-main">
       <div class="pp-main-head">
-        <h2 id="paper-title" class="pp-title">This week<br>in English</h2>
+        <h2 id="paper-title" class="pp-title" tabindex="-1">This week<br>in English</h2>
         <p class="pp-sub">Read articles, watch videos, and leave one sentence each that you want to remember.</p>
       </div>
       <div class="pp-cols">
@@ -152,9 +153,14 @@ function fillPoster(root,ctx) {
     <div class="pp-strip" aria-label="This week’s news and videos">${picks.map(item =>
       `<a href="${link(item)}" aria-label="${escape(item.title)}" data-title="${escape(item.title)}"${item.topics?.[0] ? ` data-tag="${escape(item.topics[0])}"` : ""}><img src="${escape(item.type === "video" ? (item.image || "").replace("hqdefault","mqdefault") : upgrade(item.image))}" data-fallback="${escape(item.image)}" alt="" loading="lazy"></a>`).join("")}</div>`;
 }
+// The glow at the bottom of the first screen says "there is more below"; it fades once the page is scrolled.
+function cueOnScroll() {
+  document.querySelector(".home-scene")?.classList.toggle("is-scrolled",window.scrollY > 24);
+}
 export function leaveHome() {
   clearInterval(timer);
   timer = 0;
+  window.removeEventListener("scroll",cueOnScroll);
 }
 export function renderHome(root,ctx) {
   if (root.querySelector(".home-scene")) {
@@ -162,6 +168,7 @@ export function renderHome(root,ctx) {
     return;
   }
   leaveHome();
+  window.addEventListener("scroll",cueOnScroll,{passive:true});
   root.innerHTML = `<div class="home-page">${template()}<section class="home-paper" aria-labelledby="paper-title"></section></div>`;
   if (!root.dataset.homeBound) {
     root.dataset.homeBound = "1";
@@ -190,6 +197,12 @@ export function renderHome(root,ctx) {
       applyPicks(root).then(() => { if (focusSelector) root.querySelector(focusSelector)?.focus(); });
     };
     root.addEventListener("click",event => {
+      if (event.target.closest("[data-scroll-down]")) {
+        const paper = root.querySelector(".home-paper");
+        paper?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",block:"start"});
+        root.querySelector("#paper-title")?.focus({preventScroll:true});
+        return;
+      }
       if (event.target.closest("[data-prefs-toggle]")) {
         prefsOpen = !prefsOpen;
         fillPoster(root,lastCtx);

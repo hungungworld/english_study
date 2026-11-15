@@ -18,7 +18,9 @@
       ['.tabs a,.tv-seg button', 40, 1],
       ['.tabs button,.filters-right select,[data-board-author]', 32, 1],
       ['.pr-group a,.pr-group button', 32, 1],
-      ['.hero > button,.pr-head > button,.tv-about-btn', 36, 1],
+      ['.hero > button,.pr-head > button', 36, 1],
+      ['.scroll-glow', 96, 1],                             // home scroll cue (DESIGN.md 6-8): a tall soft light, not a regular button
+      ['.tv-about-btn', 34, 1],                            // inside the 36px Explore pill (1px border each side)
       ['.chip,.tv-chip', 36, 1],
       ['nav.pager button', 44, 1],
       ['a.home-primary,button.home-ghost', 44, 1],

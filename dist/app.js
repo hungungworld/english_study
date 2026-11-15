@@ -300,9 +300,9 @@ function renderBoard(chat) {
   const posts = sorted(board.posts.filter(post => boardKind(post) === kind && (!labMember || post.author === labMember)));
   const shown = paged("feed",posts);
   const weekCount = which => inPeriod(board.posts.filter(post => boardKind(post) === which),"week").length;
-  const write = chat ? '<button type="button" class="primary" data-new-chat>＋ Write</button>' : '<button type="button" class="primary" data-new-note>＋ Write a note</button>';
+  const write = chat ? '<button type="button" class="primary" data-new-chat>＋ Write</button>' : '<button type="button" class="primary" data-new-note>＋ Write</button>';
   const blank = chat ? emptyAction("No posts yet. Write the first one.",'<button type="button" data-new-chat>＋ Write</button>') :
-    emptyAction("No notes yet. Leave the first one.",'<button type="button" data-new-note>＋ Write a note</button>');
+    emptyAction("No notes yet. Leave the first one.",'<button type="button" data-new-note>＋ Write</button>');
   const names = [[0,"All members"],...members.map((name,index) => [index + 1,name]).filter(([,name]) => name)];
   return posterPage({title:chat ? "Free board" : "Study board",sub:chat ? "Say hi and cheer each other on" : "English study notes from the group",action:write,label:"Board info and filters",
     bottom:`<nav class="pr-group" aria-label="Board type"><b>Board</b><a href="#feed" ${chat ? "" : 'aria-current="page"'}>Study board</a><a href="#feed/chat" ${chat ? 'aria-current="page"' : ""}>Free board</a></nav>
@@ -467,7 +467,7 @@ function openEditor(standalone, post, source, host, kind) {
   const words = post ? board.words.filter(word => word.post_id === post.id) : [];
   editorChanged = false;
   const target = host ?? editor;
-  const heading = standalone ? "Add a word" : post ? "Edit note" : source ? "Write a note on this item" : "Write a note";
+  const heading = standalone ? "Add a word" : post ? "Edit note" : source ? "Write about this item" : "Write";
   target.innerHTML = `<div class="dialog-head"><h2 id="${pre}-title">${heading}</h2><button type="button" data-close aria-label="Close">✕</button></div>
   <form novalidate><p class="hint">Author · <strong>${writerName(post)}</strong></p><label class="sr-only">Author<select name="author" disabled>${authorOptions(post)}</select></label>
   <label data-guest>Display name<input name="author_name" maxlength="40" value="${e(selected.author_name)}"></label>
@@ -536,7 +536,7 @@ function openEditor(standalone, post, source, host, kind) {
         await refresh();
         host.innerHTML = `<div class="dialog-head"><h2 id="writer-title">Saved</h2><button type="button" data-close aria-label="Close">✕</button></div>
           <p>Your note is posted. You can keep viewing the item.</p>
-          <div class="row"><a class="writer-link" href="#post/${e(id)}">View your note</a><button type="button" data-write-again>Write another note</button></div>`;
+          <div class="row"><a class="writer-link" href="#post/${e(id)}">View your note</a><button type="button" data-write-again>Write another</button></div>`;
         studied();
         flash("Saved.");
         return;

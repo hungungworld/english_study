@@ -348,7 +348,7 @@ function paint() {
   const controls = Object.entries(filters).filter(([id]) => id !== "scraps").map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
   const keepSearchFocus = document.activeElement?.id === "tv-q";
   const caret = keepSearchFocus ? document.activeElement.selectionStart : 0;
-  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${section === "home" ? "Videos & articles" : filters[section] ?? "Explore"}</h1>${!section ? `<button type="button" class="tv-about-btn" data-about-toggle aria-expanded="${aboutOpen}" aria-controls="tv-about" aria-label="About this list">i</button>` : ""}</div>
+  feed.innerHTML = `<section class="tv-home"><div class="tv-intro"><h1>${!section ? `<button type="button" class="tv-about-btn" data-about-toggle aria-expanded="${aboutOpen}" aria-controls="tv-about"><span>Explore</span><span class="sr-only"> · about this list</span><span class="ic info" aria-hidden="true"></span></button>` : section === "home" ? "Videos & articles" : filters[section] ?? "Explore"}</h1></div>
     ${!section ? aboutHtml() : ""}
     ${section === "home" ? `<nav class="tv-filters home-tv-tabs" aria-label="Videos and articles">${controls}</nav>` : ""}
     ${!section ? `<div class="tv-summary" data-summary>${summaryHtml()}</div>` : ""}
@@ -381,7 +381,7 @@ function detail(item) {
     <h1 lang="en">${escape(item.title)}</h1>
     ${item.summary ? `<p class="tv-summary" lang="en">${escape(item.summary)}</p>` : ""}
     <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "Open on YouTube" : "Read on BBC"}<span class="ar ne" aria-hidden="true"></span></a>
-    <button type="button" class="tv-action" data-write-source>＋ Write a note on this item</button>
+    <button type="button" class="tv-action" data-write-source>＋ Write</button>
     <button type="button" class="tv-action" data-scrap aria-label="Save" aria-pressed="${saved}" title="${saved ? "Remove from saved" : "Save"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div></section><aside class="tv-writer" aria-label="Write a note" hidden></aside></div>`;
 }
 function showDetail(item, origin) {

@@ -567,7 +567,7 @@
 
 /* ---- Explore: "About this list" button (36px, next to the title) and its panel ---- */
 :root:root:root body.media-mode .tv-intro{display:flex;align-items:center;gap:var(--ds-sp-2)}
-:root:root:root body.media-mode .tv-intro .tv-about-btn{pointer-events:auto;width:var(--ds-h-chip);height:var(--ds-h-chip);min-height:var(--ds-h-chip);padding:0;border:1px solid rgba(241,239,233,.5);border-radius:var(--ds-radius);background:rgba(17,17,17,.87);color:var(--ds-on-dark);font:500 var(--ds-fs-ui)/1 var(--ds-sans);display:inline-flex;align-items:center;justify-content:center}
+:root:root:root body.media-mode .tv-intro .tv-about-btn{pointer-events:auto;height:var(--ds-h-chip);min-height:var(--ds-h-chip);padding:0;border:1px solid rgba(241,239,233,.5);border-radius:var(--ds-radius);background:rgba(17,17,17,.87);color:var(--ds-on-dark);font:500 var(--ds-fs-ui)/1 var(--ds-sans);display:inline-flex;align-items:center;justify-content:center}
 :root:root:root body.media-mode .tv-intro .tv-about-btn:hover,:root:root:root body.media-mode .tv-intro .tv-about-btn[aria-expanded=true]{background:var(--ds-on-dark);color:var(--ds-ink)}
 :root:root:root body.media-mode .tv-about{position:fixed;z-index:4;top:calc(var(--ds-sp-4) + var(--ds-h-chip) + var(--ds-sp-2));left:50%;transform:translateX(-50%);width:min(560px,calc(100vw - 2 * var(--ds-sp-4)));max-height:calc(100vh - 160px);overflow:auto;padding:var(--ds-sp-4);background:rgba(17,17,17,.92);border:1px solid rgba(241,239,233,.5);border-radius:var(--ds-radius);color:var(--ds-on-dark)}
 :root:root:root body.media-mode .tv-about[hidden]{display:none}
@@ -576,3 +576,29 @@
 :root:root:root body.media-mode .tv-about dt{font-size:var(--ds-fs-ui);line-height:1.6;color:var(--ds-on-dark-muted)}
 :root:root:root body.media-mode .tv-about dd{margin:0;font-size:var(--ds-fs-ui);line-height:1.6;color:var(--ds-on-dark-2)}
 @media (max-width:560px){:root:root:root body.media-mode .tv-about dl{grid-template-columns:minmax(0,1fr)}:root:root:root body.media-mode .tv-about dt{margin-bottom:calc(-1 * var(--ds-sp-2))}}
+/* Explore floating bar: title label and info button share one 36px height; the button shows an icon, not a letter. */
+:root:root:root body.media-mode .tv-intro h1{min-height:var(--ds-h-chip)}
+:root:root:root body .ic.info{margin:0;--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='8' r='6.4'/%3E%3Cpath d='M8 7.2v3.6'/%3E%3Cpath d='M8 4.9h.01'/%3E%3C/svg%3E")}
+:root:root:root body.media-mode .tv-intro .tv-about-btn .ic{width:20px;height:20px;vertical-align:0}
+
+/* Home scroll cue (DESIGN.md 6-8): a soft light at the bottom edge of the first screen, just above the poster strip.
+   It is a real element because the scene's ::before (film grain) and ::after (vignette) are already taken. */
+:root:root:root body .home-scene .scroll-glow{color:var(--ds-on-dark);position:absolute;left:25%;right:25%;bottom:0;width:auto;height:calc(var(--ds-sp-7) * 2);min-height:0;padding:0;border:0;border-radius:0;cursor:pointer;z-index:1;background:radial-gradient(ellipse 100% 100% at 50% 100%,rgba(241,239,233,.3),rgba(241,239,233,0) 70%);animation:ds-cue 2.8s ease-in-out infinite;transition:opacity .4s}
+:root:root:root body .home-scene.is-scrolled .scroll-glow{opacity:0;animation:none;pointer-events:none}
+:root:root:root body .home-scene .scroll-glow:is(:hover,:focus-visible){animation:none;opacity:1}
+:root:root:root body .home-scene .scroll-glow:focus-visible{outline:2px solid var(--ds-on-dark);outline-offset:-2px}
+@keyframes ds-cue{0%,100%{opacity:.25}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){:root:root:root body .home-scene .scroll-glow{animation:none;opacity:.55}}
+
+
+/* Explore label: the whole pill is the button that opens "About this list" (a click no longer falls through to the cards behind it). */
+:root:root:root body.media-mode .tv-intro{padding:0;gap:0}
+:root:root:root body.media-mode .tv-intro h1{display:flex;align-items:center;height:100%;padding:0 var(--ds-sp-3)}
+:root:root:root body.media-mode .tv-intro h1:has(.tv-about-btn){padding:0}
+:root:root:root body.media-mode .tv-intro h1 .tv-about-btn{pointer-events:auto;display:inline-flex;align-items:center;gap:var(--ds-sp-2);width:auto;height:calc(var(--ds-h-chip) - 2px);min-height:calc(var(--ds-h-chip) - 2px);padding:0 var(--ds-sp-3);border:0;border-radius:0;background:transparent;color:var(--ds-on-dark);font:inherit;cursor:pointer}
+:root:root:root body.media-mode .tv-intro h1 .tv-about-btn:hover,:root:root:root body.media-mode .tv-intro h1 .tv-about-btn[aria-expanded=true]{background:var(--ds-on-dark);color:var(--ds-ink)}
+/* Explore results view: the filter pills and the dock badge (the old `body .media-mode` selectors never matched, since media-mode is on body). */
+:root:root:root body.media-mode .tv-pill{background:rgba(17,17,17,.87);border:0;height:var(--ds-h-tag);min-height:var(--ds-h-tag)}
+:root:root:root body.media-mode .tv-dock .tv-explore .badge{background:var(--ds-ink);color:var(--ds-paper)}
+:root:root:root body.media-mode .tv-summary{top:calc(var(--ds-sp-4) + var(--ds-h-chip) + var(--ds-sp-3));gap:var(--ds-sp-2)}
+:root:root:root body.media-mode .tv-dock :is(a,button){font-size:var(--ds-fs-ui)}
