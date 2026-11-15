@@ -10,7 +10,7 @@
   --ds-muted:#5c5850; --ds-line:#d4d0c4;
   --ds-dark:#0b0907; --ds-dark-2:#14100c; --ds-on-dark:#f1efe9; --ds-on-dark-muted:#b8b4a8;
   /* type */
-  --ds-sans:"Helvetica Neue",Helvetica,Arial,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+  --ds-sans:"Helvetica Neue",Helvetica,Arial,"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --ds-serif:"Noto Serif KR","Times New Roman",Georgia,serif;
   --ds-fs-caption:12px; --ds-fs-ui:14px; --ds-fs-body:16px; --ds-fs-item:20px; --ds-fs-h2:24px;
   --ds-fs-article:32px; --ds-fs-term:40px; --ds-fs-numeral:48px; --ds-fs-h1:clamp(32px,4.4vw,48px);
@@ -31,7 +31,7 @@
 :root:root:root body :is(.dialog-head h2,.quiz h2:not([lang]),#tv-overlay .tv-detail-copy h1){font-size:var(--ds-fs-h2);line-height:1.2;margin:0}
 :root:root:root body .quiz h2[lang]{font-size:var(--ds-fs-term);line-height:1.2}
 :root:root:root body :is(.meta,.count,.hint,.hero p,#tv-overlay .tv-label,.tv-summary,.word-row span,.word-row em,.pp-rail,.pp-sub,.pp-cols p,.pp-more,.pp-vert,.home-links a,.tv-detail-copy .tv-summary){font-size:var(--ds-fs-ui);line-height:1.5}
-:root:root:root body :is(.tag,.tv-pill,.pp-k,.pp-note,.pp-cols h3,.pp-words h3,.chip small,.tv-chip small,.news-screen span,.pile-screen .ps-cap){font-size:var(--ds-fs-caption);line-height:1.4}
+:root:root:root body :is(.tag,.tv-pill,.pp-k,.pp-note,.chip small,.tv-chip small,.news-screen span,.pile-screen .ps-cap){font-size:var(--ds-fs-caption);line-height:1.4}
 :root:root:root body :is(.pp-cols h3,.pp-words h3,.pp-k){font-weight:700}
 :root:root:root body .home-copy p{font-size:var(--ds-fs-item);line-height:1.5}
 :root:root:root body .pp-dates{font-size:var(--ds-fs-numeral);line-height:1}
@@ -131,7 +131,6 @@
 :root:root:root body .home-actions{gap:var(--ds-sp-3)}
 :root:root:root body .home-links{gap:var(--ds-sp-5)}
 /* the side tab would sit on top of an open dialog */
-body:has(dialog[open]) #open-members{visibility:hidden}
 @media(max-width:700px){
   :root:root body .shell{padding-inline:var(--ds-sp-4)}
   :root:root body.study-mode .shell{padding-left:var(--ds-sp-4)}
@@ -183,3 +182,385 @@ body:has(dialog[open]) #open-members{visibility:hidden}
 :root:root:root body.media-mode .tv-dock{color:var(--ds-on-dark)}
 :root:root:root body.media-mode .tv-dock::before,:root:root:root body.media-mode .tv-dock > :not(a):not(button){color:var(--ds-on-dark)}
 :root:root:root body.media-mode .tv-pill,:root:root:root body.media-mode .tv-intro h1{color:var(--ds-on-dark)}
+/* paper-filled buttons on dark scenes keep ink text (must follow the on-dark rule above) */
+:root:root:root body.media-mode :is(.tv-sheet,.tv-dock) :is(button,a)[aria-pressed=true],:root:root:root body.media-mode .tv-dock .tv-explore,:root:root:root body.media-mode .tv-sheet .tv-seg button[aria-pressed=true],:root:root:root body.media-mode .tv-sheet .tv-chip[aria-pressed=true]{color:var(--ds-ink)}
+:root:root:root body.media-mode .tv-sheet .tv-apply,:root:root:root body.media-mode .tv-dock > button:last-child:not(.tv-explore){background:var(--ds-paper);color:var(--ds-ink)}
+/* home first screen: the scene starts below the shell's top padding, so subtract it to keep the TV pile above the fold */
+:root:root:root body .home-scene{min-height:calc(100svh - var(--ds-sp-6))}
+/* ---- home poster: one type scale (body 14, section label 16, caption 12), no clamp() drift ---- */
+:root:root:root body :is(.pp-rail,.pp-rail p,.pp-cols p,.pp-sub,.pp-more,.pp-words small){font-size:var(--ds-fs-ui);line-height:1.5}
+:root:root:root body .pp-rail .pp-k{font-size:var(--ds-fs-ui);font-weight:700}
+:root:root:root body :is(.pp-cols h3,.pp-words h3){font-size:var(--ds-fs-body);font-weight:700;line-height:1.3;padding-top:var(--ds-sp-2);margin:0 0 var(--ds-sp-2)}
+:root:root:root body .pp-words div{font-size:var(--ds-fs-h2)}
+:root:root:root body .pp-dates{font-size:var(--ds-fs-numeral)}
+:root:root:root body .pp-dates span{font-size:var(--ds-fs-item)}
+:root:root:root body .pp-note{font-size:var(--ds-fs-caption)}
+:root:root:root body .pp-vert{font-size:var(--ds-fs-ui)}
+@media(max-width:900px){
+  :root:root:root body .home-paper{grid-template-columns:120px minmax(0,1fr)}
+  :root:root:root body .pp-vert{display:none}
+  :root:root:root body .pp-strip{left:120px;right:0}
+  :root:root:root body .pp-dates{font-size:var(--ds-fs-h2)}
+  :root:root:root body .pp-dates span{font-size:var(--ds-fs-ui)}
+  :root:root:root body .pp-words div{font-size:var(--ds-fs-item)}
+}
+/* ---- arrows are drawn, not typed: the font's arrow glyphs sit above the Korean baseline ---- */
+:root:root:root body .ar{display:inline-block;width:1.15em;height:1.15em;flex:none;vertical-align:-.22em;margin-left:.3em;background:currentColor;-webkit-mask:var(--ar) center/100% 100% no-repeat;mask:var(--ar) center/100% 100% no-repeat}
+:root:root:root body .ar.l{margin-left:0;margin-right:.3em}
+:root:root:root body .ar.ne{--ar:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6'%3E%3Cpath d='M4.5 11.5l7-7M5.5 4.5h6v6'/%3E%3C/svg%3E")}
+:root:root:root body .ar.r{--ar:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6'%3E%3Cpath d='M2.5 8h11M9 3.5L13.5 8 9 12.5'/%3E%3C/svg%3E")}
+:root:root:root body .ar.l{--ar:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6'%3E%3Cpath d='M13.5 8h-11M7 3.5L2.5 8 7 12.5'/%3E%3C/svg%3E")}
+:root:root:root body .ar.d{--ar:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6'%3E%3Cpath d='M8 2.5v11M3.5 9L8 13.5 12.5 9'/%3E%3C/svg%3E")}
+:root:root:root body .ar.cv{--ar:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6'%3E%3Cpath d='M6 3l5 5-5 5'/%3E%3C/svg%3E")}
+/* Hangul: one webfont on every device (system Hangul fonts are hand-hinted and land on different pixel rows at 14px), unhinted rendering */
+:root:root body{text-rendering:geometricPrecision;-webkit-font-smoothing:antialiased}
+
+/* 자료 상세: 제목 ↔ 요약/버튼 사이 16px (DESIGN.md 4번 '창 안 제목 아래') */
+:root:root:root body #tv-overlay .tv-detail-copy h1{margin:var(--ds-sp-2) 0 var(--ds-sp-4)}
+:root:root:root body #tv-overlay .tv-detail-copy .tv-summary{margin:0 0 var(--ds-sp-4)}
+
+/* 홈 CTA: 크고 굵던 버튼을 기본 버튼 크기(44px, 14px/500)로 줄임 */
+:root:root:root body :is(a.home-primary,button.home-ghost){min-height:var(--ds-h-button);padding:0 var(--ds-sp-4);font:500 var(--ds-fs-ui)/1.2 var(--ds-sans);letter-spacing:.02em}
+:root:root:root body .home-links{gap:var(--ds-sp-4)}
+:root:root:root body .home-links a{border-bottom-color:transparent;padding-bottom:0}
+:root:root:root body .home-links a:hover{border-bottom-color:currentColor}
+
+/* 홈 포스터: 위쪽 메뉴와 겹치던 세로 메뉴를 없앴으므로 2단(레일 + 본문)으로 */
+:root:root:root body .home-paper{grid-template-columns:clamp(104px,17vw,250px) minmax(0,1fr)}
+@media(max-width:900px){:root:root:root body .home-paper{grid-template-columns:120px minmax(0,1fr)}}
+
+/* 홈 포스터 왼쪽 레일: 묶음(이번 주 노트 / 출처 / 날짜 / 안내) 사이 32px, 묶음 안 라벨 아래 4px */
+:root:root:root body .pp-rail{display:flex;flex-direction:column;gap:var(--ds-sp-6)}
+:root:root:root body .pp-rail p{margin:0}
+:root:root:root body .pp-rail .pp-k{display:block;margin-bottom:var(--ds-sp-1)}
+:root:root:root body .pp-rail .pp-dates{margin-top:var(--ds-sp-4)}
+:root:root:root body .pp-rail .pp-note{margin-top:0}
+
+/* ---- 엄지척 · 연속 학습 · 하트 · 틀린 단어 ---- */
+:root:root:root body .ic{display:inline-block;width:1.15em;height:1.15em;flex:none;vertical-align:-.22em;background:currentColor;-webkit-mask:var(--ic) center/100% 100% no-repeat;mask:var(--ic) center/100% 100% no-repeat}
+:root:root:root body .ic.thumb{margin-right:var(--ds-sp-2);--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.4' stroke-linejoin='round'%3E%3Cpath d='M2.5 7.5h2.5v6H2.5zM5 7.5l2.5-5c1.2 0 1.8.9 1.5 2L8.6 6.5h3.9c.9 0 1.5.8 1.3 1.6l-1 4.2c-.2.7-.8 1.2-1.5 1.2H5'/%3E%3C/svg%3E")}
+:root:root:root body .react[aria-pressed=true] .ic.thumb{background:currentColor;-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='black' stroke='black' stroke-width='1.4' stroke-linejoin='round' d='M2.5 7.5h2.5v6H2.5zM5 7.5l2.5-5c1.2 0 1.8.9 1.5 2L8.6 6.5h3.9c.9 0 1.5.8 1.3 1.6l-1 4.2c-.2.7-.8 1.2-1.5 1.2H5z'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='black' stroke='black' stroke-width='1.4' stroke-linejoin='round' d='M2.5 7.5h2.5v6H2.5zM5 7.5l2.5-5c1.2 0 1.8.9 1.5 2L8.6 6.5h3.9c.9 0 1.5.8 1.3 1.6l-1 4.2c-.2.7-.8 1.2-1.5 1.2H5z'/%3E%3C/svg%3E")}
+:root:root:root body .ic.heart{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='black' d='M8 14S1.5 10 1.5 5.7C1.5 3.7 3 2.5 4.7 2.5c1.3 0 2.5.7 3.3 1.9.8-1.2 2-1.9 3.3-1.9 1.7 0 3.2 1.2 3.2 3.2C14.5 10 8 14 8 14z'/%3E%3C/svg%3E")}
+:root:root:root body .ic.heart.off{opacity:.2}
+:root:root:root body .hearts{display:inline-flex;gap:var(--ds-sp-1);vertical-align:middle}
+:root:root:root body .study-panel{display:grid;gap:var(--ds-sp-3)}
+:root:root:root body .study-panel :is(h2,h3,p,ol,ul){margin:0}
+:root:root:root body .study-panel h3{font-size:var(--ds-fs-item);line-height:1.3;margin-top:var(--ds-sp-3)}
+:root:root:root body .study-panel .streak{font:400 var(--ds-fs-body)/1.6 var(--ds-sans)}
+:root:root:root body .study-panel .streak strong{font-size:var(--ds-fs-item);font-weight:700}
+:root:root:root body .week-dots{display:flex;gap:var(--ds-sp-2);list-style:none;padding:0}
+:root:root:root body .week-dots li{display:grid;place-items:center;width:var(--ds-h-seg);height:var(--ds-h-seg);border:1px solid var(--ds-ink);border-radius:var(--ds-radius);font:500 var(--ds-fs-ui)/1 var(--ds-sans)}
+:root:root:root body .week-dots li.on{background:var(--ds-ink);color:var(--ds-paper)}
+:root:root:root body .week-members{list-style:none;padding:0;display:grid;gap:var(--ds-sp-2)}
+:root:root:root body .week-members li{display:flex;justify-content:space-between;gap:var(--ds-sp-4);padding-bottom:var(--ds-sp-2);border-bottom:1px solid var(--ds-line);font:400 var(--ds-fs-ui)/1.5 var(--ds-sans)}
+:root:root:root body .wrong-box{display:grid;gap:var(--ds-sp-3);padding-bottom:var(--ds-sp-4);margin-bottom:var(--ds-sp-4);border-bottom:1px solid var(--ds-line)}
+:root:root:root body .wrong-box :is(h3,p,ul){margin:0}
+:root:root:root body .wrong-list{list-style:none;padding:0;display:grid;gap:var(--ds-sp-2)}
+:root:root:root body .wrong-list li{display:flex;gap:var(--ds-sp-4);font:400 var(--ds-fs-ui)/1.5 var(--ds-sans)}
+:root:root:root body .filters-right{margin-left:auto;align-items:center}
+:root:root:root body .react{display:inline-flex;align-items:center}
+:root:root:root body .study-panel h2{font-size:var(--ds-fs-item);line-height:1.3}
+:root:root:root body .quiz :is(h2,h3):not([lang]){margin:0 0 var(--ds-sp-3)}
+:root:root:root body .quiz .wrong-box{margin-top:var(--ds-sp-4);text-align:center;justify-items:center}
+:root:root:root body .quiz .wrong-box h3{margin:0}
+:root:root:root body .quiz .wrong-list{justify-items:start}
+:root:root:root body .quiz .section-title{margin:var(--ds-sp-6) 0 var(--ds-sp-3)}
+:root:root:root body .quiz > .row{margin-bottom:var(--ds-sp-2)}
+
+/* ---- 탭·필터 위계 정리 (사용자 요청: 에디토리얼 톤, 윤곽선 힘 빼기) ----
+   1차 탭 = 밑줄 탭, 2차 전환 = 작은 베이지 분할 컨트롤, 조원 선택 = 밑줄만 있는 인라인 셀렉트 */
+:root{--ds-sand:#efece6;--ds-wash:#f3f1ec}
+:root:root:root body .toolbar.filters-row{align-items:center;gap:var(--ds-sp-3) var(--ds-sp-4);border-bottom:1px solid var(--ds-line)}
+:root:root:root body .tabs:has(> a){gap:var(--ds-sp-5);align-self:flex-end;border:0}
+:root:root:root body .tabs > a{min-height:var(--ds-h-seg);padding:0;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:transparent;color:var(--ds-muted);font:500 var(--ds-fs-ui)/1.2 var(--ds-sans)}
+:root:root:root body .tabs > a:hover{background:transparent;color:var(--ds-ink)}
+:root:root:root body .tabs > a[aria-current=page]{background:transparent;color:var(--ds-ink);font-weight:700;border-bottom-color:var(--ds-ink)}
+:root:root:root body .tabs:has(> button){gap:0;padding:var(--ds-sp-1);background:var(--ds-sand);border:0;border-radius:var(--ds-radius)}
+:root:root:root body .tabs > button{min-height:var(--ds-sp-6);padding:0 var(--ds-sp-3);border:0;border-radius:var(--ds-radius);background:transparent;color:var(--ds-muted);font:500 var(--ds-fs-caption)/1.2 var(--ds-sans)}
+:root:root:root body .tabs > button:hover:enabled{background:transparent;color:var(--ds-ink)}
+:root:root:root body .tabs > button[aria-pressed=true]{background:var(--ds-white);color:var(--ds-ink);font-weight:700}
+:root:root:root body .filters-right{gap:var(--ds-sp-3);align-self:center}
+:root:root:root body .filters-right select{min-height:var(--ds-sp-6);min-width:0;padding:0 var(--ds-sp-2);border:0;border-bottom:1px solid var(--ds-ink);border-radius:0;background-color:transparent;font:500 var(--ds-fs-ui)/1.2 var(--ds-sans)}
+:root:root:root body .filters-right .count{line-height:var(--ds-sp-6)}
+:root:root:root body .card.empty{border:0;background:var(--ds-wash);color:var(--ds-muted)}
+:root:root:root body #main .filters-right select{min-height:var(--ds-sp-6);height:var(--ds-sp-6);padding:0 var(--ds-sp-2);border:0;border-bottom:1px solid var(--ds-ink);border-radius:0;background-color:transparent}
+:root:root:root body #main [data-board-author]{min-height:var(--ds-sp-6);padding:0 var(--ds-sp-2);border:0;border-bottom:1px solid var(--ds-ink);border-radius:0;background:transparent;color:var(--ds-ink)}
+
+/* ---- 전체 수직 리듬 · 헤어라인 버튼 (사용자 요청, DESIGN.md 2.2 / 3 / 5) ----
+   제목 행간 최소 1.35, 본문 1.6. 글 다음에 상자·버튼·카드가 오면 간격 최소 16px.
+   밝은 화면의 보조 버튼 테두리는 가는 웜그레이 선. 포커스 링은 2px 한 겹만 남김. */
+:root:root:root body :is(.hero h1,article.card > h1,.post-preview h2,article.card > h2,.word-group-head h2,.section-title,.card h3,.dialog-head h2,.quiz h2,#tv-overlay .tv-detail-copy h1,.study-panel :is(h2,h3),.wrong-box h3){line-height:1.35}
+:root:root:root body :is(h1,h2,h3,h4,p,.hint,.meta,.count,.snippet,.prose,.chat-body) + :is(.row,.card,.stack,.toolbar,.quiz,.tabs,.week-dots,.week-members,.wrong-box,.study-panel,nav.pager,progress,blockquote){margin-top:var(--ds-sp-4)}
+:root:root:root body :is(.study-panel,.wrong-box){gap:var(--ds-sp-4)}
+:root:root:root body :is(.study-panel,.wrong-box) > *{margin-top:0}
+:root:root:root body.study-mode :where(button:not(.primary):not(.tv-card)){border-color:var(--ds-line)}
+:root:root:root body.study-mode button:not(.primary):not(.tv-card):hover:enabled{border-color:var(--ds-ink)}
+
+/* ---- 글 카드 아래 액션 바(응원하기 · 댓글쓰기)와 댓글 ---- */
+:root:root:root body .post-actions{display:grid;grid-template-columns:1fr 1fr;gap:var(--ds-sp-2);margin-top:var(--ds-sp-4);padding-top:var(--ds-sp-2);border-top:1px solid var(--ds-line)}
+:root:root:root body .post-actions > :is(button,a){display:inline-flex;align-items:center;justify-content:center;gap:var(--ds-sp-2);min-height:var(--ds-h-button);border:0;background:transparent;color:var(--ds-ink);font:500 var(--ds-fs-ui)/1.2 var(--ds-sans);text-decoration:none}
+:root:root:root body .post-actions > :is(button,a):hover:enabled,:root:root:root body .post-actions > a:hover{background:var(--ds-sand);color:var(--ds-ink)}
+:root:root:root body .post-actions > .meta{grid-column:1 / -1}
+:root:root:root body .ic.chat{margin-right:var(--ds-sp-2);--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.4' stroke-linejoin='round'%3E%3Cpath d='M2.5 3.5h11v7h-5l-3 2.5v-2.5h-3z'/%3E%3C/svg%3E")}
+:root:root:root body .comments{display:grid;gap:var(--ds-sp-4);margin-top:var(--ds-sp-6)}
+:root:root:root body .comments :is(h2,p,ul){margin:0}
+:root:root:root body .comment-list{list-style:none;padding:0;display:grid;gap:var(--ds-sp-4)}
+:root:root:root body .comment-list li{display:grid;gap:var(--ds-sp-2);padding-bottom:var(--ds-sp-4);border-bottom:1px solid var(--ds-line)}
+:root:root:root body .comment-list .meta button{min-height:var(--ds-h-tag);padding:0 var(--ds-sp-2);border:0;background:transparent;text-decoration:underline;color:var(--ds-muted)}
+:root:root:root body .comment-form{display:grid;gap:var(--ds-sp-3)}
+
+/* 태그 고르기: 직접 쓰지 않고 칩 중에서 하나 선택 */
+:root:root:root body .tag-options{display:flex;flex-wrap:wrap;gap:var(--ds-sp-2);margin:0;padding:0;border:0;min-inline-size:0}
+:root:root:root body .tag-options legend{padding:0;margin-bottom:var(--ds-sp-2);font:700 var(--ds-fs-ui)/1.4 var(--ds-sans)}
+:root:root:root body .chip-radio{position:relative;display:inline-flex;margin:0}
+:root:root:root body .chip-radio input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+:root:root:root body .chip-radio span{box-sizing:border-box;display:inline-flex;align-items:center;min-height:var(--ds-h-chip);padding:0 var(--ds-sp-3);border:1px solid var(--ds-line);border-radius:var(--ds-radius);font:500 var(--ds-fs-ui)/1.2 var(--ds-sans);color:var(--ds-ink)}
+:root:root:root body .chip-radio input:checked + span{background:var(--ds-ink);border-color:var(--ds-ink);color:var(--ds-paper)}
+:root:root:root body .chip-radio input:focus-visible + span{outline:2px solid var(--ds-ink);outline-offset:2px}
+/* 댓글 삭제 / 섹션 간격 */
+:root:root:root body .comment-list .meta button{min-height:var(--ds-h-button);margin-left:var(--ds-sp-2)}
+:root:root:root body .comments{margin-bottom:var(--ds-sp-6)}
+
+/* TV 화면 안에는 사진만. 제목은 더미 아래 한 줄(14px)로, 가리킨 화면에 따라 바뀜 */
+:root:root:root body .pile-screen .ps-cap{display:none}
+:root:root:root body .tv-pile .pile-now{position:absolute;left:0;right:0;top:calc(100% + var(--ds-sp-3));margin:0;text-align:center;font:400 var(--ds-fs-ui)/1.5 var(--ds-sans);color:var(--ds-on-dark)}
+:root:root:root body .tv-pile .pile-now small{display:block;color:var(--ds-on-dark-muted);font-size:var(--ds-fs-caption)}
+:root:root:root body .tv-pile .pile-now{top:auto;bottom:calc(100% + var(--ds-sp-3));text-align:left;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
+:root:root:root body.media-mode #tv-overlay .tv-summary{color:var(--ds-on-dark-muted)}
+:root:root:root body.study-mode #tv-overlay .tv-summary{color:var(--ds-muted)}
+
+
+/* 팝업 공통: 머리글(24px 세리프 제목 + 오른쪽 ✕ 44px) → 내용 → 맨 아래 주요 버튼. 시트·노트 쓰기 창·글쓰기 창이 같은 짜임 */
+:root:root:root body .tv-sheet .dialog-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--ds-sp-3)}
+:root:root:root body .tv-sheet .dialog-head h2{font-size:var(--ds-fs-h2);line-height:1.35;margin:0}
+
+/* 홈 아래 썸네일 띠: 제목은 사진 밖, 세로선 왼쪽 칸 아래에 (마우스를 올리거나 포커스할 때만) */
+:root:root:root body .home-paper .strip-now{position:absolute;z-index:3;left:var(--ds-sp-4);bottom:var(--ds-sp-4);width:calc(clamp(104px,17vw,250px) - var(--ds-sp-5));margin:0;font:500 var(--ds-fs-caption)/1.4 var(--ds-sans);color:var(--ds-ink);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:6;overflow:hidden}
+:root:root:root body .home-paper .strip-now small{display:block;margin-top:var(--ds-sp-1);font-size:var(--ds-fs-caption);font-weight:700}
+@media(max-width:900px){:root:root:root body .home-paper .strip-now{width:calc(120px - var(--ds-sp-5))}}
+:root:root:root body.media-mode .tv-sheet .dialog-head [data-close]{background:transparent;color:var(--ds-on-dark);border:1px solid var(--ds-on-dark)}
+:root:root:root body.media-mode .tv-sheet .dialog-head [data-close]:hover{background:var(--ds-on-dark);color:var(--ds-ink)}
+:root:root:root body.media-mode .tv-sheet .tv-apply{margin-top:var(--ds-sp-3);width:100%}
+/* 컨트롤 정리: 숨긴 상단 글쓰기 버튼이 다시 보이지 않게 */
+:root:root:root body #write[hidden]{display:none}
+:root:root:root body :is(#editor,#member-editor,#member-picker) .hint{color:var(--ds-muted)}
+
+/* ---- 포스터 레이아웃 (게시판 연습) ----
+   왼쪽 정보 칸(이번 주 · 게시판 · 조원 · 날짜) + 오른쪽 큰 제목과 목록. 900px 이하에서는 칸이 제목 아래 가로 줄이 됨 */
+:root:root:root body .poster-page{display:grid;grid-template-columns:clamp(140px,15vw,200px) minmax(0,1fr);grid-template-areas:"rail head" "rail body";column-gap:var(--ds-sp-5);align-items:start}
+:root:root:root body .pr-head{grid-area:head;display:flex;justify-content:space-between;align-items:flex-start;gap:var(--ds-sp-4);margin-bottom:var(--ds-sp-5)}
+:root:root:root body .pr-head h1{font-size:var(--ds-fs-h1);line-height:1.35;margin:0}
+:root:root:root body .pr-head p{margin:var(--ds-sp-2) 0 0;font:400 var(--ds-fs-ui)/1.5 var(--ds-sans);color:var(--ds-muted)}
+:root:root:root body .pr-rail{grid-area:rail;display:flex;flex-direction:column;gap:var(--ds-sp-5);padding-right:var(--ds-sp-4);border-right:1px solid var(--ds-line);align-self:stretch}
+:root:root:root body .pr-group{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ds-sp-1);font:400 var(--ds-fs-ui)/1.5 var(--ds-sans)}
+:root:root:root body .pr-group b{font-weight:700;margin-bottom:var(--ds-sp-1)}
+:root:root:root body .pr-group :is(a,button){display:inline-flex;align-items:center;min-height:var(--ds-sp-5);padding:0;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:var(--ds-muted);font:500 var(--ds-fs-ui)/1.4 var(--ds-sans);text-align:left;text-decoration:none}
+:root:root:root body .pr-group :is(a,button):hover:enabled,:root:root:root body .pr-group a:hover{color:var(--ds-ink);background:transparent}
+:root:root:root body .pr-group :is(a[aria-current=page],button[aria-pressed=true]){color:var(--ds-ink);font-weight:700;border-bottom-color:var(--ds-ink)}
+:root:root:root body .pr-date{margin-top:auto;font-size:var(--ds-fs-term);font-weight:700;letter-spacing:-.03em;line-height:1}
+:root:root:root body .pr-date span{display:block;margin-top:var(--ds-sp-1);font-size:var(--ds-fs-ui);font-weight:400;letter-spacing:0}
+:root:root:root body .pr-body{grid-area:body;min-width:0;border-top:2px solid var(--ds-ink);padding-top:var(--ds-sp-3)}
+:root:root:root body .pr-body > .count{margin:0 0 var(--ds-sp-3)}
+@media(max-width:900px){
+  :root:root:root body .poster-page{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "rail" "body"}
+  :root:root:root body .pr-rail{flex-direction:row;flex-wrap:wrap;gap:var(--ds-sp-3) var(--ds-sp-5);padding:0 0 var(--ds-sp-4);border-right:0;border-bottom:1px solid var(--ds-line);margin-bottom:var(--ds-sp-4)}
+  :root:root:root body .pr-date{display:none}
+}
+:root:root:root body .pr-group{gap:var(--ds-sp-2)}
+:root:root:root body .pr-group b{margin-bottom:0}
+:root:root:root body .pr-group :is(a,button){min-height:var(--ds-sp-6)}
+@media(max-width:900px){
+  :root:root:root body .pr-group[role=group]{flex-direction:row;flex-wrap:wrap;gap:var(--ds-sp-1) var(--ds-sp-4);flex-basis:100%}
+  :root:root:root body .pr-group[role=group] b{flex-basis:100%}
+}
+@media(max-width:900px){:root:root:root body .pr-group[role=group]{row-gap:var(--ds-sp-2)}}
+:root:root:root body .top nav a{font-size:var(--ds-fs-ui)}
+:root:root:root body .pr-date{margin-top:0;font-size:var(--ds-fs-numeral)}
+@media(max-width:900px){:root:root:root body .pr-date{display:block;flex-basis:100%}}
+
+/* ---- 홈: 내 관심 기사 설정 (톱니바퀴) ---- */
+:root:root:root body .ic.gear{margin:0;--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.3' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='8' r='2.3'/%3E%3Cpath d='M6.8 1.5h2.4l.4 1.7 1.2.5 1.5-.9 1.7 1.7-.9 1.5.5 1.2 1.7.4v2.4l-1.7.4-.5 1.2.9 1.5-1.7 1.7-1.5-.9-1.2.5-.4 1.7H6.8l-.4-1.7-1.2-.5-1.5.9-1.7-1.7.9-1.5-.5-1.2-1.7-.4V6.8l1.7-.4.5-1.2-.9-1.5 1.7-1.7 1.5.9 1.2-.5z'/%3E%3C/svg%3E")}
+:root:root:root body .home-paper .pp-gear{position:absolute;z-index:4;left:var(--ds-sp-4);bottom:var(--ds-sp-4);width:var(--ds-h-button);height:var(--ds-h-button);min-height:var(--ds-h-button);padding:0;border:1px solid var(--ds-line);border-radius:var(--ds-radius);background:var(--ds-paper);color:var(--ds-ink)}
+:root:root:root body .home-paper .pp-gear[aria-expanded=true]{background:var(--ds-ink);color:var(--ds-paper);border-color:var(--ds-ink)}
+:root:root:root body .home-paper .strip-now{bottom:calc(var(--ds-sp-4) + var(--ds-h-button) + var(--ds-sp-2))}
+:root:root:root body .home-paper .pp-prefs{position:absolute;z-index:5;left:var(--ds-sp-4);bottom:calc(var(--ds-sp-4) + var(--ds-h-button) + var(--ds-sp-2));width:min(420px,calc(100vw - 2 * var(--ds-sp-4)));box-sizing:border-box;padding:var(--ds-sp-5);background:var(--ds-surface);color:var(--ds-ink);border:1px solid var(--ds-ink);border-radius:var(--ds-radius);display:grid;gap:var(--ds-sp-3)}
+:root:root:root body .home-paper .pp-prefs[hidden]{display:none}
+:root:root:root body .home-paper .pp-prefs :is(h2,p){margin:0}
+:root:root:root body .home-paper .pp-prefs .dialog-head{margin:0;display:flex;align-items:center;justify-content:space-between}
+:root:root:root body .home-paper .pp-prefs .dialog-head h2{font-size:var(--ds-fs-h2);line-height:1.35}
+:root:root:root body .home-paper .pp-prefs-topics{display:flex;flex-wrap:wrap;gap:var(--ds-sp-2)}
+/* 톱니바퀴: 네모 상자 없이 아이콘만, 마우스를 올리면 "기사 설정" 안내 */
+:root:root:root body .home-paper .pp-gear{border:0;background:transparent;color:var(--ds-ink);overflow:visible}
+:root:root:root body .home-paper .pp-gear[aria-expanded=true]{background:transparent;color:var(--ds-ink);border:0}
+:root:root:root body .home-paper .pp-gear:hover{background:transparent;color:var(--ds-ink)}
+:root:root:root body .home-paper .pp-gear .ic.gear{width:24px;height:24px}
+:root:root:root body .home-paper .pp-gear::after{content:attr(data-tip);position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:var(--ds-sp-2);padding:var(--ds-sp-1) var(--ds-sp-2);background:var(--ds-ink);color:var(--ds-paper);border-radius:var(--ds-radius);font:500 var(--ds-fs-caption)/1.4 var(--ds-sans);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s}
+:root:root:root body .home-paper .pp-gear:is(:hover,:focus-visible)::after{opacity:1}
+:root:root:root body .home-paper .pp-gear[aria-expanded=true]::after{opacity:0}
+:root:root:root body .home-paper .pp-prefs .hint{color:var(--ds-muted)}
+
+/* ---- 글자 중요도 3단계 (DESIGN.md 2.6) ----
+   밝은 영역: 1단계 ink / 2단계 ink-2 / 3단계 muted.  어두운 영역: on-dark / on-dark-2 / on-dark-muted.
+   색만으로 구분하지 않고 크기·굵기도 함께 쓴다. */
+:root{--ds-ink-2:#3a3832;--ds-on-dark-2:#d4d0c4}
+/* TV 위쪽 */
+:root:root:root body .home-copy p{color:var(--ds-on-dark-2)}
+/* 왼쪽 칸 */
+:root:root:root body .pp-rail p{color:var(--ds-ink-2)}
+:root:root:root body .pp-rail .pp-k{color:var(--ds-muted)}
+:root:root:root body .pp-dates span{color:var(--ds-muted)}
+/* 포스터 본문 */
+:root:root:root body .pp-sub{color:var(--ds-ink-2)}
+:root:root:root body .home-paper .pp-cols p{color:var(--ds-muted)}
+:root:root:root body .home-paper .pp-cols p a{color:var(--ds-ink-2);font-weight:500}
+:root:root:root body .home-paper .pp-more{color:var(--ds-ink-2)}
+:root:root:root body .pp-words small{color:var(--ds-muted)}
+/* 썸네일 띠 제목·태그 */
+:root:root:root body .home-paper .strip-now{color:var(--ds-ink-2)}
+:root:root:root body .home-paper .strip-now small{color:var(--ds-muted)}
+
+/* ---- 칩 선택 표시: 선택하면 채움 + 체크 + 짧은 전환 (눌렀는지 한눈에) ---- */
+:root:root:root body .chip[aria-pressed=true]{background:var(--ds-ink);color:var(--ds-paper);border-color:var(--ds-ink)}
+:root:root:root body .chip[aria-pressed=true]::before{content:"";flex:none;width:1em;height:1em;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.8'%3E%3Cpath d='M3 8.5l3.2 3.2L13 4.8'/%3E%3C/svg%3E") center/100% 100% no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.8'%3E%3Cpath d='M3 8.5l3.2 3.2L13 4.8'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+@media(prefers-reduced-motion:no-preference){:root:root:root body .chip{transition:background-color .12s,color .12s,border-color .12s}}
+/* 날짜 "Nov. 14": 왼쪽 칸이 좁아서 32px, 칸이 더 좁으면 "Nov." / "14"로 줄바꿈 */
+:root:root:root body :is(.pp-dates,.pr-date){font-size:var(--ds-fs-article);line-height:1.1;letter-spacing:-.02em}
+
+/* ---- 공유 행(Row) 그리드: 왼쪽 칸과 오른쪽 본문의 위·가운데·아래 수평선을 맞춘다 (DESIGN.md 4.1) ----
+   홈 포스터: 1행(왼쪽 이번 주 노트·출처 | 제목·설명) · 2행(날짜 | 최근 노트·뉴스, 굵은 선 같은 높이) · 3행(안내 | 이번 주 단어, 맨 아래 같은 높이) */
+:root{--ds-pp-foot:clamp(190px,26vw,380px)}
+:root:root:root body .home-paper{row-gap:var(--ds-sp-5);grid-template-rows:auto auto auto}
+:root:root:root body :is(.pp-rail,.pp-main){display:grid;grid-row:1 / span 3;grid-template-rows:subgrid;padding-top:var(--ds-sp-5);padding-bottom:var(--ds-pp-foot);align-items:start}
+:root:root:root body .pp-rail{grid-column:1;gap:0}
+:root:root:root body .pp-main{grid-column:2}
+:root:root:root body .pp-rail-top{grid-row:1;align-self:stretch;display:flex;flex-direction:column;justify-content:space-between;gap:var(--ds-sp-4)}
+:root:root:root body .pp-main-head{grid-row:1}
+:root:root:root body .pp-main-head .pp-title{margin:0 0 var(--ds-sp-2)}
+:root:root:root body .pp-main-head .pp-sub{margin:0}
+:root:root:root body .pp-dates{grid-row:2;margin:0;padding-top:var(--ds-sp-2);border-top:2px solid var(--ds-ink)}
+:root:root:root body .pp-cols{grid-row:2}
+:root:root:root body .pp-rail-foot{grid-row:3;align-self:end;border-top:2px solid var(--ds-ink);padding-top:var(--ds-sp-2);min-height:var(--ds-sp-6)}
+:root:root:root body .pp-words{grid-row:3;margin-top:0}
+:root:root:root body :is(.pp-cols h3,.pp-words h3){padding-top:var(--ds-sp-2)}
+:root:root:root body .pp-rail .pp-note{margin:0}
+
+/* 게시판 연습: 1행(날짜·이번 주 · 게시판 전환 | 제목·쓰기 버튼) / 2행(조원 필터 | 굵은 선 아래 목록) */
+:root:root:root body .poster-page{row-gap:var(--ds-sp-5);grid-template-rows:auto auto}
+:root:root:root body .pr-head{margin-bottom:0}
+:root:root:root body .pr-rail{grid-row:1 / span 2;grid-column:1;display:grid;grid-template-rows:subgrid;gap:0;align-items:start;padding-top:0}
+:root:root:root body .pr-rail-top{grid-row:1;align-self:stretch;display:flex;flex-direction:column;justify-content:space-between;gap:var(--ds-sp-4)}
+:root:root:root body .pr-rail-a{display:flex;flex-direction:column;gap:var(--ds-sp-3)}
+:root:root:root body .pr-rail-bottom{grid-row:2;border-top:2px solid var(--ds-ink);padding-top:var(--ds-sp-3)}
+:root:root:root body .pr-head{grid-row:1;grid-column:2}
+:root:root:root body .pr-body{grid-row:2;grid-column:2}
+@media(max-width:900px){
+  :root:root:root body .poster-page{grid-template-rows:auto}
+  :root:root:root body .pr-rail{display:flex;grid-row:auto;grid-column:auto}
+  :root:root:root body :is(.pr-rail-top,.pr-rail-a,.pr-rail-bottom){display:contents}
+  :root:root:root body .pr-head,:root:root:root body .pr-body{grid-row:auto;grid-column:auto}
+}
+/* 행 정렬 보정: 1행 위·아래 끝선, 2행 구분선, 3행 구분선+맨 아래 */
+:root:root:root body .pp-main-head{align-self:stretch;display:flex;flex-direction:column;justify-content:space-between}
+:root:root:root body .pp-rail .pp-dates{margin:0}
+:root:root:root body .pp-rail .pp-rail-foot{align-self:stretch;display:flex;align-items:flex-end}
+
+/* 홈 포스터를 하나의 평평한 그리드로: 칸마다 행 위치를 직접 지정 (서브그리드는 1행 높이에 왼쪽 내용을 반영하지 못해 사용하지 않음) */
+:root:root:root body :is(.pp-rail,.pp-main){display:contents}
+:root:root:root body .home-paper{padding-top:var(--ds-sp-5);padding-bottom:var(--ds-pp-foot);grid-template-rows:auto auto auto}
+:root:root:root body .home-paper::before{content:"";position:absolute;top:0;bottom:0;left:clamp(104px,17vw,250px);width:1px;background:var(--ds-line)}
+:root:root:root body .pp-rail .pp-rail-top{grid-column:1;grid-row:1;margin:0 clamp(10px,1.2vw,18px) 0 clamp(14px,2vw,30px)}
+:root:root:root body .pp-rail .pp-dates{grid-column:1;grid-row:2;margin:0 clamp(10px,1.2vw,18px) 0 clamp(14px,2vw,30px)}
+:root:root:root body .pp-rail .pp-rail-foot{grid-column:1;grid-row:3;margin:0 clamp(10px,1.2vw,18px) 0 clamp(14px,2vw,30px)}
+:root:root:root body .pp-main .pp-main-head{grid-column:2;grid-row:1;margin:0 clamp(16px,2.4vw,40px)}
+:root:root:root body .pp-main .pp-cols{grid-column:2;grid-row:2;margin:0 clamp(16px,2.4vw,40px);max-width:none}
+:root:root:root body .pp-main .pp-words{grid-column:2;grid-row:3;margin:0 clamp(16px,2.4vw,40px);max-width:none}
+@media(max-width:900px){:root:root:root body .home-paper::before{left:120px}}
+
+/* 게시판 연습도 같은 평평한 그리드로 */
+@media(min-width:901px){
+  :root:root:root body .poster-page{position:relative}
+  :root:root:root body .poster-page::before{content:"";position:absolute;top:0;bottom:0;left:calc(clamp(140px,15vw,200px) + var(--ds-sp-3));width:1px;background:var(--ds-line)}
+  :root:root:root body .pr-rail{display:contents}
+  :root:root:root body .pr-rail-top{grid-column:1;grid-row:1}
+  :root:root:root body .pr-rail-bottom{grid-column:1;grid-row:2}
+  :root:root:root body .pr-head{align-items:stretch}
+  :root:root:root body .pr-head > div{align-self:stretch;display:flex;flex-direction:column;justify-content:space-between}
+  :root:root:root body .pr-head > button{align-self:flex-start}
+}
+:root:root:root body .pr-rail-bottom{display:flex;flex-direction:column;gap:var(--ds-sp-5)}
+
+/* ---- 게시판 연습: 선 제거(No-Line) — 남기는 선은 좌우를 가르는 세로선 하나뿐. 영역은 여백으로, 선택은 글자 농도·굵기로 ---- */
+:root:root:root body .poster-page{row-gap:var(--ds-sp-7)}
+:root:root:root body .poster-page::before{background:var(--ds-line)}
+:root:root:root body .pr-rail-bottom{border-top:0;padding-top:0;gap:var(--ds-sp-6)}
+:root:root:root body .pr-body{border-top:0;padding-top:0}
+:root:root:root body .pr-group :is(a,button){border-bottom:0}
+:root:root:root body .pr-group :is(a[aria-current=page],button[aria-pressed=true]){border-bottom:0;color:var(--ds-ink);font-weight:700}
+:root:root:root body .pr-group :is(a,button):not([aria-current=page]):not([aria-pressed=true]){color:var(--ds-muted);font-weight:500}
+:root:root:root body .poster-page .tag{border:0;background:var(--ds-sand)}
+:root:root:root body .poster-page .post-actions{border-top:0;padding-top:0}
+/* 게시판 연습: 오른쪽 목록 위 굵은 선은 되살림(좋다고 하신 선). 왼쪽 칸에 제가 더했던 가로선만 제거한 상태 유지 */
+:root:root:root body .poster-page{row-gap:var(--ds-sp-5)}
+:root:root:root body .pr-body{border-top:2px solid var(--ds-ink);padding-top:var(--ds-sp-3)}
+/* 홈: 왼쪽 칸에 더했던 가로선 두 개(날짜 위, 체험 모드 위)만 제거. 행 정렬은 그대로, 날짜 위는 여백 */
+:root:root:root body .pp-rail .pp-dates{border-top:0;padding-top:0}
+:root:root:root body .pp-rail .pp-rail-foot{border-top:0;padding-top:0}
+
+/* ---- 게시판 연습 정리: 배너 슬림 · 타이틀 한 줄 · 사이드바 제목/메뉴 위계 · 액션 버튼 좌측 정렬 ---- */
+:root:root:root body #main > .banner:has(+ .poster-page){border:0;background:var(--ds-wash);color:var(--ds-muted);min-height:var(--ds-h-chip);padding:0 var(--ds-sp-4);display:flex;align-items:center;font:500 var(--ds-fs-caption)/1.4 var(--ds-sans);margin-bottom:var(--ds-sp-5)}
+:root:root:root body .pr-head h1{white-space:nowrap}
+:root:root:root body .pr-head{align-items:flex-start}
+:root:root:root body .pr-group b{font-size:var(--ds-fs-caption);font-weight:500;letter-spacing:.04em;color:var(--ds-muted)}
+:root:root:root body .poster-page .post-actions{display:flex;justify-content:flex-start;gap:var(--ds-sp-5)}
+:root:root:root body .poster-page .post-actions > :is(button,a){justify-content:flex-start;padding:0}
+:root:root:root body .poster-page .post-actions > :is(button,a):hover:enabled,:root:root:root body .poster-page .post-actions > a:hover{background:transparent;text-decoration:underline;text-underline-offset:3px}
+
+/* ---- 게시판 연습 마감: 제목 아래 공백 제거 · 글 사이 헤어라인 · 작성자 모노그램 · 상단 메뉴 활성 표시 ---- */
+:root:root:root body .pr-rail-top{align-self:start}
+:root:root:root body .pr-rail-bottom{gap:var(--ds-sp-6)}
+:root:root:root body .poster-page .stack{gap:0}
+:root:root:root body .poster-page .stack > article{padding-block:var(--ds-sp-5);border-bottom:1px solid var(--ds-line)}
+:root:root:root body .poster-page .stack > article:last-child{border-bottom:0}
+:root:root:root body .poster-page .stack > article:first-child{padding-top:var(--ds-sp-3)}
+:root:root:root body .mono{display:none}
+:root:root:root body .poster-page .mono{display:inline-flex;align-items:center;justify-content:center;width:var(--ds-h-tag);height:var(--ds-h-tag);margin-right:var(--ds-sp-2);background:var(--ds-sand);color:var(--ds-ink-2);border-radius:var(--ds-radius);font:700 var(--ds-fs-caption)/1 var(--ds-sans);vertical-align:middle}
+:root:root:root body .poster-page .meta > span{display:inline-flex;align-items:center}
+/* 상단 메뉴: 모두 같은 크기·톤, 현재 위치는 진하고 굵게 + 밑줄 (내 스크랩만 흐리던 것 통일) */
+:root:root:root body.study-mode .top nav a{color:var(--ds-muted);font:500 var(--ds-fs-ui)/1.2 var(--ds-sans);opacity:1;margin-left:0;border-bottom:2px solid transparent;border-radius:0;background:transparent}
+:root:root:root body.study-mode .top nav a:hover{color:var(--ds-ink);background:transparent}
+:root:root:root body.study-mode .top nav a[aria-current]{color:var(--ds-ink);font-weight:700;border-bottom-color:var(--ds-ink);background:transparent}
+
+/* ---- 홈 포스터 다듬기 (사용자 요청): 날짜를 맨 위로 · 제목 축소 · 가로선 헤어라인 · 단어 목록 컴팩트 ---- */
+:root:root:root body .pp-rail .pp-dates{grid-row:1;align-self:start}
+:root:root:root body .pp-rail .pp-rail-top{grid-row:2;align-self:start;justify-content:flex-start;gap:var(--ds-sp-6)}
+:root:root:root body .pp-rail .pp-k{font-size:var(--ds-fs-caption);font-weight:500;letter-spacing:.04em;color:var(--ds-muted)}
+:root:root:root body .pp-main .pp-title{font-size:clamp(40px,4.8vw,64px);line-height:1.1;margin:0 0 var(--ds-sp-3)}
+:root:root:root body :is(.pp-cols h3,.pp-words h3){border-top:1px solid var(--ds-line)}
+:root:root:root body .pp-words div{font-size:var(--ds-fs-item);font-weight:500;padding-block:var(--ds-sp-2);line-height:1.3}
+:root:root:root body .pp-words div span{font-weight:500}
+
+/* ---- 헤더 액션 버튼(＋ 노트 쓰기 · ＋ 글쓰기 · ＋ 단어 추가): 슬림 36px, 제목 첫 줄의 가운데에 맞춤 (DESIGN.md 2.5) ---- */
+:root:root:root body :is(.hero,.pr-head) > button{min-height:var(--ds-h-chip);height:var(--ds-h-chip);padding:0 var(--ds-sp-4);font:500 var(--ds-fs-ui)/1 var(--ds-sans);white-space:nowrap;align-self:flex-start;margin-top:calc((var(--ds-fs-h1) * 1.35 - var(--ds-h-chip)) / 2)}
+:root:root:root body :is(.hero,.pr-head){align-items:flex-start}
+
+/* ---- 홈 중단 정렬: 왼쪽 "이번 주 노트·출처"가 오른쪽 "최근 노트·새로 올라온 뉴스"와 같은 헤어라인 아래에서 시작하고 같은 높이에서 끝남 ---- */
+:root:root:root body .pp-rail .pp-rail-top{align-self:stretch;justify-content:space-between;border-top:1px solid var(--ds-line);padding-top:var(--ds-sp-2)}
+:root:root:root body .pp-rail .pp-rail-top p{margin:0}
+:root:root:root body .pp-main .pp-cols{align-self:stretch}
+:root:root:root body .pp-cols > div{display:flex;flex-direction:column}
+:root:root:root body .pp-cols .pp-more{margin-top:auto;align-self:flex-start}
+
+/* ---- 게시판·단어장 포스터 페이지: 글자 중요도 3단계 (DESIGN.md 2.2.1) 와 목록 구분 ---- */
+:root:root:root body .poster-page .stack > :is(article,section){padding-block:var(--ds-sp-5);border-bottom:1px solid var(--ds-line)}
+:root:root:root body .poster-page .stack > :is(article,section):last-child{border-bottom:0}
+:root:root:root body .poster-page .stack > :is(article,section):first-child{padding-top:var(--ds-sp-3)}
+/* 1단계: 글 제목·단어 / 2단계: 요약·본문·뜻·값 / 3단계: 작성자·날짜·예문·개수 */
+:root:root:root body .poster-page :is(.post-preview h2 a,.word-group h2 a,.word-row strong,.card h2,.card h3){color:var(--ds-ink)}
+:root:root:root body .poster-page :is(.snippet,.chat-body,.card > p,.word-row span,.prose p){color:var(--ds-ink-2)}
+:root:root:root body .poster-page :is(.meta,.meta a,.meta time,.word-row em,.card > p[lang=en],.count,.hint){color:var(--ds-muted)}
+:root:root:root body .poster-page .post-actions > :is(button,a){color:var(--ds-ink-2)}
+:root:root:root body .poster-page .tag{color:var(--ds-muted)}
+
+/* 내 스크랩 포스터 페이지: 검색칸·카드 목록 간격 */
+:root:root:root body .poster-page .pr-body > #scrap-q{width:100%;max-width:var(--ds-sp-8);min-width:240px;margin-bottom:var(--ds-sp-5)}
+:root:root:root body .poster-page .pr-body > .tv-grid{margin-top:0}

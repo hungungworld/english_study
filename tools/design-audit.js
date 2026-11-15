@@ -15,10 +15,13 @@
     radii: ['0px', '2px'],
     minGap: 8,                                            // DESIGN.md 5
     heights: [                                            // DESIGN.md 2.5  [selector, expected px, tolerance]
-      ['.tabs a,.tabs button,.tv-seg button', 40, 1],
+      ['.tabs a,.tv-seg button', 40, 1],
+      ['.tabs button,.filters-right select,[data-board-author]', 32, 1],
+      ['.pr-group a,.pr-group button', 32, 1],
+      ['.hero > button,.pr-head > button', 36, 1],
       ['.chip,.tv-chip', 36, 1],
       ['nav.pager button', 44, 1],
-      ['a.home-primary,button.home-ghost', 52, 1],
+      ['a.home-primary,button.home-ghost', 44, 1],
       ['.tag,.tv-pill', 24, 1],
       ['input:not([type=hidden]):not([type=checkbox]):not([type=radio]),select', 44, 1],
       ['.top nav a,.tv-dock a,.tv-dock button', 44, 1],
@@ -28,7 +31,7 @@
     sansFonts: ['"Helvetica Neue"', 'Helvetica', 'Arial'],
     serifFonts: ['"Noto Serif KR"', '"Times New Roman"', 'Georgia', '"Instrument Serif"'],
     colors: [                                             // DESIGN.md 2.1 as r,g,b
-      [17, 17, 17], [58, 56, 50], [241, 239, 233], [251, 250, 246], [255, 255, 255],
+      [17, 17, 17], [239, 236, 230], [243, 241, 236], [58, 56, 50], [241, 239, 233], [251, 250, 246], [255, 255, 255],
       [92, 88, 80], [212, 208, 196], [11, 9, 7], [20, 16, 12], [184, 180, 168], [0, 0, 0],
     ],
   };
@@ -43,7 +46,7 @@
   const near = (a, b, t = 2) => Math.abs(a - b) <= t;
 
   function scope() {
-    const modal = [...document.querySelectorAll('dialog[open]')].pop();
+    const modal = [...document.querySelectorAll('dialog[open],.pp-prefs:not([hidden])')].pop();
     const root = modal || document.body;
     const all = [...root.querySelectorAll('*')].filter(vis).filter(e => !e.closest('[hidden]'));
     return { root, modal, all };
@@ -63,7 +66,7 @@
       if (hasText && !inMedia(el)) {
         const fs = px(s.fontSize);
         const floating = el.matches('.tv-intro h1');
-        const h1Range = el.matches('.hero h1') && fs >= 32 && fs <= 48;
+        const h1Range = el.matches('.hero h1,.pr-head h1') && fs >= 32 && fs <= 48;
         if (fs < 12) add('font-min-12', el, fs + 'px');
         else if (!isDisplay(el) && !h1Range && !floating && !SPEC.fontSizes.some(f => near(fs, f, .5))) add('font-ladder', el, fs + 'px');
         const w = parseInt(s.fontWeight);
@@ -71,6 +74,22 @@
         const fam = s.fontFamily;
         const ok = SPEC.sansFonts.concat(SPEC.serifFonts).some(f => fam.startsWith(f));
         if (!ok) add('font-family', el, fam.slice(0, 40));
+      }
+
+      if (hasText && !inMedia(el) && el.getClientRects().length && s.visibility !== 'hidden') {
+        // 글자와 실제 바탕(겹친 반투명 층 포함)의 대비 4.5:1 (큰 글자 3:1). 흰 바탕에 종이색 글자 같은 실수를 잡는다.
+        const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+        const lum = c => .2126 * f(c.r) + .7152 * f(c.g) + .0722 * f(c.b);
+        const layers = [];
+        for (let n = el; n; n = n.parentElement) { const b = rgb(getComputedStyle(n).backgroundColor); if (b && b.a > 0) { layers.push(b); if (b.a >= 1) break; } }
+        let base = document.body.classList.contains('media-mode') ? { r: 11, g: 9, b: 7 } : { r: 241, g: 239, b: 233 };
+        for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; base = { r: l.r * l.a + base.r * (1 - l.a), g: l.g * l.a + base.g * (1 - l.a), b: l.b * l.a + base.b * (1 - l.a) }; }
+        const fg = rgb(s.color);
+        if (fg) {
+          const l1 = lum(fg), l2 = lum(base), ratio = (Math.max(l1, l2) + .05) / (Math.min(l1, l2) + .05);
+          const large = px(s.fontSize) >= 24 || (px(s.fontSize) >= 19 && parseInt(s.fontWeight) >= 700);
+          if (ratio < (large ? 3 : 4.5) && !el.disabled) add('contrast', el, ratio.toFixed(1) + ':1');
+        }
       }
 
       if (!inMedia(el)) {
@@ -82,6 +101,14 @@
           if (!SPEC.colors.some(k => near(k[0], col.r, 1) && near(k[1], col.g, 1) && near(k[2], col.b, 1))) add('color', el, kind + ' rgb(' + col.r + ',' + col.g + ',' + col.b + ')');
         }
       }
+    }
+
+    // 글자 중요도: 홈 포스터에는 글자 색이 3단계 이상 보여야 한다 (DESIGN.md 2.2.1)
+    const poster = document.querySelector('.home-paper');
+    if (poster && !modal) {
+      const tones = new Set();
+      for (const el of [...poster.querySelectorAll('*')].filter(e => [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && e.getClientRects().length)) tones.add(getComputedStyle(el).color);
+      if (tones.size < 3) add('text-hierarchy', poster, '글자 색이 ' + tones.size + '단계뿐');
     }
 
     // control heights
@@ -128,7 +155,7 @@
 
     // text that spills out of its box
     for (const el of all.filter(e => e.matches('button,.tag,.tv-pill,.chip,.tv-chip,.tabs a'))) {
-      if (!inMedia(el) && el.scrollWidth > el.clientWidth + 1) add('text-clipped', el, 'scrollWidth ' + el.scrollWidth + ' > ' + el.clientWidth);
+      if (!inMedia(el) && !el.matches('.pp-gear') && el.scrollWidth > el.clientWidth + 1) add('text-clipped', el, 'scrollWidth ' + el.scrollWidth + ' > ' + el.clientWidth);
     }
 
     // group

@@ -72,3 +72,61 @@ export async function removePost(id, token) {
   demo.words = demo.words.filter(word => word.post_id !== id);
   writeLocal("demo", demo);
 }
+
+// ---- 엄지척 반응, 연속 학습일, 하트 (이 브라우저에 저장) ----
+const dayMs = 86400000;
+export const dayKey = (ms = Date.now()) => new Date(ms + 9 * 3600000).toISOString().slice(0,10);
+const shiftDay = (key, n) => new Date(Date.parse(key + "T00:00:00Z") + n * dayMs).toISOString().slice(0,10);
+export const MAX_HEARTS = 5;
+export const HEART_EVERY = 3;
+const blankStudy = () => ({days:[],saved:[],hearts:0,awarded:[]});
+export const studyState = member => readLocal("streak",{})[member] ?? blankStudy();
+export function streakOf(state, today = dayKey()) {
+  const has = new Set([...state.days,...state.saved]);
+  let key = has.has(today) ? today : shiftDay(today,-1), count = 0;
+  while (has.has(key)) { count++; key = shiftDay(key,-1); }
+  return count;
+}
+// A study action (quiz answer, note, word) marks today. Every 3rd streak day earns a heart;
+// one missed day is covered by spending a heart.
+export function recordStudy(member) {
+  const all = readLocal("streak",{});
+  const state = all[member] ?? blankStudy();
+  const today = dayKey();
+  const result = {newDay:false,spent:false,earned:false};
+  if (!state.days.includes(today)) {
+    result.newDay = true;
+    const last = [...state.days,...state.saved].filter(key => key < today).sort().pop();
+    if (last === shiftDay(today,-2) && state.hearts > 0) { state.hearts--; state.saved.push(shiftDay(today,-1)); result.spent = true; }
+    state.days.push(today);
+    if (streakOf(state,today) % HEART_EVERY === 0 && !state.awarded.includes(today) && state.hearts < MAX_HEARTS) {
+      state.hearts++; state.awarded.push(today); result.earned = true;
+    }
+    Object.assign(state,{days:state.days.slice(-60),saved:state.saved.slice(-60),awarded:state.awarded.slice(-60)});
+    all[member] = state;
+    writeLocal("streak",all);
+  }
+  return {...result,streak:streakOf(state,today),hearts:state.hearts};
+}
+export const readReactions = () => readLocal("reactions",{});
+export function toggleReaction(postId, member) {
+  const all = readReactions();
+  const list = new Set(all[postId] ?? []);
+  if (list.has(member)) list.delete(member); else list.add(member);
+  all[postId] = [...list];
+  writeLocal("reactions",all);
+  return all;
+}
+
+// ---- 댓글 (이 브라우저에 저장) ----
+export const readComments = () => readLocal("comments",{});
+export function addComment(postId, member, text) {
+  const all = readComments();
+  all[postId] = [...(all[postId] ?? []), {id:crypto.randomUUID(),member,text,at:new Date().toISOString()}];
+  writeLocal("comments",all);
+}
+export function removeComment(postId, commentId) {
+  const all = readComments();
+  all[postId] = (all[postId] ?? []).filter(item => item.id !== commentId);
+  writeLocal("comments",all);
+}

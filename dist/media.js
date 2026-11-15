@@ -65,7 +65,8 @@ function refreshScraps() {
   home.querySelectorAll(".tv-message").forEach(note => note.remove());
   if (!visible.length) home.querySelector(".tv-grid").insertAdjacentHTML("afterend",
     `<p class="tv-message">${scraps.length ? "조건에 맞는 스크랩이 없어요." : "아직 스크랩한 자료가 없어요. 둘러보기에서 책갈피 버튼을 눌러 저장해 보세요."}</p>`);
-  home.querySelector("[data-scrap-count]").textContent = total + "개";
+  const countEl = home.querySelector("[data-scrap-count]");
+  if (countEl) countEl.textContent = total + "개";
   home.querySelectorAll("[data-scrap-type]").forEach(button => button.setAttribute("aria-pressed",button.dataset.scrapType === scrapType));
   home.querySelectorAll("[data-scrap-topic]").forEach(button => button.setAttribute("aria-pressed",scrapTopics.has(button.dataset.scrapTopic)));
   home.querySelector(".tv-footer").innerHTML = pagerHtml("scrap",scrapPage,pageCount(total));
@@ -211,10 +212,14 @@ function card(item) {
     ${screen(item)}<span class="tv-label" lang="ko"><span>${escape(item.source)}</span><span>${date(item)}</span></span>
     <strong class="tv-title" lang="en">${escape(item.title)}</strong></button>`;
 }
+// 외부 자료(뉴스·영상) 제목 앞뒤의 이모지는 잉크·종이 두 색 디자인과 맞지 않아 화면에서만 지운다.
+export const cleanTitle = (title = "") => String(title).replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\u20e3\u200d\ufe0f\u{1F3FB}-\u{1F3FF}]+/gu,"").replace(/\s{2,}/g," ").trim();
 async function get(path) {
   const response = await fetch(path);
   if (!response.ok) throw new Error("자료를 불러오지 못했어요.");
-  return response.json();
+  const data = await response.json();
+  if (Array.isArray(data.items)) data.items = data.items.map(item => ({...item,title:cleanTitle(item.title)}));
+  return data;
 }
 function merge(current, incoming) {
   return [...new Map([...current,...incoming].map(item => [item.id,item])).values()];
@@ -279,7 +284,7 @@ function paintFooter() {
     return;
   }
   if (section === "home") {
-    foot.innerHTML = pending ? "불러오는 중…" : '<a href="#videos">영상 더 보기 ↗</a><a href="#news">기사 더 보기 ↗</a>';
+    foot.innerHTML = pending ? "불러오는 중…" : '<a href="#videos">영상 더 보기<span class="ar ne" aria-hidden="true"></span></a><a href="#news">기사 더 보기<span class="ar ne" aria-hidden="true"></span></a>';
     return;
   }
   const moreAvailable = items().length > visible.length || (["all","video"].includes(filter) && next);
@@ -292,9 +297,44 @@ function paintFooter() {
     observer.observe(foot);
   }
 }
+const MONTHS_EN = ["Jan.","Feb.","Mar.","Apr.","May","Jun.","Jul.","Aug.","Sep.","Oct.","Nov.","Dec."];
+// 내 스크랩: 게시판·단어장과 같은 포스터 페이지(왼쪽 정보·필터 칸 + 큰 제목 + 카드 목록). 필터는 스크랩이 6개 이상일 때만.
+function scrapsPage() {
+  const now = new Date(Date.now() + 9 * 3600000);
+  const many = scraps.length >= 6;
+  const counts = TOPICS.map(topic => [topic,scraps.filter(item => (item.topics ?? []).includes(topic)).length]).filter(([,count]) => count);
+  const kinds = [["all","전체"],["news","뉴스"],["video","영상"]].map(([id,label]) => `<button type="button" data-scrap-type="${id}" aria-pressed="${scrapType === id}">${label}</button>`).join("");
+  const topics = counts.map(([topic,count]) => `<button type="button" data-scrap-topic="${topic}" aria-pressed="${scrapTopics.has(topic)}">${topic} ${count}</button>`).join("");
+  const empty = !visible.length ? `<p class="tv-message">${scraps.length ? "조건에 맞는 스크랩이 없어요." : "아직 스크랩한 자료가 없어요. 둘러보기에서 책갈피 버튼을 눌러 저장해 보세요."}</p>` : "";
+  return `<section class="tv-home"><div class="poster-page">
+    <header class="pr-head"><div><h1>내 스크랩</h1><p>저장해 둔 기사와 영상</p></div></header>
+    <aside class="pr-rail" aria-label="스크랩 정보와 필터">
+      <div class="pr-rail-top"><div class="pr-date" aria-hidden="true">${MONTHS_EN[now.getUTCMonth()]} ${now.getUTCDate()}<span>${now.getUTCFullYear()}</span></div></div>
+      <div class="pr-rail-bottom">
+        <div class="pr-group"><b>스크랩</b><span data-scrap-count>${scrapFiltered().length}개</span></div>
+        ${many ? `<div class="pr-group" role="group" aria-label="종류"><b>종류</b>${kinds}</div>
+        ${topics ? `<div class="pr-group" role="group" aria-label="주제"><b>주제</b>${topics}</div>` : ""}
+        <div class="pr-group"><button type="button" data-scrap-reset>초기화</button></div>` : ""}
+      </div>
+    </aside>
+    <div class="pr-body">
+      ${many ? '<input id="scrap-q" type="search" placeholder="스크랩 검색" aria-label="스크랩 검색" autocomplete="off" maxlength="60">' : ""}
+      <div class="tv-grid">${visible.map(card).join("")}</div>
+      ${empty}
+      <div class="tv-footer" role="status"></div>
+    </div>
+  </div></section>`;
+}
 function paint() {
   if (!feed?.isConnected) return;
-  if (section === "scraps") visible = scrapSlice();
+  if (section === "scraps") {
+    visible = scrapSlice();
+    feed.innerHTML = scrapsPage();
+    paintFooter();
+    const search = feed.querySelector("#scrap-q");
+    if (search) search.value = scrapQuery;
+    return;
+  }
   if (!visible.length) {
     visible = section === "home" && filter === "all"
       ? [...videos.slice(0,3),...news.slice(0,3)]
@@ -312,7 +352,7 @@ function paint() {
     ${section === "home" ? `<nav class="tv-filters home-tv-tabs" aria-label="영상 및 기사">${controls}</nav>` : ""}
     ${!section ? `<div class="tv-summary" data-summary>${summaryHtml()}</div>` : ""}
     ${!section ? sheetHtml() + dockHtml() + '<div class="sr-only" role="status" aria-live="polite" data-results-live></div>' : ""}
-    ${section === "scraps" ? `<a class="back" href="#explore">← 둘러보기</a>${scrapFilterHtml()}` : ""}
+    ${section === "scraps" ? `<a class="back" href="#explore"><span class="ar l" aria-hidden="true"></span>둘러보기</a>${scraps.length >= 6 ? scrapFilterHtml() : ""}` : ""}
     ${messages.length ? `<div class="tv-message">${messages.join(" ")} <button data-reload>다시 시도</button></div>` : ""}
     ${section ? `<div class="tv-grid">${visible.map(card).join("")}</div>` : `<div class="tv-view" data-view data-mode="${resultsActive() ? "results" : "globe"}">${viewInner()}</div>`}
     ${(ready || section === "scraps") && !visible.length && !messages.length && (section || !resultsActive()) ? `<p class="tv-message">${section === "scraps" ? "아직 스크랩한 자료가 없어요. 둘러보기에서 책갈피 버튼을 눌러 저장해 보세요." : "표시할 자료가 없어요."}</p>` : ""}
@@ -339,7 +379,7 @@ function detail(item) {
     <div class="tv-detail-copy"><p class="tv-label">${escape(item.source)} · ${date(item)}</p>
     <h1 lang="en">${escape(item.title)}</h1>
     ${item.summary ? `<p class="tv-summary" lang="en">${escape(item.summary)}</p>` : ""}
-    <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "YouTube에서 열기" : "BBC 원문 읽기"} ↗</a>
+    <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "YouTube에서 열기" : "BBC 원문 읽기"}<span class="ar ne" aria-hidden="true"></span></a>
     <button type="button" class="tv-action" data-write-source>＋ 이 자료로 노트 쓰기</button>
     <button type="button" class="tv-action" data-scrap aria-label="스크랩" aria-pressed="${saved}" title="${saved ? "스크랩 해제" : "스크랩"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div></section><aside class="tv-writer" aria-label="노트 쓰기" hidden></aside></div>`;
 }
@@ -410,7 +450,7 @@ overlay.addEventListener("close",() => {
 // Rest state: only the dock is visible. "탐색" opens a sheet (search, type, topics);
 // applying it closes the sheet and leaves a one-line summary of what is active.
 // Keyword or topic filters switch the globe to a result list; type alone keeps the globe.
-const TOPICS = ["AI·테크","경제·금융","무역","에너지·기후","헬스·바이오","식품·뷰티","교육","엔터·문화","정치·국제","사회·생활"];
+export const TOPICS = ["AI·테크","경제·금융","무역","에너지·기후","헬스·바이오","식품·뷰티","교육","엔터·문화","정치·국제","사회·생활"];
 const selectedTopics = new Set();
 let sheetOpen = false;
 let listView = false;
@@ -455,7 +495,7 @@ function filterCount() {
   return (searchTerms().length ? 1 : 0) + selectedTopics.size + (filter !== "all" ? 1 : 0);
 }
 function applyLabel() {
-  return resultsActive() ? `결과 ${landingResults().length}개 보기` : "닫기";
+  return resultsActive() ? `결과 ${landingResults().length}개 보기` : `자료 ${items().length}개 보기`;
 }
 function typeControls() {
   return Object.entries(filters).filter(([id]) => id !== "scraps")
@@ -463,13 +503,14 @@ function typeControls() {
 }
 function dockHtml() {
   const count = filterCount();
-  return `<nav class="tv-dock" aria-label="둘러보기 메뉴"><button type="button" class="tv-explore" data-sheet-toggle aria-expanded="${sheetOpen}" aria-controls="tv-sheet">검색·필터${count ? `<span class="badge" aria-label="적용된 필터 ${count}개">${count}</span>` : ""}</button><a href="#home">홈</a><a href="#scraps">내 스크랩</a><a href="#feed">게시판</a><a href="#words">단어장</a><button type="button" data-tv-write>＋ 노트 쓰기</button></nav>`;
+  return `<nav class="tv-dock" aria-label="둘러보기 메뉴"><button type="button" class="tv-explore" data-sheet-toggle aria-expanded="${sheetOpen}" aria-controls="tv-sheet">검색·필터${count ? `<span class="badge" aria-label="적용된 필터 ${count}개">${count}</span>` : ""}</button><a href="#home">홈</a><a href="#scraps">내 스크랩</a></nav>`;
 }
 function sheetHtml() {
   const counts = topicCounts();
   return `<div class="tv-sheet" id="tv-sheet" role="dialog" aria-label="검색·필터" ${sheetOpen ? "" : "hidden"}>
+    <div class="dialog-head"><h2>검색·필터</h2><button type="button" data-sheet-toggle data-close aria-label="검색·필터 닫기">✕</button></div>
     <form role="search" data-tv-search><input id="tv-q" type="search" name="q" placeholder="예: climate, AI" aria-keyshortcuts="/" autocomplete="off" enterkeyhint="search" aria-label="뉴스와 영상 검색" maxlength="60"></form>
-    <div class="tv-sheet-row"><div class="tv-seg" role="group" aria-label="유형">${typeControls()}</div><div class="tv-seg" role="group" aria-label="보기 방식"><button type="button" data-view-mode="globe" aria-pressed="${!listView}">지구본</button><button type="button" data-view-mode="list" aria-pressed="${listView}">목록</button></div><button type="button" class="tv-link" data-reset-filters>초기화</button></div>
+    <div class="tv-sheet-row"><div class="tv-seg" role="group" aria-label="유형">${typeControls()}</div><button type="button" class="tv-link" data-reset-filters>초기화</button></div>
     <div class="tv-topics" role="group" aria-label="주제">${TOPICS.map(topic =>
       `<button type="button" class="tv-chip${counts[topic] ? "" : " is-zero"}" data-topic="${topic}" aria-pressed="${selectedTopics.has(topic)}">${topic}<small>${counts[topic]}</small></button>`).join("")}</div>
     <button type="button" class="tv-apply" data-sheet-apply>${applyLabel()}</button>
