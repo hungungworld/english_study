@@ -62,6 +62,30 @@ function flash(message) {
   clearTimeout(noticeTimer);
   noticeTimer = setTimeout(() => { notice.textContent = ""; }, 4000);
 }
+// Line breaks (DESIGN.md 2.6): glue short words to the next word, numbers to their unit and month names to the day,
+// so a line never ends in "a", "of" or "in" and "Nov. 16" or "25 articles" never splits.
+const GLUE_WORDS = /\b(a|an|the|and|or|of|to|in|on|for|with|at|by|from|as|is|are|not|your|our|this|that|my|its|I)[ \t]+(?=\S)/gi;
+const GLUE_MONTH = /\b(Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?[ \t]+(?=\d)/g;
+function glue(root = document.body) {
+  const walker = document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode: node =>
+    !node.nodeValue.trim() || node.parentElement?.closest("script,style,textarea,input,select,option,[data-no-glue]") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT});
+  const nodes = [];
+  for (let node; (node = walker.nextNode());) nodes.push(node);
+  for (const node of nodes) {
+    const next = node.nodeValue.replace(GLUE_WORDS,"$1\u00A0").replace(GLUE_MONTH,match => match.replace(/[ \t]+$/,"\u00A0"))
+      .replace(/(\d)[ \t]+(?=[A-Za-z])/g,"$1\u00A0").replace(/[ \t]+·[ \t]+/g,"\u00A0· ");
+    // The last two words of a block stay together, so no block ends with one word alone on its line.
+    const tail = node === node.parentElement.lastChild && node.parentElement.matches("p,li,dd,h1,h2,h3,h4,blockquote,.snippet,.hint,.meta")
+      ? next.replace(/[ \t]+(\S+\s*)$/,"\u00A0$1") : next;
+    if (tail !== node.nodeValue) node.nodeValue = tail;
+  }
+}
+let glueQueued = false;
+new MutationObserver(() => {
+  if (glueQueued) return;
+  glueQueued = true;
+  requestAnimationFrame(() => { glueQueued = false; glue(); });
+}).observe(document.body,{childList:true,subtree:true});
 window.addEventListener("sync-failed",() => flash("Could not save to the shared database. Check your connection."));
 function safeLink(value) {
   try {
@@ -96,6 +120,7 @@ function postCard(post, index) {
 function wordCard(word, level = 2, noteLink = true) {
   return `<article class="card"><h${level}>${e(word.term)}</h${level}><p>${e(word.meaning)}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}<div class="meta">${authorLink(word)}${noteLink && word.post_id ? `<a href="#post/${e(word.post_id)}">View note</a>` : ""}</div></article>`;
 }
+const plural = (n, word) => `${n} ${n === 1 ? word : word + "s"}`;
 const empty = message => `<div class="card empty">${e(message)}</div>`;
 const emptyAction = (message, action) => `<div class="card empty"><p>${e(message)}</p><p>${action}</p></div>`;
 const activeMember = () => readLocal("active-member",0);
@@ -300,13 +325,13 @@ function renderBoard(chat) {
   const posts = sorted(board.posts.filter(post => boardKind(post) === kind && (!labMember || post.author === labMember)));
   const shown = paged("feed",posts);
   const weekCount = which => inPeriod(board.posts.filter(post => boardKind(post) === which),"week").length;
-  const write = chat ? '<button type="button" class="primary" data-new-chat>＋ Write</button>' : '<button type="button" class="primary" data-new-note>＋ Write</button>';
-  const blank = chat ? emptyAction("No posts yet. Write the first one.",'<button type="button" data-new-chat>＋ Write</button>') :
-    emptyAction("No notes yet. Leave the first one.",'<button type="button" data-new-note>＋ Write</button>');
+  const write = chat ? '<button type="button" class="primary" data-new-chat><span class="ic plus" aria-hidden="true"></span>Write</button>' : '<button type="button" class="primary" data-new-note><span class="ic plus" aria-hidden="true"></span>Write</button>';
+  const blank = chat ? emptyAction("No posts yet. Write the first one.",'<button type="button" data-new-chat><span class="ic plus" aria-hidden="true"></span>Write</button>') :
+    emptyAction("No notes yet. Leave the first one.",'<button type="button" data-new-note><span class="ic plus" aria-hidden="true"></span>Write</button>');
   const names = [[0,"All members"],...members.map((name,index) => [index + 1,name]).filter(([,name]) => name)];
   return posterPage({title:chat ? "Free board" : "Study board",sub:chat ? "Say hi and cheer each other on" : "English study notes from the group",action:write,label:"Board info and filters",
     bottom:`<nav class="pr-group" aria-label="Board type"><b>Board</b><a href="#feed" ${chat ? "" : 'aria-current="page"'}>Study board</a><a href="#feed/chat" ${chat ? 'aria-current="page"' : ""}>Free board</a></nav>
-      <div class="pr-group"><b>This week</b><span>${weekCount("study")} notes</span><span>${weekCount("chat")} posts</span><span>${members.filter(Boolean).length} members</span></div>
+      <div class="pr-group"><b>This week</b><span>${plural(weekCount("study"),"note")}</span><span>${plural(weekCount("chat"),"post")}</span><span>${plural(members.filter(Boolean).length,"member")}</span></div>
       <div class="pr-group" role="group" aria-label="Members"><b>Members</b>${names.map(([id,name]) => `<button type="button" data-lab-member="${id}" aria-pressed="${labMember === id}">${e(name)}</button>`).join("")}</div>`,
     body:`<div class="stack">${shown.items.map(chat ? chatCard : postCard).join("") || blank}</div>${shown.nav}`});
 }
@@ -315,12 +340,12 @@ function renderWords(key) {
   const nav = `<nav class="pr-group" aria-label="Vocab view"><b>Vocab</b><a href="#words" ${quizView ? 'aria-current="page"' : ""}>Quiz</a><a href="#words/list" ${quizView ? "" : 'aria-current="page"'}>Word list</a></nav>`;
   if (quizView) {
     return posterPage({title:"Vocab",sub:"Take quizzes with the words we collect",label:"Vocab info",
-      bottom:nav + `<div class="pr-group"><b>This week</b><span>${inPeriod(board.words,"week").length} new words</span><span>${board.words.length} total</span></div>`,
+      bottom:nav + `<div class="pr-group"><b>This week</b><span>${plural(inPeriod(board.words,"week").length,"new word")}</span><span>${board.words.length} total</span></div>`,
       body:studyPanel() + renderQuiz()});
   }
   const words = sorted(wordSelection());
   const names = [[0,"All members"],...members.map((name,index) => [index + 1,name]).filter(([,name]) => name)];
-  return posterPage({title:"Vocab",sub:"English words and phrases we collect",action:'<button type="button" class="primary" data-new-word>＋ Add a word</button>',label:"Vocab info and filters",
+  return posterPage({title:"Vocab",sub:"English words and phrases we collect",action:'<button type="button" class="primary" data-new-word><span class="ic plus" aria-hidden="true"></span>Add a word</button>',label:"Vocab info and filters",
     bottom:nav + `<div class="pr-group" role="group" aria-label="View"><b>View</b><button type="button" data-wview="all" aria-pressed="${wordView === "all"}">By word</button><button type="button" data-wview="group" aria-pressed="${wordView === "group"}">By note</button></div>
       <div class="pr-group"><b>Words</b><span>${words.length}</span></div>
       <div class="pr-group" role="group" aria-label="Author"><b>Members</b>${names.map(([id,name]) => `<button type="button" data-word-member="${id}" aria-pressed="${wordMember === id}">${e(name)}</button>`).join("")}</div>`,
@@ -474,11 +499,11 @@ function openEditor(standalone, post, source, host, kind) {
   ${standalone ? "" : `<label>Title<input name="title" required maxlength="150" value="${e(post?.title ?? source?.title.slice(0,150))}"></label>
   <label>Summary<textarea name="summary" required maxlength="12000" rows="3" placeholder="Sum up what this item is about.">${e(notes.summary)}</textarea></label>
   <label>My thoughts<textarea name="reflection" maxlength="4000" rows="3" placeholder="What you learned or what you think.">${e(notes.reflection)}</textarea></label>
-  <label>Key sentence<input name="sentence" lang="en" maxlength="500" value="${e(notes.sentence)}" placeholder="The English sentence you found most important"></label>
+  <label>Key sentence<input name="sentence" lang="en" maxlength="500" value="${e(notes.sentence)}" placeholder="Your key English sentence"></label>
   <label>Reference link (optional)<input type="url" name="link" value="${e(post?.link ?? source?.url)}" maxlength="2000" placeholder="https://"></label>
   ${tagOptions(post?.tag ?? (source ? source.type === "video" ? "Video" : "Article" : ""))}`}
   <div class="stack" data-words>${standalone ? wordFields({},false) : words.map(word => wordFields(word)).join("")}</div>
-  <div class="row">${standalone ? "" : '<button type="button" data-add-word>＋ Add a word</button>'}<button class="primary" type="submit">${standalone ? "Add" : post ? "Save changes" : "Post note"}</button></div>
+  <div class="row">${standalone ? "" : '<button type="button" data-add-word><span class="ic plus" aria-hidden="true"></span>Add a word</button>'}<button class="primary" type="submit">${standalone ? "Add" : post ? "Save changes" : "Post note"}</button></div>
   <p class="form-error" id="${pre}-error" role="alert" hidden></p></form>`;
   if (!host) editor.setAttribute("aria-labelledby","editor-title");
   const form = target.querySelector("form");

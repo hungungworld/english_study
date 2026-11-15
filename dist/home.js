@@ -41,11 +41,12 @@ function clearNow(screen) {
   const line = screen.closest(".tv-pile")?.querySelector(".pile-now");
   if (line) line.innerHTML = "";
 }
+const plural = (n,word) => `${n} ${n === 1 ? word : word + "s"}`;
 function template() {
   return `<section class="home-scene" aria-labelledby="home-title">
     <div class="home-copy">
       <h1 id="home-title" lang="en">axciting</h1>
-      <p>Read English articles and watch videos,<br>and keep the sentences you want to remember.</p>
+      <p><span>Read English articles and watch videos,</span> <span>and keep the sentences you want to remember.</span></p>
       <div class="home-actions">
         <a class="home-primary" href="#explore">Explore<span class="ar r" aria-hidden="true"></span></a>
       </div>
@@ -131,7 +132,7 @@ function fillPoster(root,ctx) {
   paper.innerHTML = `
     <div class="pp-rail">
       <div class="pp-rail-top">
-        <p><span class="pp-k">This week</span>${ctx.memberCount} members<br>${ctx.postCount} notes<br>${ctx.wordCount} words</p>
+        <p><span class="pp-k">This week</span>${plural(ctx.memberCount,"member")}<br>${plural(ctx.postCount,"note")}<br>${plural(ctx.wordCount,"word")}</p>
         <p><span class="pp-k">Sources</span>BBC News<br>BBC Learning English</p>
       </div>
       <div class="pp-dates">${escape(ctx.today.label)}<span>${ctx.today.year}</span></div>

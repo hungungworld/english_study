@@ -155,6 +155,35 @@
       if (ox > 2 && oy > 2) add('text-overlap', a, 'with ' + desc(b));
     }
 
+    // line breaks: a last line holding one short word, or a line ending in a function word, reads badly (see DESIGN.md 2.6)
+    const WEAK = new Set(['a','an','the','and','or','of','to','in','on','for','with','at','by','from','as','is','are','&','·','–','—','not','your','our','this','that','my','its']);
+    const lineWords = el => {
+      const words = [];
+      for (const n of el.childNodes) {
+        if (n.nodeType !== 3 || !n.textContent.trim()) continue;
+        const re = /\S+/g; let m;
+        while ((m = re.exec(n.textContent))) {
+          const r = document.createRange(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length);
+          const b = r.getClientRects()[0]; if (b && b.width) words.push({w: m[0], top: Math.round(b.top)});
+        }
+      }
+      const lines = [];
+      for (const w of words) { const last = lines[lines.length - 1]; if (last && Math.abs(last.top - w.top) < 6) last.words.push(w.w); else lines.push({top: w.top, words: [w.w]}); }
+      return lines.map(l => l.words);
+    };
+    for (const el of all.filter(e => !inMedia(e) && !e.closest('.sr-only') && !e.matches('.sr-only,option,select,textarea,input') && !e.querySelector('br') && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()))) {
+      const lines = lineWords(el);
+      if (lines.length < 2) continue;
+      const last = lines[lines.length - 1];
+      if (last.length === 1 && last[0].replace(/\W/g, '').length <= 9) add('line-orphan', el, '"' + last[0] + '" alone on the last line');
+      for (const line of lines.slice(0, -1)) {
+        const raw = line[line.length - 1];
+        if (/[.,;:!?)"”’]$/.test(raw)) continue;           // a word that closes a sentence, clause or quote may end a line
+        const end = raw.toLowerCase();
+        if (WEAK.has(end)) { add('line-weak-end', el, 'line ends with "' + line[line.length - 1] + '" → ' + lines.map(l => l.join(' ')).join(' / ').slice(0, 90)); break; }
+      }
+    }
+
     // text that spills out of its box
     for (const el of all.filter(e => e.matches('button,.tag,.tv-pill,.chip,.tv-chip,.tabs a'))) {
       if (!inMedia(el) && !el.matches('.pp-gear') && el.scrollWidth > el.clientWidth + 1) add('text-clipped', el, 'scrollWidth ' + el.scrollWidth + ' > ' + el.clientWidth);

@@ -381,7 +381,7 @@ function detail(item) {
     <h1 lang="en">${escape(item.title)}</h1>
     ${item.summary ? `<p class="tv-summary" lang="en">${escape(item.summary)}</p>` : ""}
     <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "Open on YouTube" : "Read on BBC"}<span class="ar ne" aria-hidden="true"></span></a>
-    <button type="button" class="tv-action" data-write-source>＋ Write</button>
+    <button type="button" class="tv-action" data-write-source><span class="ic plus" aria-hidden="true"></span>Write</button>
     <button type="button" class="tv-action" data-scrap aria-label="Save" aria-pressed="${saved}" title="${saved ? "Remove from saved" : "Save"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div></section><aside class="tv-writer" aria-label="Write a note" hidden></aside></div>`;
 }
 function showDetail(item, origin) {
@@ -526,12 +526,12 @@ function typeControls() {
 }
 function dockHtml() {
   const count = filterCount();
-  return `<nav class="tv-dock" aria-label="Explore menu"><button type="button" class="tv-explore" data-sheet-toggle aria-expanded="${sheetOpen}" aria-controls="tv-sheet">Search & filter${count ? `<span class="badge" aria-label="${count} filters applied">${count}</span>` : ""}</button><a href="#home">Home</a><a href="#scraps">Saved</a></nav>`;
+  return `<nav class="tv-dock" aria-label="Explore menu"><button type="button" class="tv-explore" data-sheet-toggle aria-expanded="${sheetOpen}" aria-controls="tv-sheet">Search${count ? `<span class="badge" aria-label="${count} filters applied">${count}</span>` : ""}</button><a href="#home">Home</a><a href="#scraps">Saved</a></nav>`;
 }
 function sheetHtml() {
   const counts = topicCounts();
-  return `<div class="tv-sheet" id="tv-sheet" role="dialog" aria-label="Search & filter" ${sheetOpen ? "" : "hidden"}>
-    <div class="dialog-head"><h2>Search & filter</h2><button type="button" data-sheet-toggle data-close aria-label="Close search and filter">✕</button></div>
+  return `<div class="tv-sheet" id="tv-sheet" role="dialog" aria-label="Search" ${sheetOpen ? "" : "hidden"}>
+    <div class="dialog-head"><h2>Search</h2><button type="button" data-sheet-toggle data-close aria-label="Close search">✕</button></div>
     <form role="search" data-tv-search><input id="tv-q" type="search" name="q" placeholder="e.g. climate, AI" aria-keyshortcuts="/" autocomplete="off" enterkeyhint="search" aria-label="Search news and videos" maxlength="60"></form>
     <div class="tv-sheet-row"><div class="tv-seg" role="group" aria-label="Type">${typeControls()}</div><button type="button" class="tv-link" data-reset-filters>Reset</button></div>
     <div class="tv-topics" role="group" aria-label="Topics">${TOPICS.map(topic =>

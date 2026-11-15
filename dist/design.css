@@ -602,3 +602,53 @@
 :root:root:root body.media-mode .tv-dock .tv-explore .badge{background:var(--ds-ink);color:var(--ds-paper)}
 :root:root:root body.media-mode .tv-summary{top:calc(var(--ds-sp-4) + var(--ds-h-chip) + var(--ds-sp-3));gap:var(--ds-sp-2)}
 :root:root:root body.media-mode .tv-dock :is(a,button){font-size:var(--ds-fs-ui)}
+
+/* ---- Line breaking (DESIGN.md 2.6): headings and short blocks balance their lines, paragraphs avoid a lone last word ---- */
+:root:root:root body :is(h1,h2,h3,h4,legend,.pp-title,.pp-sub,.pr-head p,.home-copy p span,.tv-message,.card.empty p,.tv-empty p,.hero p){text-wrap:balance}
+:root:root:root body :is(p,dd,li,blockquote,.hint,.snippet,.meta,.prose,.pp-cols p,.pp-rail p,.tv-detail-copy p){text-wrap:pretty}
+:root:root:root body :is(button,.chip,.tag,.tv-pill,.pr-group a,.pr-group button,.tabs a,.tabs button){text-wrap:balance}
+:root:root:root body{overflow-wrap:break-word}
+:root:root:root body .home-copy p span{display:block}
+
+/* ---- Phones (≤700px): the home poster becomes one column in reading order, with no side rail ---- */
+@media (max-width:700px){
+  :root:root:root body .home-paper{display:flex;flex-direction:column;gap:var(--ds-sp-5);padding:var(--ds-sp-5) var(--ds-sp-4) var(--ds-sp-6);grid-template-columns:none}
+  :root:root:root body .home-paper::before{display:none}
+  :root:root:root body :is(.pp-rail .pp-rail-top,.pp-rail .pp-dates,.pp-rail .pp-rail-foot,.pp-main .pp-main-head,.pp-main .pp-cols,.pp-main .pp-words){margin:0;grid-column:auto;grid-row:auto;max-width:none}
+  :root:root:root body .pp-rail .pp-dates{order:1;display:flex;align-items:baseline;gap:var(--ds-sp-2);font-size:var(--ds-fs-h2);border:0;padding:0}
+  :root:root:root body .pp-rail .pp-dates span{font-size:var(--ds-fs-ui)}
+  :root:root:root body .pp-main .pp-main-head{order:2;display:block}
+  :root:root:root body .pp-main .pp-title{font-size:var(--ds-fs-display-m,40px);line-height:1.1;margin:0 0 var(--ds-sp-3)}
+  :root:root:root body .pp-main .pp-cols{order:3;display:grid;grid-template-columns:minmax(0,1fr);gap:var(--ds-sp-5)}
+  :root:root:root body .pp-main .pp-words{order:4}
+  :root:root:root body .pp-rail .pp-rail-top{order:5;flex-direction:row;flex-wrap:wrap;justify-content:flex-start;gap:var(--ds-sp-4) var(--ds-sp-6);border-top:1px solid var(--ds-line);padding-top:var(--ds-sp-3)}
+  :root:root:root body .pp-rail .pp-rail-foot{order:6;min-height:0;border:0;padding:0}
+  :root:root:root body .pp-rail .pp-rail-foot:empty{display:none}
+  :root:root:root body .home-paper .pp-strip{order:7;position:static;left:auto;right:auto;height:120px;padding:0;gap:var(--ds-sp-1)}
+  :root:root:root body .home-paper .strip-now{display:none}
+  :root:root:root body .home-paper .pp-gear{order:8;position:static;align-self:flex-start}
+  :root:root:root body .home-paper .pp-gear::after{display:none}
+  :root:root:root body .home-paper .pp-prefs{position:static;width:auto;order:9}
+}
+
+/* ---- Phones (≤700px): poster pages (board, vocab, saved) — compact date, groups as wrapped rows ---- */
+@media (max-width:700px){
+  :root:root:root body .poster-page{row-gap:var(--ds-sp-4)}
+  :root:root:root body .pr-rail{gap:var(--ds-sp-4) var(--ds-sp-5);padding-bottom:var(--ds-sp-4);margin-bottom:0}
+  :root:root:root body .pr-date{display:flex;align-items:baseline;gap:var(--ds-sp-2);flex-basis:100%;margin:0;font-size:var(--ds-fs-h2);line-height:1.2}
+  :root:root:root body .pr-date span{display:inline;margin:0;font-size:var(--ds-fs-ui)}
+  :root:root:root body .pr-group{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:var(--ds-sp-1) var(--ds-sp-4)}
+  :root:root:root body .pr-group b{flex-basis:100%;margin:0}
+  :root:root:root body .pr-head{gap:var(--ds-sp-3)}
+  :root:root:root body .pr-head h1{font-size:var(--ds-fs-h1)}
+}
+
+/* ---- Phones (≤700px): note detail ---- */
+@media (max-width:700px){
+  :root:root:root body .card > h1{font-size:var(--ds-fs-h1);line-height:1.25;margin:0 0 var(--ds-sp-3)}
+  :root:root:root body .card > h1 + .meta{margin-top:0}
+}
+
+/* ---- "+" is drawn, not typed: the full-width plus glyph sat off-centre inside buttons ---- */
+:root:root:root body .ic.plus{width:var(--ds-sp-4);height:var(--ds-sp-4);margin:0;vertical-align:0;--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='square'%3E%3Cpath d='M8 3v10M3 8h10'/%3E%3C/svg%3E")}
+:root:root:root body button:has(> .ic.plus){display:inline-flex;align-items:center;justify-content:center;gap:var(--ds-sp-2);line-height:1}
