@@ -74,6 +74,15 @@ export async function loadBoard() {
 }
 // An edit key (token) proves a post is yours; without one, a member can still change a post that carries their own name (memberNo).
 export async function saveEntry(entry, token, id, memberNo) {
+  // The server accepts exactly one word for a standalone word entry (no title), so several words are saved one by one.
+  if (shared && !entry.title && !id && entry.words.length > 1) {
+    let saved = 0;
+    for (const word of entry.words) {
+      try { await saveEntry({...entry,words:[word]},crypto.randomUUID() + crypto.randomUUID(),undefined,0); saved++; }
+      catch { throw new Error(saved ? `Saved ${saved} of ${entry.words.length} words. Check your connection and add the rest again.` : "Could not save. Check your connection and try again."); }
+    }
+    return null;
+  }
   if (shared && id && !token && memberNo) return rpc("study_save_as", {entry, post_key:id, member_no:memberNo});
   if (shared) return rpc("study_save", {entry, edit_token:token, post_key:id ?? null});
   const created_at = new Date().toISOString();
