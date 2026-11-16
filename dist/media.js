@@ -464,19 +464,14 @@ async function loadArticle(item) {
 }
 // ---- Highlighter: yellow marks stored as positions only (paragraph, start, end) in this browser; the article text itself is never saved ----
 const ICON_ATTRS = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"';
-const PEN_BUTTON = `<div class="tv-fabs"><button type="button" class="tv-jump" data-jump data-dir="down" aria-label="Jump to the end of the article" title="Jump to the end"><svg ${ICON_ATTRS}><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg></button><button type="button" class="tv-pen" data-pen aria-pressed="false" aria-label="Highlighter" title="Highlighter"><svg ${ICON_ATTRS}><path d="M4 20l1-5L16 4l4 4L9 19z"/><path d="M13 7l4 4"/></svg></button></div>`;
-// One arrow: it points down (jump to the end) all the way through the article and flips up only near the end (back to the top).
+const PEN_BUTTON = `<div class="tv-fabs"><button type="button" class="tv-jump" data-jump="up" aria-label="Back to the top" title="Back to the top"><svg ${ICON_ATTRS}><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></button><button type="button" class="tv-jump" data-jump="down" aria-label="Jump to the end of the article" title="Jump to the end"><svg ${ICON_ATTRS}><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg></button><button type="button" class="tv-pen" data-pen aria-pressed="false" aria-label="Highlighter" title="Highlighter"><svg ${ICON_ATTRS}><path d="M4 20l1-5L16 4l4 4L9 19z"/><path d="M13 7l4 4"/></svg></button></div>`;
+// Two arrows, up and down, for long articles. Each fades and stops working when you are already at that end.
 function syncJump(scroll) {
-  const jump = scroll.querySelector("[data-jump]");
-  if (!jump) return;
   const long = scroll.scrollHeight > scroll.clientHeight * 1.6;
-  jump.hidden = !long;
-  const down = scroll.scrollTop < scroll.scrollHeight - scroll.clientHeight - scroll.clientHeight * .5;
-  if ((jump.dataset.dir === "down") !== down) {
-    jump.dataset.dir = down ? "down" : "up";
-    jump.setAttribute("aria-label",down ? "Jump to the end of the article" : "Back to the top");
-    jump.title = down ? "Jump to the end" : "Back to the top";
-    jump.querySelector("svg").innerHTML = down ? '<path d="M12 5v14"/><path d="M6 13l6 6 6-6"/>' : '<path d="M12 19V5"/><path d="M6 11l6-6 6 6"/>';
+  const max = scroll.scrollHeight - scroll.clientHeight;
+  for (const jump of scroll.querySelectorAll("[data-jump]")) {
+    jump.hidden = !long;
+    jump.disabled = jump.dataset.jump === "up" ? scroll.scrollTop < 24 : scroll.scrollTop > max - 24;
   }
 }
 let penOn = false;
@@ -643,7 +638,7 @@ overlay.addEventListener("click",async event => {
   if (jump) {
     const scroll = overlay.querySelector(".tv-scroll");
     const smooth = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-    scroll.scrollTo({top:jump.dataset.dir === "down" ? scroll.scrollHeight : 0,behavior:smooth});
+    scroll.scrollTo({top:jump.dataset.jump === "down" ? scroll.scrollHeight : 0,behavior:smooth});
   }
   const pen = event.target.closest("[data-pen]");
   if (pen) {

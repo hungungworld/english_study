@@ -164,6 +164,7 @@
     const stackControls = all.filter(e => e.matches('button,a.tv-out,a.home-primary,input:not([type=hidden]):not([type=checkbox]):not([type=radio]),select,textarea') && !inMedia(e) && !e.closest('.tv-pill,.pp-vert,.tabs,.tv-seg,.pr-group,.chip-radio,.pager,.tv-dock,.top,.tv-sheet-row,.scrap-topics,.tv-topics,.pp-prefs-topics,.week-dots,.tag-options'));
     const stackText = all.filter(e => !inMedia(e) && !e.closest('button,a,label,legend,option,.pr-group,.sr-only') && !e.matches('label,legend,b,.pp-k,.sr-only') && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()));
     for (const c of stackControls) {
+      if (c.closest('.tv-fabs')) continue;   // the pen and jump arrows float above the scrolling article
       const rc = c.getBoundingClientRect();
       for (const t of stackText) {
         if (t.contains(c) || c.contains(t)) continue;

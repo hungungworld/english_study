@@ -915,3 +915,6 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 
 /* Word fields: the Remove word button sits 16px under the last hint line (the gap alone is 12px) */
 :root:root:root body .word-fields > button{margin-top:var(--ds-sp-1)}
+
+/* The two jump arrows fade when you are already at that end (DESIGN.md 10-48) */
+:root:root:root body #tv-overlay .tv-jump:disabled{opacity:.2;cursor:default}
