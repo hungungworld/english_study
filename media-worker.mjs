@@ -130,6 +130,18 @@ async function media(request, env, context, path, cursor) {
 }
 const koreanCache = new Map();
 const hangul = /^[가-힣 ]{1,14}$/;
+// Dictionary answers are cleaned: weak guesses, polite or casual sentence endings, and the same word with a particle attached are dropped.
+const sentenceEnding = /(해요|어요|아요|습니다|ㅂ니다|세요|네요|지요|드릴|드리겠)/;
+function cleanKorean(translations) {
+  const kept = [];
+  const ranked = (translations ?? []).filter(item => hangul.test(item.displayTarget) && item.confidence >= 0.05).sort((a,b) => b.confidence - a.confidence);
+  for (const {displayTarget:text} of ranked) {
+    if (sentenceEnding.test(text) || (text.length >= 3 && text.endsWith("해"))) continue;
+    if (kept.some(known => known.length >= 2 && text.startsWith(known) && text !== known)) continue;
+    if (!kept.includes(text)) kept.push(text);
+  }
+  return kept;
+}
 async function similarWords(term) {
   try {
     const response = await fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(term)}&max=12`,{signal:AbortSignal.timeout(4000)});
@@ -150,8 +162,7 @@ async function koreanFor(words, env) {
     if (!response.ok) throw new Error("translator");
     const data = await response.json();
     batch.forEach((word,index) => {
-      const best = (data[index]?.translations ?? []).filter(item => hangul.test(item.displayTarget)).sort((a,b) => b.confidence - a.confidence)[0];
-      koreanCache.set(word,best ? best.displayTarget : "");
+      koreanCache.set(word,cleanKorean(data[index]?.translations)[0] ?? "");
     });
   }
   return words.map(word => koreanCache.get(word) || "");
@@ -179,10 +190,11 @@ async function translateTerm(term, env) {
   };
   try {
     const entry = await call("dictionary/lookup?api-version=3.0&from=en&to=ko",AbortSignal.timeout(6000));
-    let korean = [...new Set((entry?.translations ?? []).filter(item => hangul.test(item.displayTarget)).sort((a,b) => b.confidence - a.confidence).map(item => item.displayTarget))].slice(0,2).join(", ");
+    let korean = cleanKorean(entry?.translations).slice(0,2).join(", ");
     if (!korean) {
       const phrase = await call("translate?api-version=3.0&from=en&to=ko",AbortSignal.timeout(6000));
-      const text = phrase?.translations?.[0]?.text?.trim() ?? "";
+      let text = (phrase?.translations?.[0]?.text ?? "").trim().replace(/[.!?。]+$/,"");
+      if (text.length >= 3 && /해(요)?$/.test(text)) text = text.replace(/해(요)?$/,"하다");
       if (text.length <= 30 && !/[A-Za-z]{3,}/.test(text)) korean = text;
     }
     return Response.json({configured:true,korean},{headers:{"Cache-Control":"public, max-age=86400"}});
