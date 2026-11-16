@@ -888,3 +888,8 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body.study-mode #tv-overlay .tv-topbar{background:var(--ds-surface);border-bottom-color:var(--ds-line)}
 :root:root:root body.study-mode #tv-overlay .tv-source{color:var(--ds-muted)}
 :root:root:root body.study-mode #tv-overlay .tv-topbar .tv-close,:root:root:root body.study-mode #tv-overlay .tv-topbar .tv-close:hover{color:var(--ds-ink)}
+
+/* Note panel beside a detail window (DESIGN.md 10-42): its title row is the same 44px as the window's top bar, so the two bottom lines meet and the window reads as one piece */
+:root:root:root body #tv-overlay.is-writing .tv-writer{padding-top:0}
+:root:root:root body #tv-overlay .tv-writer .dialog-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:var(--ds-sp-3);box-sizing:border-box;height:var(--ds-h-button);margin:0 calc(clamp(16px,2vw,28px) * -1) var(--ds-sp-4);padding:0 calc(clamp(16px,2vw,28px) - var(--ds-sp-3)) 0 clamp(16px,2vw,28px);border-bottom:1px solid var(--ds-ink);background:var(--ds-surface)}
+:root:root:root body #tv-overlay .tv-writer .dialog-head h2{margin:0;font-size:var(--ds-fs-item);line-height:1.2}
