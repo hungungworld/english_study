@@ -853,7 +853,7 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body .pp-prefs .row button[data-prefs-reset]:disabled{opacity:.4;cursor:not-allowed;text-decoration:none}
 
 /* Article reader: the picture and the text scroll together, so a long article never squeezes the picture away (DESIGN.md 10-36) */
-:root:root:root body #tv-overlay .tv-detail.is-reader{grid-template-rows:var(--ds-h-button) minmax(0,1fr)}
+:root:root:root body #tv-overlay .tv-detail.is-reader{grid-template-rows:minmax(0,1fr)}
 :root:root:root body #tv-overlay .tv-detail.is-reader .tv-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain;border-radius:inherit}
 :root:root:root body #tv-overlay .tv-detail.is-reader .tv-screen{height:auto;aspect-ratio:16/9;max-height:none}
 
@@ -879,17 +879,7 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body #tv-overlay .tv-hl-list{display:grid;gap:var(--ds-sp-3);margin:0;padding-left:var(--ds-sp-4);font:400 var(--ds-fs-body)/1.6 var(--ds-sans)}
 :root:root:root body #tv-overlay .tv-hl-list li::marker{color:var(--ds-on-dark-muted)}
 
-/* Detail window top bar (DESIGN.md 10-42): source and date on the left, a box-free close on the right; media starts below it */
-:root:root:root body #tv-overlay .tv-detail{grid-template-rows:var(--ds-h-button) minmax(0,1fr) auto}
-:root:root:root body #tv-overlay .tv-topbar{display:flex;align-items:center;justify-content:space-between;gap:var(--ds-sp-3);min-width:0;padding:0 var(--ds-sp-1) 0 var(--ds-sp-4);border-bottom:1px solid var(--ds-on-dark-muted);background:var(--ds-dark-2)}
-:root:root:root body #tv-overlay .tv-source{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:400 var(--ds-fs-ui)/1.2 var(--ds-sans);color:var(--ds-on-dark-muted)}
-:root:root:root body #tv-overlay .tv-topbar .tv-close{position:static;flex:none;width:var(--ds-h-button);height:var(--ds-h-button);margin:0;padding:0;border:0;border-radius:var(--ds-radius);background:transparent;color:var(--ds-on-dark);box-shadow:none}
-:root:root:root body #tv-overlay .tv-topbar .tv-close:hover{background:transparent;color:var(--ds-on-dark);opacity:.7}
-:root:root:root body.study-mode #tv-overlay .tv-topbar{background:var(--ds-surface);border-bottom-color:var(--ds-line)}
-:root:root:root body.study-mode #tv-overlay .tv-source{color:var(--ds-muted)}
-:root:root:root body.study-mode #tv-overlay .tv-topbar .tv-close,:root:root:root body.study-mode #tv-overlay .tv-topbar .tv-close:hover{color:var(--ds-ink)}
-
-/* Note panel beside a detail window (DESIGN.md 10-42): its title row is the same 44px as the window's top bar, so the two bottom lines meet and the window reads as one piece */
-:root:root:root body #tv-overlay.is-writing .tv-writer{padding-top:0}
-:root:root:root body #tv-overlay .tv-writer .dialog-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:var(--ds-sp-3);box-sizing:border-box;height:var(--ds-h-button);margin:0 calc(clamp(16px,2vw,28px) * -1) var(--ds-sp-4);padding:0 calc(clamp(16px,2vw,28px) - var(--ds-sp-3)) 0 clamp(16px,2vw,28px);border-bottom:1px solid var(--ds-ink);background:var(--ds-surface)}
-:root:root:root body #tv-overlay .tv-writer .dialog-head h2{margin:0;font-size:var(--ds-fs-item);line-height:1.2}
+/* Detail window close (DESIGN.md 10-42): a box-free ✕ above the window's top-right corner, outside the picture and the video; hidden while a note is being written (the note panel has its own) */
+:root:root:root body #tv-overlay > .tv-close,:root:root:root body.media-mode #tv-overlay > .tv-close,:root:root:root body.study-mode #tv-overlay > .tv-close{position:fixed;right:auto;bottom:auto;z-index:60;display:flex;align-items:center;justify-content:center;width:var(--ds-h-button);height:var(--ds-h-button);margin:0;padding:0;border:0;border-radius:var(--ds-radius);background:transparent;color:var(--ds-on-dark);font-size:var(--ds-fs-body);box-shadow:none}
+:root:root:root body #tv-overlay > .tv-close:hover,:root:root:root body.media-mode #tv-overlay > .tv-close:hover,:root:root:root body.study-mode #tv-overlay > .tv-close:hover{background:transparent;color:var(--ds-on-dark);opacity:.7}
+:root:root:root body #tv-overlay > .tv-close[hidden]{display:none}

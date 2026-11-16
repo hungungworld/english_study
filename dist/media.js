@@ -384,9 +384,9 @@ function paint() {
 function detail(item) {
   const saved = scraps.some(entry => scrapKey(entry) === scrapKey(item));
   const reader = item.type === "read";
-  return `<div class="tv-stage"><section class="tv-detail${reader ? " is-reader" : ""}"><div class="tv-topbar"><span class="tv-source" lang="en">${escape(item.source)} · ${date(item)}</span><button type="button" class="tv-close" aria-label="Close">✕</button></div>
+  return `<button type="button" class="tv-close" aria-label="Close">✕</button><div class="tv-stage"><section class="tv-detail${reader ? " is-reader" : ""}">
     ${reader ? '<div class="tv-scroll">' : ""}${item.type === "video" ? `<iframe class="tv-player" title="${escape(item.title)}" src="https://www.youtube-nocookie.com/embed/${escape(item.id)}" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>` : screen(item,true)}
-    <div class="tv-detail-copy">
+    <div class="tv-detail-copy"><p class="tv-label">${escape(item.source)} · ${date(item)}</p>
     <h1 lang="en">${escape(item.title)}</h1>
     ${item.summary ? `<p class="tv-summary" lang="en">${escape(item.summary)}</p>` : ""}
     ${item.type === "read" ? '<div class="tv-article" data-article aria-live="polite"><p class="hint">Loading the article…</p></div>' : ""}
@@ -399,6 +399,7 @@ function showDetail(item, origin) {
   overlay.classList.remove("is-writing");
   overlay.innerHTML = detail(item);
   overlay.showModal();
+  placeClose();
   if (item.type === "read") loadArticle(item);
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
     const target = overlay.getBoundingClientRect();
@@ -406,9 +407,20 @@ function showDetail(item, origin) {
     const y = origin ? origin.y + origin.height / 2 - target.y - target.height / 2 : 0;
     const scale = origin ? Math.min(origin.width / target.width,.85) : .92;
     overlay.animate([{transform:`translate(${x}px,${y}px) scale(${scale})`,opacity:.7},
-      {transform:"none",opacity:1}],{duration:460,easing:"cubic-bezier(.2,.8,.2,1)"});
+      {transform:"none",opacity:1}],{duration:460,easing:"cubic-bezier(.2,.8,.2,1)"}).finished.then(placeClose).catch(() => {});
   }
 }
+// The close button floats just above the window's top-right corner, outside the picture and the video; while a note is being written the window fills the screen and the note panel has its own close.
+function placeClose() {
+  const close = overlay.querySelector(":scope > .tv-close");
+  if (!close || !overlay.open) return;
+  const box = overlay.getBoundingClientRect();
+  close.hidden = overlay.classList.contains("is-writing");
+  close.style.top = Math.max(0,box.top - 44) + "px";
+  close.style.left = Math.max(0,box.right - 44) + "px";
+}
+new MutationObserver(placeClose).observe(overlay,{attributes:true,attributeFilter:["class","open"]});
+addEventListener("resize",placeClose);
 // BBC forbids embedding its pages, so while writing the article opens in its own window,
 // placed over the left part of the screen and leaving the writing panel visible.
 function openSideWindow(url) {
