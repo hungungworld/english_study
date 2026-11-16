@@ -1116,6 +1116,135 @@ async function refresh() {
   updateMemberLabel();
   if (!loadError && members.length && !members[readLocal("active-member",0) - 1] && !memberPicker.open) chooseMember();
 }
+// ---- Reading an article: click a word (or drag a phrase) and a bar offers to add it to the word list ----
+const ARTICLE_TEXT = "[data-article] .tv-para > p[lang=en]";
+let wordPick = null;
+const sameWord = (word, term) => word.term.trim().toLowerCase() === term.toLowerCase();
+function wordBarHtml() {
+  const pick = wordPick;
+  const found = board.words.find(word => sameWord(word,pick.term));
+  const close = '<button type="button" class="wb-close" data-wb-close aria-label="Close">✕</button>';
+  const sentence = pick.sentence ? `<p class="wb-sentence" lang="en">“${e(pick.sentence)}”</p>` : "";
+  if (pick.done) return `<div class="wb-top"><strong lang="en">${e(pick.term)}</strong><span lang="ko">${e(pick.korean)}</span>${close}</div><p role="status">Added to your words.</p>`;
+  if (found) {
+    return `<div class="wb-top"><strong lang="en">${e(pick.term)}</strong><span lang="ko">${e(found.meaning)}</span>${close}</div>
+      <p role="status">Already in your words.</p>${canManageWord(found) ? '<div class="row"><button type="button" class="tv-action" data-wb-edit-saved>Edit</button></div>' : ""}`;
+  }
+  const meaning = pick.editing || (!pick.loading && !pick.korean)
+    ? `<input class="wb-input" name="meaning" lang="ko" aria-label="Korean meaning" maxlength="120" autocomplete="off" placeholder="Korean meaning" value="${e(pick.korean)}">`
+    : `<span lang="ko">${pick.loading ? "…" : e(pick.korean)}</span>`;
+  return `<div class="wb-top"><strong lang="en">${e(pick.term)}</strong>${meaning}${close}</div>${sentence}
+    ${pick.error ? `<p class="form-error" role="alert">${e(pick.error)}</p>` : ""}
+    <div class="row"><button type="button" class="tv-action" data-wb-add ${pick.busy ? "disabled" : ""}>Add to words</button>${pick.editing || (!pick.loading && !pick.korean) ? "" : '<button type="button" class="tv-action" data-wb-edit>Edit meaning</button>'}</div>`;
+}
+function paintWordBar(focusInput) {
+  const detail = overlayEl.querySelector(".tv-detail");
+  if (!detail) return;
+  let bar = detail.querySelector(".tv-wordbar");
+  if (!wordPick) { bar?.remove(); return; }
+  if (!bar) { bar = document.createElement("div"); bar.className = "tv-wordbar"; bar.setAttribute("role","region"); bar.setAttribute("aria-label","Add this word"); detail.appendChild(bar); }
+  bar.innerHTML = wordBarHtml();
+  if (focusInput) bar.querySelector(".wb-input")?.focus();
+}
+function pickWord(para, event) {
+  const selection = getSelection();
+  if (!selection.rangeCount) return;
+  let range = selection.getRangeAt(0);
+  if (!para.contains(range.commonAncestorContainer)) return;
+  if (selection.isCollapsed) {
+    const at = document.caretPositionFromPoint?.(event.clientX,event.clientY);
+    const node = at?.offsetNode ?? document.caretRangeFromPoint?.(event.clientX,event.clientY)?.startContainer;
+    const offset = at?.offset ?? document.caretRangeFromPoint?.(event.clientX,event.clientY)?.startOffset ?? 0;
+    if (!node || node.nodeType !== 3 || !para.contains(node)) return;
+    const text = node.textContent;
+    let from = offset, to = offset;
+    while (from > 0 && /[A-Za-z'’-]/.test(text[from - 1])) from--;
+    while (to < text.length && /[A-Za-z'’-]/.test(text[to])) to++;
+    if (to - from < 2) return;
+    range = document.createRange();
+    range.setStart(node,from);
+    range.setEnd(node,to);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+  const term = range.toString().replace(/\s+/g," ").replace(/’/g,"'").trim().replace(/^[^A-Za-z]+|[^A-Za-z]+$/g,"");
+  if (!/^[A-Za-z][A-Za-z' -]{0,58}$/.test(term) || term.split(" ").length > 6) return;
+  const before = document.createRange();
+  before.selectNodeContents(para);
+  before.setEnd(range.startContainer,range.startOffset);
+  const full = para.textContent;
+  const start = before.toString().length;
+  const breaks = [". ","! ","? "].map(mark => full.lastIndexOf(mark,start - 1));
+  const sentenceStart = Math.max(...breaks) < 0 ? 0 : Math.max(...breaks) + 2;
+  const stop = full.slice(start).search(/[.!?]["”’]?(\s|$)/);
+  const sentence = full.slice(sentenceStart,stop < 0 ? full.length : start + stop + 1).trim().slice(0,300);
+  const current = {term,sentence,korean:"",loading:true,editing:false,error:"",busy:false,done:false};
+  wordPick = current;
+  paintWordBar();
+  lookupWord(term.toLowerCase()).then(found => {
+    if (wordPick !== current) return;
+    current.korean = found.korean || "";
+    current.loading = false;
+    paintWordBar(!current.korean);
+  }).catch(() => {
+    if (wordPick !== current) return;
+    current.loading = false;
+    paintWordBar(true);
+  });
+}
+overlayEl.addEventListener("pointerup",event => {
+  const para = event.target.closest?.(ARTICLE_TEXT);
+  if (para) setTimeout(() => pickWord(para,event),0);
+});
+overlayEl.addEventListener("keyup",event => {
+  if (event.key !== "Shift" && !event.shiftKey) return;
+  const selection = getSelection();
+  const para = selection.anchorNode?.parentElement?.closest(ARTICLE_TEXT);
+  if (para && !selection.isCollapsed) pickWord(para,event);
+});
+overlayEl.addEventListener("click",async event => {
+  if (!wordPick) return;
+  if (event.target.closest("[data-wb-close]")) { wordPick = null; paintWordBar(); return; }
+  if (event.target.closest("[data-wb-edit]")) { wordPick.editing = true; paintWordBar(true); return; }
+  if (event.target.closest("[data-wb-edit-saved]")) {
+    const word = board.words.find(item => sameWord(item,wordPick.term));
+    if (word) openEditor(true,undefined,undefined,undefined,undefined,word);
+    return;
+  }
+  if (!event.target.closest("[data-wb-add]")) return;
+  const current = wordPick;
+  const input = overlayEl.querySelector(".wb-input");
+  const meaning = (input ? input.value : current.korean).trim();
+  if (!meaning) { current.editing = true; current.error = "Enter the Korean meaning."; paintWordBar(true); return; }
+  const member = activeMember();
+  if (!members[member - 1]) { chooseMember(() => overlayEl.querySelector("[data-wb-add]")?.click()); return; }
+  current.korean = meaning;
+  current.busy = true;
+  current.error = "";
+  paintWordBar();
+  try {
+    const entry = {author:member,author_name:"",title:"",body:"",link:"",tag:"",board:"study",
+      words:[{id:"",term:current.term,meaning,example:current.sentence}]};
+    await saveEntry(entry,crypto.randomUUID() + crypto.randomUUID(),undefined,0);
+    try { board = await loadBoard(); } catch {}
+    studied();
+    current.done = true;
+    current.busy = false;
+    if (wordPick === current) paintWordBar();
+    flash("Word added.");
+  } catch (failure) {
+    current.busy = false;
+    current.error = failure.message;
+    if (wordPick === current) paintWordBar();
+  }
+});
+overlayEl.addEventListener("cancel",event => {
+  if (!wordPick) return;
+  event.preventDefault();
+  wordPick = null;
+  paintWordBar();
+});
+overlayEl.addEventListener("close",() => { wordPick = null; });
 overlayEl.addEventListener("write-media",event => {
   const {item,host} = event.detail;
   writerSource = item;

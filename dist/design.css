@@ -835,3 +835,15 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body #tv-overlay .tv-para .tv-link{margin-left:0;padding-left:0}
 :root:root:root body #tv-overlay .tv-para .tv-ko{padding-left:var(--ds-sp-4);border-left:1px solid var(--ds-on-dark-muted);color:var(--ds-on-dark)}
 :root:root:root body #tv-overlay .tv-article a{text-underline-offset:4px}
+
+/* Word bar in the article reader (DESIGN.md 10-37): sticky strip with the picked word, its meaning, and the existing action buttons */
+:root:root:root body #tv-overlay .tv-wordbar{position:sticky;bottom:0;display:grid;gap:var(--ds-sp-4);padding:var(--ds-sp-4);background:var(--ds-dark-2);border-top:1px solid var(--ds-on-dark-muted);z-index:2}
+:root:root:root body #tv-overlay .tv-wordbar :is(p,.row){margin:0}
+:root:root:root body #tv-overlay .tv-wordbar .wb-top{display:flex;align-items:center;gap:var(--ds-sp-3);flex-wrap:wrap}
+:root:root:root body #tv-overlay .tv-wordbar .wb-top strong{font:700 var(--ds-fs-item)/1.35 var(--ds-serif)}
+:root:root:root body #tv-overlay .tv-wordbar .wb-top span{font:400 var(--ds-fs-body)/1.6 var(--ds-sans)}
+:root:root:root body #tv-overlay .tv-wordbar .wb-sentence,:root:root:root body #tv-overlay .tv-wordbar p{font:400 var(--ds-fs-ui)/1.6 var(--ds-sans);color:var(--ds-on-dark-muted)}
+:root:root:root body #tv-overlay .tv-wordbar .row{display:flex;gap:var(--ds-sp-2);flex-wrap:wrap}
+:root:root:root body #tv-overlay .tv-wordbar .wb-input{flex:1 1 160px;min-width:0;min-height:var(--ds-h-input);padding:0 var(--ds-sp-3);background:var(--ds-dark);color:var(--ds-on-dark);border:1px solid var(--ds-on-dark-muted);border-radius:var(--ds-radius);font:400 var(--ds-fs-body)/1.4 var(--ds-sans)}
+:root:root:root body #tv-overlay .tv-wordbar .wb-close{margin-left:auto;min-width:var(--ds-h-button);min-height:var(--ds-h-button);padding:0;border:0;background:transparent;border-radius:var(--ds-radius);color:var(--ds-on-dark);font-size:var(--ds-fs-body)}
+@media (max-width:700px){:root:root:root body #tv-overlay .tv-wordbar{padding:var(--ds-sp-3) var(--ds-sp-4)}}

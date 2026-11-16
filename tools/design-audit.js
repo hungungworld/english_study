@@ -136,6 +136,7 @@
     for (let i = 0; i < inter.length; i++) for (let j = i + 1; j < inter.length; j++) {
       const a = inter[i], b = inter[j];
       if (a.contains(b) || b.contains(a)) continue;
+      if (a.closest('.tv-wordbar') !== b.closest('.tv-wordbar')) continue;   // the sticky word bar floats above the scrolling article
       if (a.parentElement === b.parentElement && a.parentElement.matches('.tabs,.tv-seg,.tv-dock')) continue;
       const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
       const dx = Math.max(ra.left - rb.right, rb.left - ra.right), dy = Math.max(ra.top - rb.bottom, rb.top - ra.bottom);
@@ -165,6 +166,7 @@
       const rc = c.getBoundingClientRect();
       for (const t of stackText) {
         if (t.contains(c) || c.contains(t)) continue;
+        if (t.closest('.tv-wordbar') !== c.closest('.tv-wordbar')) continue;
         const rt = t.getBoundingClientRect();
         const overlap = Math.min(rt.right, rc.right) - Math.max(rt.left, rc.left);
         const gap = rc.top - rt.bottom;
@@ -177,6 +179,7 @@
     for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) {
       const a = texts[i], b = texts[j];
       if (a.contains(b) || b.contains(a)) continue;
+      if (a.closest('.tv-wordbar') !== b.closest('.tv-wordbar')) continue;
       const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
       const ox = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left), oy = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
       if (ox > 2 && oy > 2) add('text-overlap', a, 'with ' + desc(b));
