@@ -429,12 +429,141 @@ async function loadArticle(item) {
       <div class="row"><button type="button" class="tv-action" data-translate-all>Translate all</button></div>
       ${article.paragraphs.map((text,index) => `<div class="tv-para" data-para="${index}"><p lang="en">${escape(text)}</p>
         <button type="button" class="tv-link" data-translate aria-expanded="false">Translate</button><p class="tv-ko" lang="ko" hidden></p></div>`).join("")}
+      <div class="tv-highlights" data-highlights hidden></div>
       <p class="hint">Powered by <a href="${escape(article.url)}" target="_blank" rel="noopener noreferrer">The Guardian</a>. Korean translation by Microsoft Translator.</p>`;
     host.paragraphs = article.paragraphs;
+    host.itemId = item.id;
+    host.savedTerms = [];
+    host.renderMarks = () => renderMarks(host);
+    penOn = false;
+    const scroll = overlay.querySelector(".tv-scroll");
+    if (scroll && !scroll.querySelector("[data-pen]")) scroll.insertAdjacentHTML("beforeend",PEN_BUTTON);
+    renderMarks(host);
+    overlay.dispatchEvent(new CustomEvent("article-ready",{detail:{host}}));
     if (!readLocal("reader-hint",false)) showReaderHint(host);
   } catch {
     if (host.isConnected) host.innerHTML = '<p class="hint">Could not load the article. Use the link below to read it on The Guardian.</p>';
   }
+}
+// ---- Highlighter: yellow marks stored as positions only (paragraph, start, end) in this browser; the article text itself is never saved ----
+const PEN_BUTTON = '<button type="button" class="tv-pen" data-pen aria-pressed="false" aria-label="Highlighter" title="Highlighter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 20l1-5L16 4l4 4L9 19z"/><path d="M13 7l4 4"/></svg></button>';
+let penOn = false;
+const readMarks = id => readLocal("reader-marks",{})[id] ?? [];
+function writeMarks(id, list) {
+  const all = readLocal("reader-marks",{});
+  if (list.length) all[id] = list; else delete all[id];
+  writeLocal("reader-marks",all);
+}
+function mergeMarks(list) {
+  const sorted = list.map(mark => [...mark]).sort((a,b) => a[0] - b[0] || a[1] - b[1]);
+  const out = [];
+  for (const mark of sorted) {
+    const last = out[out.length - 1];
+    if (last && last[0] === mark[0] && mark[1] <= last[2]) last[2] = Math.max(last[2],mark[2]);
+    else out.push(mark);
+  }
+  return out;
+}
+const isSentence = text => text.trim().split(/\s+/).length >= 4 || text.length >= 30;
+function renderMarks(host) {
+  const marks = readMarks(host.itemId);
+  const saved = (host.savedTerms ?? []).filter(Boolean);
+  host.paragraphs.forEach((text,index) => {
+    const para = host.querySelector(`[data-para="${index}"] > p[lang=en]`);
+    if (!para) return;
+    const lit = marks.filter(mark => mark[0] === index).map(mark => [mark[1],mark[2]]);
+    const known = [];
+    for (const term of saved) {
+      const pattern = new RegExp("(^|[^A-Za-z])(" + term.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + ")(?![A-Za-z])","gi");
+      for (const match of text.matchAll(pattern)) known.push([match.index + match[1].length,match.index + match[1].length + match[2].length]);
+    }
+    if (!lit.length && !known.length) { if (para.querySelector("mark.hl,.word-saved")) para.textContent = text; return; }
+    const cuts = [...new Set([0,text.length,...lit.flat(),...known.flat()])].sort((a,b) => a - b);
+    let html = "";
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const [from,to] = [cuts[i],cuts[i + 1]];
+      let piece = escape(text.slice(from,to));
+      if (known.some(([s,e]) => s <= from && e >= to)) piece = `<span class="word-saved" title="Already in your words">${piece}</span>`;
+      if (lit.some(([s,e]) => s <= from && e >= to)) piece = `<mark class="hl">${piece}</mark>`;
+      html += piece;
+    }
+    para.innerHTML = html;
+  });
+  const box = host.querySelector("[data-highlights]");
+  if (!box) return;
+  const pieces = marks.slice().sort((a,b) => a[0] - b[0] || a[1] - b[1]).map(([p,s,e]) => host.paragraphs[p]?.slice(s,e).trim()).filter(Boolean);
+  const sentences = pieces.filter(isSentence);
+  const words = [...new Set(pieces.filter(piece => !isSentence(piece)).map(piece => piece.toLowerCase()))];
+  box.hidden = !pieces.length;
+  box.innerHTML = pieces.length ? `<h2>Highlights</h2>
+    ${sentences.length ? `<ul class="tv-hl-list" lang="en">${sentences.map(text => `<li>${escape(text)}</li>`).join("")}</ul>` : ""}
+    ${words.length ? `<p lang="en"><strong>Words</strong> · ${words.map(escape).join(" · ")}</p>` : ""}
+    <div class="row"><button type="button" class="tv-action" data-note-from-highlights>Write a note with these</button></div>` : "";
+}
+const paraOffset = (para, node, offset) => {
+  const range = document.createRange();
+  range.selectNodeContents(para);
+  range.setEnd(node,offset);
+  return range.toString().length;
+};
+function paintFromSelection(para, event, click = false) {
+  const host = para.closest("[data-article]");
+  const index = Number(para.closest("[data-para]")?.dataset.para);
+  if (!host?.paragraphs || Number.isNaN(index)) return;
+  const text = host.paragraphs[index];
+  const selection = getSelection();
+  let start, end;
+  if (!click && selection.rangeCount && !selection.isCollapsed && para.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+    const range = selection.getRangeAt(0);
+    start = paraOffset(para,range.startContainer,range.startOffset);
+    end = paraOffset(para,range.endContainer,range.endOffset);
+    while (start < end && /\s/.test(text[start])) start++;
+    while (end > start && /\s/.test(text[end - 1])) end--;
+    while (start > 0 && /[A-Za-z'’-]/.test(text[start - 1]) && /[A-Za-z'’-]/.test(text[start])) start--;
+    while (end < text.length && /[A-Za-z'’-]/.test(text[end]) && /[A-Za-z'’-]/.test(text[end - 1])) end++;
+  } else if (event?.clientX !== undefined) {
+    const at = document.caretPositionFromPoint?.(event.clientX,event.clientY);
+    const hit = at?.offsetNode ? [at.offsetNode,at.offset] : (() => { const r = document.caretRangeFromPoint?.(event.clientX,event.clientY); return r ? [r.startContainer,r.startOffset] : null; })();
+    if (!hit || hit[0].nodeType !== 3 || !para.contains(hit[0])) return;
+    const at0 = paraOffset(para,hit[0],hit[1]);
+    const marks = readMarks(host.itemId);
+    const over = marks.filter(mark => mark[0] === index && mark[1] <= at0 && at0 < mark[2]);
+    if (over.length) { writeMarks(host.itemId,marks.filter(mark => !over.includes(mark))); renderMarks(host); return; }
+    start = at0; end = at0;
+    while (start > 0 && /[A-Za-z'’-]/.test(text[start - 1])) start--;
+    while (end < text.length && /[A-Za-z'’-]/.test(text[end])) end++;
+  } else return;
+  if (end - start < 2) return;
+  writeMarks(host.itemId,mergeMarks([...readMarks(host.itemId),[index,start,end]]));
+  selection.removeAllRanges();
+  renderMarks(host);
+}
+let pressedAt = null;
+overlay.addEventListener("pointerdown",event => { pressedAt = {x:event.clientX,y:event.clientY}; });
+overlay.addEventListener("pointerup",event => {
+  if (!penOn) return;
+  const para = event.target.closest?.(".tv-article .tv-para > p[lang=en]");
+  // A plain single click toggles the word under it; a drag or double-click paints what was selected.
+  const click = Boolean(pressedAt) && Math.hypot(event.clientX - pressedAt.x,event.clientY - pressedAt.y) < 5 && event.detail === 1;
+  if (para) setTimeout(() => paintFromSelection(para,event,click),80);
+});
+// Touch screens: a long-press selection has no pointer-up at its end, so the selection is painted once it settles.
+if (matchMedia("(pointer: coarse)").matches) {
+  let settle;
+  document.addEventListener("selectionchange",() => {
+    clearTimeout(settle);
+    settle = setTimeout(() => {
+      if (!penOn || !overlay.open) return;
+      const selection = getSelection();
+      const para = selection.anchorNode?.parentElement?.closest(".tv-article .tv-para > p[lang=en]");
+      if (para && !selection.isCollapsed) paintFromSelection(para);
+    },600);
+  });
+}
+function highlightSeed() {
+  const host = overlay.querySelector("[data-article]");
+  const pieces = readMarks(host.itemId).slice().sort((a,b) => a[0] - b[0] || a[1] - b[1]).map(([p,s,e]) => host.paragraphs[p]?.slice(s,e).trim()).filter(Boolean);
+  return {sentences:pieces.filter(isSentence),words:[...new Set(pieces.filter(piece => !isSentence(piece)).map(piece => piece.toLowerCase()))]};
 }
 // First time in an article: one line says words can be tapped, and one word in the first paragraph blinks its outline once and keeps a dotted underline.
 function showReaderHint(host) {
@@ -478,6 +607,18 @@ async function translateParas(host, indexes) {
 overlay.addEventListener("click",async event => {
   const host = overlay.querySelector("[data-article]");
   if (event.target.closest("[data-hint-close]")) dismissReaderHint();
+  const pen = event.target.closest("[data-pen]");
+  if (pen) {
+    penOn = !penOn;
+    pen.setAttribute("aria-pressed",String(penOn));
+    overlay.querySelector(".tv-article")?.classList.toggle("pen-on",penOn);
+  }
+  if (selectedItem && event.target.closest("[data-note-from-highlights]")) {
+    const writer = overlay.querySelector(".tv-writer");
+    overlay.classList.add("is-writing");
+    writer.hidden = false;
+    overlay.dispatchEvent(new CustomEvent("write-media",{detail:{item:selectedItem,host:writer,seed:highlightSeed()}}));
+  }
   const toggle = event.target.closest("[data-translate]");
   if (toggle && host?.paragraphs) {
     const box = toggle.closest("[data-para]");

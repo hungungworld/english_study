@@ -864,3 +864,17 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body #tv-overlay .tv-hint p{margin:0;font:400 var(--ds-fs-ui)/1.6 var(--ds-sans);color:var(--ds-on-dark-muted)}
 :root:root:root body #tv-overlay .tv-hint-close{flex:none;min-width:var(--ds-h-button);min-height:var(--ds-h-button);padding:0;border:0;border-radius:var(--ds-radius);background:transparent;color:var(--ds-on-dark);font-size:var(--ds-fs-body)}
 @media (prefers-reduced-motion:reduce){:root:root:root body #tv-overlay .word-nudge{animation:none;outline:2px solid var(--ds-on-dark);outline-offset:3px}}
+
+/* Highlighter (DESIGN.md 10-40): the one yellow in the product, low opacity, only on article text the reader painted */
+:root{--ds-highlight:rgba(255,214,0,.3)}
+:root:root:root body #tv-overlay mark.hl{background:var(--ds-highlight);color:inherit;border-radius:var(--ds-radius);padding:0}
+:root:root:root body #tv-overlay .word-saved{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+:root:root:root body #tv-overlay .tv-article.pen-on .tv-para > p[lang=en]{cursor:text}
+:root:root:root body #tv-overlay .tv-pen{position:sticky;bottom:calc(var(--ds-sp-4) + var(--bar-h,0px));z-index:3;display:flex;align-items:center;justify-content:center;width:var(--ds-h-button);height:var(--ds-h-button);margin:0 var(--ds-sp-4) var(--ds-sp-4) auto;padding:0;border:1px solid var(--ds-on-dark);border-radius:var(--ds-radius);background:var(--ds-dark-2);color:var(--ds-on-dark)}
+:root:root:root body #tv-overlay .tv-pen[aria-pressed=true]{background:var(--ds-on-dark);color:var(--ds-dark)}
+:root:root:root body #tv-overlay .tv-pen svg{width:22px;height:22px}
+:root:root:root body #tv-overlay .tv-highlights{display:grid;gap:var(--ds-sp-4);padding-top:var(--ds-sp-5);border-top:1px solid var(--ds-on-dark-muted)}
+:root:root:root body #tv-overlay .tv-highlights[hidden]{display:none}
+:root:root:root body #tv-overlay .tv-highlights h2{margin:0;font:700 var(--ds-fs-item)/1.35 var(--ds-serif)}
+:root:root:root body #tv-overlay .tv-hl-list{display:grid;gap:var(--ds-sp-3);margin:0;padding-left:var(--ds-sp-4);font:400 var(--ds-fs-body)/1.6 var(--ds-sans)}
+:root:root:root body #tv-overlay .tv-hl-list li::marker{color:var(--ds-on-dark-muted)}

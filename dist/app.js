@@ -624,9 +624,9 @@ const subjectChips = current => `<fieldset class="tag-options"><legend>What did 
 const whereChips = current => `<fieldset class="tag-options"><legend>Where</legend>${[["study","Study board"],["chat","Free board"]].map(([value,label]) => `<label class="chip-radio"><input type="radio" name="where" value="${value}" ${value === current ? "checked" : ""}><span>${label}</span></label>`).join("")}</fieldset>`;
 const joinList = items => items.length > 1 ? `${items.slice(0,-1).join(", ")} and ${items.at(-1)}` : items[0];
 
-function openEditor(standalone, post, source, host, kind, editWord) {
+function openEditor(standalone, post, source, host, kind, editWord, seed) {
   if (!post && !members[readLocal("active-member",0) - 1]) {
-    chooseMember(() => openEditor(standalone,post,source,host,kind,editWord));
+    chooseMember(() => openEditor(standalone,post,source,host,kind,editWord,seed));
     return;
   }
   const pre = host ? "writer" : "editor";
@@ -641,6 +641,11 @@ function openEditor(standalone, post, source, host, kind, editWord) {
   const values = {};
   if (notes) for (const item of notes.sections) values[item.label] = item.text;
   else if (editing && type === "note") values[SUBJECTS[subject].fields.find(field => field.required).label] = post.body;   // an old plain-text note
+  if (seed && !editing) {
+    // Highlights made while reading: the first key sentences and any highlighted words not yet in the word list.
+    const keyField = SUBJECTS[subject].fields.find(field => field.label === "Key sentence");
+    if (keyField && seed.sentences.length) values[keyField.label] = seed.sentences.join(" / ").slice(0,3900);
+  }
   let where = post ? boardKind(post) : kind === "chat" ? "chat" : "study";
   let pinned = editing && isPinned(post);
   // A note with sections of its own (not one of the subject forms, e.g. a guide) is edited section by section so nothing is lost.
@@ -657,7 +662,7 @@ function openEditor(standalone, post, source, host, kind, editWord) {
   <label data-guest>Display name<input name="author_name" maxlength="40" value="${e(selected.author_name)}"></label>
   ${canSwitch ? `<div class="tv-seg type-seg" role="group" aria-label="Post type"><button type="button" data-type="note" aria-pressed="${type === "note"}">Note</button><button type="button" data-type="post" aria-pressed="${type === "post"}">Post</button></div>` : ""}
   <div class="compose" data-compose></div>
-  <div class="stack" data-words>${standalone ? wordFields(editWord ?? {},false) : words.map(word => wordFields(word)).join("")}</div>
+  <div class="stack" data-words>${standalone ? wordFields(editWord ?? {},false) : (seed && !editing ? seed.words.slice(0,8).map(term => wordFields({term})) : words).map(word => typeof word === "string" ? word : wordFields(word)).join("")}</div>
   <p class="hint nudge" data-nudge role="status" hidden>Add the words you learned from this note. Tap “Add a word”, or press “Post note” again to post without words.</p>
   <div class="row"><button type="button" data-add-word><span class="ic plus" aria-hidden="true"></span>Add a word</button><button class="primary" type="submit"></button></div>
   <p class="form-error" id="${pre}-error" role="alert" hidden></p></form>`;
@@ -713,6 +718,7 @@ function openEditor(standalone, post, source, host, kind, editWord) {
     submit.textContent = standalone ? (editWord ? "Save changes" : "Add") : editing ? "Save changes" : type === "note" ? "Post note" : "Post";
   };
   paint();
+  if (seed && !editing && seed.words.length) form.querySelectorAll(".word-fields").forEach(box => fillWord(box,box.querySelector('[name="term"]').value.trim()));
   form.addEventListener("input",event => { capture(); editorChanged = true; clearInvalid(event); });
   form.addEventListener("change",event => {
     const input = event.target;
@@ -1119,6 +1125,13 @@ async function refresh() {
 // ---- Reading an article: click a word (or drag a phrase) and a bar offers to add it to the word list ----
 const ARTICLE_TEXT = "[data-article] .tv-para > p[lang=en]";
 let wordPick = null;
+function refreshSavedMarks() {
+  const host = overlayEl.querySelector("[data-article]");
+  if (!host?.renderMarks) return;
+  host.savedTerms = board.words.map(word => word.term.trim().toLowerCase()).filter(term => term.length >= 2);
+  host.renderMarks();
+}
+overlayEl.addEventListener("article-ready",refreshSavedMarks);
 const sameWord = (word, term) => word.term.trim().toLowerCase() === term.toLowerCase();
 function wordBarHtml() {
   const pick = wordPick;
@@ -1141,9 +1154,10 @@ function paintWordBar(focusInput) {
   const detail = overlayEl.querySelector(".tv-scroll") ?? overlayEl.querySelector(".tv-detail");
   if (!detail) return;
   let bar = detail.querySelector(".tv-wordbar");
-  if (!wordPick) { bar?.remove(); return; }
+  if (!wordPick) { bar?.remove(); detail.style.removeProperty("--bar-h"); return; }
   if (!bar) { bar = document.createElement("div"); bar.className = "tv-wordbar"; bar.setAttribute("role","region"); bar.setAttribute("aria-label","Add this word"); detail.appendChild(bar); }
   bar.innerHTML = wordBarHtml();
+  detail.style.setProperty("--bar-h",bar.offsetHeight + "px");
   if (focusInput) bar.querySelector(".wb-input")?.focus();
 }
 function pickWord(para, event) {
@@ -1229,6 +1243,7 @@ overlayEl.addEventListener("click",async event => {
     try { board = await loadBoard(); } catch {}
     studied();
     current.done = true;
+    refreshSavedMarks();
     current.busy = false;
     if (wordPick === current) paintWordBar();
     flash("Word added.");
@@ -1246,9 +1261,9 @@ overlayEl.addEventListener("cancel",event => {
 });
 overlayEl.addEventListener("close",() => { wordPick = null; });
 overlayEl.addEventListener("write-media",event => {
-  const {item,host} = event.detail;
+  const {item,host,seed} = event.detail;
   writerSource = item;
-  openEditor(false,undefined,item,host);
+  openEditor(false,undefined,item,host,undefined,undefined,seed ? {sentences:seed.sentences,words:seed.words.filter(term => !board.words.some(word => sameWord(word,term)))} : undefined);
   host.querySelector("textarea")?.focus();
 });
 function chooseMember(afterSelection) {

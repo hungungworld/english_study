@@ -101,6 +101,7 @@
         const c = rgb(s.color), b = rgb(s.backgroundColor), bc = rgb(s.borderTopColor);
         for (const [kind, col] of [['text', c], ['background', b], ['border', s.borderTopWidth !== '0px' && s.borderTopStyle !== 'none' ? bc : null]]) {
           if (!col || col.a === 0) continue;
+          if (kind === 'background' && el.matches('mark.hl')) continue;   // the reader's yellow highlighter, the one approved colour exception (DESIGN.md 10-40)
           if (!SPEC.colors.some(k => near(k[0], col.r, 1) && near(k[1], col.g, 1) && near(k[2], col.b, 1))) add('color', el, kind + ' rgb(' + col.r + ',' + col.g + ',' + col.b + ')');
         }
       }
@@ -175,7 +176,7 @@
     }
 
     // text blocks that collide
-    const texts = all.filter(e => !inMedia(e) && !e.matches('button,a,option,select,textarea,input,.tv-intro h1,.tv-summary') && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()));
+    const texts = all.filter(e => !inMedia(e) && !e.matches('button,a,option,select,textarea,input,.tv-intro h1,.tv-summary,mark.hl,.word-saved') && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()));
     for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) {
       const a = texts[i], b = texts[j];
       if (a.contains(b) || b.contains(a)) continue;
