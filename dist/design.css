@@ -300,7 +300,8 @@
 :root:root:root body .post-actions{display:grid;grid-template-columns:1fr 1fr;gap:var(--ds-sp-2);margin-top:var(--ds-sp-4);padding-top:var(--ds-sp-2);border-top:1px solid var(--ds-line)}
 :root:root:root body .post-actions > :is(button,a){display:inline-flex;align-items:center;justify-content:center;gap:var(--ds-sp-2);min-height:var(--ds-h-button);border:0;background:transparent;color:var(--ds-ink);font:500 var(--ds-fs-ui)/1.2 var(--ds-sans);text-decoration:none}
 :root:root:root body .post-actions > :is(button,a):hover:enabled,:root:root:root body .post-actions > a:hover{background:var(--ds-sand);color:var(--ds-ink)}
-:root:root:root body .post-actions > .meta{grid-column:1 / -1}
+:root:root:root body .post-actions > .meta{grid-column:1 / -1;order:1}
+:root:root:root body .poster-page .post-actions > .meta{flex-basis:100%}
 :root:root:root body .ic.chat{margin-right:var(--ds-sp-2);--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.4' stroke-linejoin='round'%3E%3Cpath d='M2.5 3.5h11v7h-5l-3 2.5v-2.5h-3z'/%3E%3C/svg%3E")}
 :root:root:root body .comments{display:grid;gap:var(--ds-sp-4);margin-top:var(--ds-sp-6)}
 :root:root:root body .comments :is(h2,p,ul){margin:0}
@@ -892,3 +893,6 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body .speak:hover:enabled{background:transparent;color:inherit;opacity:.6}
 :root:root:root body .speak svg{width:20px;height:20px;flex:none}
 :root:root:root body .quiz h2 .speak svg{width:24px;height:24px}
+
+/* Note panel beside a window: extra room at the bottom so the last fields and the Post button stay reachable even when the browser window's lower edge is partly covered (for example by the Windows taskbar) */
+:root:root:root body #tv-overlay.is-writing .tv-writer{padding-bottom:calc(var(--ds-sp-8) + var(--ds-sp-4))}
