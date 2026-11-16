@@ -435,7 +435,7 @@ async function loadHints(started) {
   try {
     const terms = started.words.map(word => word.term.trim().toLowerCase()).filter(term => /^[a-z' -]{1,40}$/.test(term));
     if (terms.length) {
-      const response = await fetch(`/api/quiz-options?terms=${encodeURIComponent(terms.join("|"))}`,{signal:AbortSignal.timeout(6000)});
+      const response = await fetch(`/api/quiz-options?v=2&terms=${encodeURIComponent(terms.join("|"))}`,{signal:AbortSignal.timeout(6000)});
       if (response.ok) started.hints = (await response.json()).options ?? {};
     }
   } catch {}
@@ -517,7 +517,7 @@ const suggestWords = async text => (await getJson(`https://api.datamuse.com/sug?
 async function translateKorean(key) {
   try {
     if (/^[a-z' -]{1,60}$/.test(key)) {
-      const ours = await getJson(`/api/translate?term=${encodeURIComponent(key)}`);
+      const ours = await getJson(`/api/translate?v=2&term=${encodeURIComponent(key)}`);
       if (ours.configured) return String(ours.korean ?? "").trim();
     }
   } catch {}

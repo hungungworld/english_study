@@ -132,10 +132,11 @@ const koreanCache = new Map();
 const hangul = /^[가-힣 ]{1,14}$/;
 // Dictionary answers are cleaned: weak guesses, polite or casual sentence endings, and the same word with a particle attached are dropped.
 const sentenceEnding = /(해요|어요|아요|습니다|ㅂ니다|세요|네요|지요|드릴|드리겠)/;
-function cleanKorean(translations) {
+function cleanKorean(translations, strict = false) {
   const kept = [];
   const ranked = (translations ?? []).filter(item => hangul.test(item.displayTarget) && item.confidence >= 0.05).sort((a,b) => b.confidence - a.confidence);
   for (const {displayTarget:text} of ranked) {
+    if (strict && ((text.length >= 2 && /[게길할겨워]$/.test(text)) || (text.length >= 3 && /[이지은는을를]$/.test(text)) || kept.some(known => known.length >= 2 && known.slice(0,2) === text.slice(0,2)))) continue;
     if (sentenceEnding.test(text) || (text.length >= 3 && text.endsWith("해"))) continue;
     if (kept.some(known => known.length >= 2 && text.startsWith(known) && text !== known)) continue;
     if (!kept.includes(text)) kept.push(text);
@@ -162,7 +163,7 @@ async function koreanFor(words, env) {
     if (!response.ok) throw new Error("translator");
     const data = await response.json();
     batch.forEach((word,index) => {
-      koreanCache.set(word,cleanKorean(data[index]?.translations)[0] ?? "");
+      koreanCache.set(word,cleanKorean(data[index]?.translations,true)[0] ?? "");
     });
   }
   return words.map(word => koreanCache.get(word) || "");
@@ -175,9 +176,9 @@ async function quizOptions(terms, env) {
     let cursor = 0;
     const options = {};
     terms.forEach((term,index) => {
-      options[term] = [...new Set(similar[index].map(() => korean[cursor++]).filter(Boolean))];
+      options[term] = [...new Set(similar[index].map(() => korean[cursor++]).filter(Boolean))].filter((text,at,list) => !list.slice(0,at).some(known => known.slice(0,2) === text.slice(0,2)));
     });
-    return Response.json({configured:true,options},{headers:{"Cache-Control":"public, max-age=86400"}});
+    return Response.json({configured:true,options},{headers:{"Cache-Control":"public, max-age=0, s-maxage=86400, must-revalidate"}});
   } catch { return Response.json({configured:false,options:{}}); }
 }
 async function translateTerm(term, env) {
@@ -197,7 +198,7 @@ async function translateTerm(term, env) {
       if (text.length >= 3 && /해(요)?$/.test(text)) text = text.replace(/해(요)?$/,"하다");
       if (text.length <= 30 && !/[A-Za-z]{3,}/.test(text)) korean = text;
     }
-    return Response.json({configured:true,korean},{headers:{"Cache-Control":"public, max-age=86400"}});
+    return Response.json({configured:true,korean},{headers:{"Cache-Control":"public, max-age=0, s-maxage=86400, must-revalidate"}});
   } catch { return Response.json({configured:false,korean:""}); }
 }
 export function handler(assets) {
