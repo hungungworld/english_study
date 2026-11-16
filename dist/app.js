@@ -757,9 +757,34 @@ function openEditor(standalone, post, source, host, kind) {
     (form.elements.title ?? form.elements.body ?? form.querySelector('[name="term"]'))?.focus();
   }
 }
-function closeEditor() {
+// Our own confirmation window. The browser's confirm() is blocked in app browsers and phone web views (it answers "no" at once, so buttons seem dead).
+const confirmBox = document.querySelector("#confirm-box");
+function askConfirm({title,message,confirmLabel = "OK",cancelLabel = "Cancel"}) {
+  return new Promise(resolve => {
+    confirmBox.innerHTML = `<div class="dialog-head"><h2 id="confirm-title">${e(title)}</h2><button type="button" data-confirm="no" aria-label="Close">✕</button></div>
+      <p>${e(message)}</p>
+      <div class="row"><button type="button" data-cancel data-confirm="no">${e(cancelLabel)}</button><button type="button" class="primary" data-confirm="yes">${e(confirmLabel)}</button></div>`;
+    const done = answer => {
+      confirmBox.removeEventListener("click",onClick);
+      confirmBox.removeEventListener("cancel",onCancel);
+      confirmBox.close();
+      resolve(answer);
+    };
+    const onClick = event => {
+      const choice = event.target.closest("[data-confirm]");
+      if (choice) done(choice.dataset.confirm === "yes");
+    };
+    const onCancel = event => { event.preventDefault(); done(false); };
+    confirmBox.addEventListener("click",onClick);
+    confirmBox.addEventListener("cancel",onCancel);
+    confirmBox.showModal();
+    confirmBox.querySelector("[data-cancel]").focus();
+  });
+}
+const unsavedAsk = () => askConfirm({title:"Close without saving?",message:"Unsaved changes will be lost.",confirmLabel:"Close"});
+async function closeEditor() {
   if (editor.querySelector('[type="submit"]')?.disabled) return;
-  if (!editorChanged || confirm("Unsaved changes will be lost. Close?")) editor.close();
+  if (!editorChanged || await unsavedAsk()) editor.close();
 }
 editor.addEventListener("cancel",event => { event.preventDefault(); closeEditor(); });
 function formClick(event, container, close) {
@@ -781,9 +806,9 @@ editor.addEventListener("click",event => formClick(event,editor,closeEditor));
 // Writing beside a video or article: the form lives in a side panel inside the detail window.
 const overlayEl = document.querySelector("#tv-overlay");
 let writerSource;
-function closeWriter(host) {
+async function closeWriter(host) {
   if (!host || host.querySelector('[type="submit"]')?.disabled) return;
-  if (editorChanged && host.querySelector("form") && !confirm("Unsaved changes will be lost. Close?")) return;
+  if (editorChanged && host.querySelector("form") && !(await unsavedAsk())) return;
   editorChanged = false;
   host.replaceChildren();
   host.hidden = true;
@@ -799,8 +824,10 @@ overlayEl.addEventListener("click",event => {
   }
 });
 overlayEl.addEventListener("click",event => {
-  if (event.target.closest(".tv-close") && overlayEl.classList.contains("is-writing") && editorChanged &&
-      overlayEl.querySelector(".tv-writer form") && !confirm("Unsaved changes will be lost. Close?")) event.stopImmediatePropagation();
+  if (event.target.closest(".tv-close") && overlayEl.classList.contains("is-writing") && editorChanged && overlayEl.querySelector(".tv-writer form")) {
+    event.stopImmediatePropagation();
+    unsavedAsk().then(close => { if (close) { editorChanged = false; overlayEl.querySelector(".tv-close").click(); } });
+  }
 },true);
 overlayEl.addEventListener("cancel",event => {
   if (!overlayEl.classList.contains("is-writing")) return;
@@ -855,7 +882,7 @@ main.addEventListener("click",async event => {
   const id = location.hash.split("/")[1];
   const data = button.dataset;
   if (data.commentDelete) {
-    if (!confirm("Delete this comment? This cannot be undone.")) return;
+    if (!(await askConfirm({title:"Delete this comment?",message:"This cannot be undone.",confirmLabel:"Delete"}))) return;
     removeComment(data.postId,data.commentDelete);
     render();
     return;
@@ -900,7 +927,7 @@ main.addEventListener("click",async event => {
     return;
   }
   if (data.deleteId) {
-    if (!confirm("Delete this post? This cannot be undone.")) return;
+    if (!(await askConfirm({title:"Delete this post?",message:"This cannot be undone.",confirmLabel:"Delete"}))) return;
     button.disabled = true;
     try {
       await removePost(data.deleteId,own[data.deleteId]);
@@ -946,11 +973,11 @@ main.addEventListener("click",async event => {
   }
   if ("newWord" in data) openEditor(true);
   if ("edit" in data) openEditor(false,board.posts.find(post => post.id === id));
-  if ("delete" in data && confirm((() => {
+  if ("delete" in data && await askConfirm({title:"Delete this post?",confirmLabel:"Delete",message:(() => {
     const target = board.posts.find(post => post.id === id);
     const count = board.words.filter(word => word.post_id === id).length;
-    return target && boardKind(target) === "chat" ? "Delete this post? This cannot be undone." : `The ${count} linked ${count === 1 ? "word" : "words"} will be deleted too. This cannot be undone.`;
-  })())) {
+    return !count || (target && boardKind(target) === "chat") ? "This cannot be undone." : `The ${count} linked ${count === 1 ? "word" : "words"} will be deleted too. This cannot be undone.`;
+  })()})) {
     button.disabled = true;
     try {
       await removePost(id,own[id]);

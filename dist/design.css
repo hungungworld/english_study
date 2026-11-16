@@ -800,3 +800,15 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 @media (prefers-reduced-motion:reduce){:root:root:root body button.is-nudged{animation:none;outline:2px solid var(--ds-ink);outline-offset:4px}}
 :root:root:root body .hint.nudge{margin:0;color:var(--ds-ink);font-weight:500}
 :root:root:root body .hint.nudge[hidden]{display:none}
+
+/* ---- Confirmation window (replaces the browser's confirm()): a small dialog built from the dialog and standard button parts ---- */
+:root:root:root body #confirm-box{width:min(420px,calc(100% - 2 * var(--ds-sp-4)));padding:var(--ds-sp-5);background:var(--ds-surface);color:var(--ds-ink);border:1px solid var(--ds-ink);border-radius:var(--ds-radius);color-scheme:light}
+:root:root:root body #confirm-box .dialog-head{margin-bottom:var(--ds-sp-3)}
+:root:root:root body #confirm-box p{margin:0 0 var(--ds-sp-4);color:var(--ds-ink-2);font:400 var(--ds-fs-body)/1.6 var(--ds-sans)}
+:root:root:root body #confirm-box .row{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--ds-sp-2)}
+:root:root:root body #confirm-box button{background:transparent;color:var(--ds-ink);border:1px solid var(--ds-line)}
+:root:root:root body #confirm-box button:hover:enabled{background:var(--ds-ink);color:var(--ds-paper);border-color:var(--ds-ink)}
+:root:root:root body #confirm-box .dialog-head button{border-color:transparent}
+:root:root:root body #confirm-box .dialog-head button:hover:enabled{background:var(--ds-wash);color:var(--ds-ink)}
+:root:root:root body #confirm-box button.primary{background:var(--ds-ink);color:var(--ds-paper);border-color:var(--ds-ink)}
+:root:root:root body #confirm-box button.primary:hover:enabled{background:var(--ds-ink-hover,var(--ds-ink-2));border-color:var(--ds-ink-hover,var(--ds-ink-2))}
