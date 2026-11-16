@@ -384,9 +384,9 @@ function paint() {
 function detail(item) {
   const saved = scraps.some(entry => scrapKey(entry) === scrapKey(item));
   const reader = item.type === "read";
-  return `<div class="tv-stage"><section class="tv-detail${reader ? " is-reader" : ""}"><button type="button" class="tv-close" aria-label="Close">✕</button>
+  return `<div class="tv-stage"><section class="tv-detail${reader ? " is-reader" : ""}"><div class="tv-topbar"><span class="tv-source" lang="en">${escape(item.source)} · ${date(item)}</span><button type="button" class="tv-close" aria-label="Close">✕</button></div>
     ${reader ? '<div class="tv-scroll">' : ""}${item.type === "video" ? `<iframe class="tv-player" title="${escape(item.title)}" src="https://www.youtube-nocookie.com/embed/${escape(item.id)}" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>` : screen(item,true)}
-    <div class="tv-detail-copy"><p class="tv-label">${escape(item.source)} · ${date(item)}</p>
+    <div class="tv-detail-copy">
     <h1 lang="en">${escape(item.title)}</h1>
     ${item.summary ? `<p class="tv-summary" lang="en">${escape(item.summary)}</p>` : ""}
     ${item.type === "read" ? '<div class="tv-article" data-article aria-live="polite"><p class="hint">Loading the article…</p></div>' : ""}

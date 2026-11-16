@@ -774,16 +774,16 @@
 
 /* Page and panel scrollbars: the same thin line as the chip rows, 6px wide on vertical scrollers (paper on dark scenes, ink on paper pages).
    Firefox gets the standard thin scrollbar. */
-html::-webkit-scrollbar,#editor::-webkit-scrollbar,#tv-overlay::-webkit-scrollbar,.tv-writer::-webkit-scrollbar,.tv-sheet::-webkit-scrollbar,.pp-prefs::-webkit-scrollbar{width:14px;height:14px}
-html::-webkit-scrollbar-button,#editor::-webkit-scrollbar-button,#tv-overlay::-webkit-scrollbar-button,.tv-writer::-webkit-scrollbar-button,.tv-sheet::-webkit-scrollbar-button,.pp-prefs::-webkit-scrollbar-button{display:none;width:0;height:0}
-html::-webkit-scrollbar-track,#editor::-webkit-scrollbar-track,#tv-overlay::-webkit-scrollbar-track,.tv-writer::-webkit-scrollbar-track,.tv-sheet::-webkit-scrollbar-track,.pp-prefs::-webkit-scrollbar-track{border-radius:0;border:4px solid transparent;background-clip:padding-box;background-color:var(--ds-line)}
-html::-webkit-scrollbar-thumb,#editor::-webkit-scrollbar-thumb,#tv-overlay::-webkit-scrollbar-thumb,.tv-writer::-webkit-scrollbar-thumb,.tv-sheet::-webkit-scrollbar-thumb,.pp-prefs::-webkit-scrollbar-thumb{border-radius:0;border:4px solid transparent;background-clip:padding-box;background-color:var(--ds-ink)}
-html:has(body.media-mode)::-webkit-scrollbar-track,body.media-mode #tv-overlay::-webkit-scrollbar-track,body.media-mode .tv-sheet::-webkit-scrollbar-track{background-color:rgba(241,239,233,.2)}
-html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::-webkit-scrollbar-thumb,body.media-mode .tv-sheet::-webkit-scrollbar-thumb{background-color:var(--ds-paper)}
+html::-webkit-scrollbar,#editor::-webkit-scrollbar,#tv-overlay::-webkit-scrollbar,.tv-writer::-webkit-scrollbar,.tv-sheet::-webkit-scrollbar,.pp-prefs::-webkit-scrollbar,.tv-scroll::-webkit-scrollbar{width:14px;height:14px}
+html::-webkit-scrollbar-button,#editor::-webkit-scrollbar-button,#tv-overlay::-webkit-scrollbar-button,.tv-writer::-webkit-scrollbar-button,.tv-sheet::-webkit-scrollbar-button,.pp-prefs::-webkit-scrollbar-button,.tv-scroll::-webkit-scrollbar-button{display:none;width:0;height:0}
+html::-webkit-scrollbar-track,#editor::-webkit-scrollbar-track,#tv-overlay::-webkit-scrollbar-track,.tv-writer::-webkit-scrollbar-track,.tv-sheet::-webkit-scrollbar-track,.pp-prefs::-webkit-scrollbar-track,.tv-scroll::-webkit-scrollbar-track{border-radius:0;border:4px solid transparent;background-clip:padding-box;background-color:var(--ds-line)}
+html::-webkit-scrollbar-thumb,#editor::-webkit-scrollbar-thumb,#tv-overlay::-webkit-scrollbar-thumb,.tv-writer::-webkit-scrollbar-thumb,.tv-sheet::-webkit-scrollbar-thumb,.pp-prefs::-webkit-scrollbar-thumb,.tv-scroll::-webkit-scrollbar-thumb{border-radius:0;border:4px solid transparent;background-clip:padding-box;background-color:var(--ds-ink)}
+html:has(body.media-mode)::-webkit-scrollbar-track,body.media-mode #tv-overlay::-webkit-scrollbar-track,body.media-mode .tv-sheet::-webkit-scrollbar-track,body.media-mode .tv-scroll::-webkit-scrollbar-track{background-color:rgba(241,239,233,.2)}
+html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::-webkit-scrollbar-thumb,body.media-mode .tv-sheet::-webkit-scrollbar-thumb,body.media-mode .tv-scroll::-webkit-scrollbar-thumb{background-color:var(--ds-paper)}
 @supports not selector(::-webkit-scrollbar){
-  html,#editor,#tv-overlay,.tv-writer,.tv-sheet,.pp-prefs{scrollbar-width:thin}
-  html,#editor,#tv-overlay,.tv-writer,.tv-sheet,.pp-prefs{scrollbar-color:var(--ds-ink) var(--ds-line)}
-  html:has(body.media-mode),body.media-mode #tv-overlay,body.media-mode .tv-sheet{scrollbar-color:var(--ds-paper) rgba(241,239,233,.2)}
+  html,#editor,#tv-overlay,.tv-writer,.tv-sheet,.pp-prefs,.tv-scroll{scrollbar-width:thin}
+  html,#editor,#tv-overlay,.tv-writer,.tv-sheet,.pp-prefs,.tv-scroll{scrollbar-color:var(--ds-ink) var(--ds-line)}
+  html:has(body.media-mode),body.media-mode #tv-overlay,body.media-mode .tv-sheet,body.media-mode .tv-scroll{scrollbar-color:var(--ds-paper) rgba(241,239,233,.2)}
 }
 
 /* A selected topic chip: its count (small) follows the chip's ink text (it was paper on paper) */
@@ -853,7 +853,7 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body .pp-prefs .row button[data-prefs-reset]:disabled{opacity:.4;cursor:not-allowed;text-decoration:none}
 
 /* Article reader: the picture and the text scroll together, so a long article never squeezes the picture away (DESIGN.md 10-36) */
-:root:root:root body #tv-overlay .tv-detail.is-reader{grid-template-rows:minmax(0,1fr)}
+:root:root:root body #tv-overlay .tv-detail.is-reader{grid-template-rows:var(--ds-h-button) minmax(0,1fr)}
 :root:root:root body #tv-overlay .tv-detail.is-reader .tv-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain;border-radius:inherit}
 :root:root:root body #tv-overlay .tv-detail.is-reader .tv-screen{height:auto;aspect-ratio:16/9;max-height:none}
 
@@ -878,3 +878,13 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body #tv-overlay .tv-highlights h2{margin:0;font:700 var(--ds-fs-item)/1.35 var(--ds-serif)}
 :root:root:root body #tv-overlay .tv-hl-list{display:grid;gap:var(--ds-sp-3);margin:0;padding-left:var(--ds-sp-4);font:400 var(--ds-fs-body)/1.6 var(--ds-sans)}
 :root:root:root body #tv-overlay .tv-hl-list li::marker{color:var(--ds-on-dark-muted)}
+
+/* Detail window top bar (DESIGN.md 10-42): source and date on the left, a box-free close on the right; media starts below it */
+:root:root:root body #tv-overlay .tv-detail{grid-template-rows:var(--ds-h-button) minmax(0,1fr) auto}
+:root:root:root body #tv-overlay .tv-topbar{display:flex;align-items:center;justify-content:space-between;gap:var(--ds-sp-3);min-width:0;padding:0 var(--ds-sp-1) 0 var(--ds-sp-4);border-bottom:1px solid var(--ds-on-dark-muted);background:var(--ds-dark-2)}
+:root:root:root body #tv-overlay .tv-source{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:400 var(--ds-fs-ui)/1.2 var(--ds-sans);color:var(--ds-on-dark-muted)}
+:root:root:root body #tv-overlay .tv-topbar .tv-close{position:static;flex:none;width:var(--ds-h-button);height:var(--ds-h-button);margin:0;padding:0;border:0;border-radius:var(--ds-radius);background:transparent;color:var(--ds-on-dark);box-shadow:none}
+:root:root:root body #tv-overlay .tv-topbar .tv-close:hover{background:transparent;color:var(--ds-on-dark);opacity:.7}
+:root:root:root body.study-mode #tv-overlay .tv-topbar{background:var(--ds-surface);border-bottom-color:var(--ds-line)}
+:root:root:root body.study-mode #tv-overlay .tv-source{color:var(--ds-muted)}
+:root:root:root body.study-mode #tv-overlay .tv-topbar .tv-close,:root:root:root body.study-mode #tv-overlay .tv-topbar .tv-close:hover{color:var(--ds-ink)}
