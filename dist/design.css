@@ -824,3 +824,14 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body .quiz .choice:disabled:not(.is-right):not(.is-wrong){opacity:.4}
 :root:root:root body .quiz .choice.is-right,:root:root:root body .quiz .choice.is-right:disabled{background:var(--ds-ink);border-color:var(--ds-ink);color:var(--ds-paper)}
 :root:root:root body .quiz .choice.is-wrong,:root:root:root body .quiz .choice.is-wrong:disabled{background:transparent;border:2px solid var(--ds-ink);color:var(--ds-ink);font-weight:700}
+
+/* Guardian reader (DESIGN.md 10-36): paragraphs with a "Translate" underline link; Korean opens beneath, set off by a thin rule */
+:root:root:root body #tv-overlay .tv-article{display:grid;gap:var(--ds-sp-5);margin:0 0 var(--ds-sp-4)}
+:root:root:root body #tv-overlay .tv-article p{margin:0;font:400 var(--ds-fs-body)/1.6 var(--ds-sans);max-width:68ch}
+:root:root:root body #tv-overlay .tv-article .tv-byline{font-size:var(--ds-fs-ui);color:var(--ds-on-dark-muted)}
+:root:root:root body #tv-overlay .tv-article .hint{font-size:var(--ds-fs-caption);color:var(--ds-on-dark-muted)}
+:root:root:root body #tv-overlay .tv-article .row{margin:0}
+:root:root:root body #tv-overlay .tv-para{display:grid;gap:var(--ds-sp-4);justify-items:start}
+:root:root:root body #tv-overlay .tv-para .tv-link{margin-left:0;padding-left:0}
+:root:root:root body #tv-overlay .tv-para .tv-ko{padding-left:var(--ds-sp-4);border-left:1px solid var(--ds-on-dark-muted);color:var(--ds-on-dark)}
+:root:root:root body #tv-overlay .tv-article a{text-underline-offset:4px}

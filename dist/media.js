@@ -2,7 +2,7 @@ import {readLocal,writeLocal} from "./data.js";
 import {pagerHtml,pageCount,PER_PAGE} from "./pager.js";
 
 const LIMIT = 12;
-const filters = {all:"All",news:"News",video:"Video",scraps:"Saved"};
+const filters = {all:"All",news:"News",video:"Video",read:"With translation",scraps:"Saved"};
 const dateFormat = new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",timeZone:"Asia/Seoul"});
 const escape = value => String(value ?? "").replace(/[&<>"']/g,char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[char]);
 let feed;
@@ -13,6 +13,8 @@ let pending;
 let notice = "";
 let news = [];
 let videos = [];
+let reads = [];
+let readError = false;
 let ready = false;
 let loadedAt = 0;
 let videoConfigured = false;
@@ -50,7 +52,7 @@ function scrapSlice() {
 function scrapFilterHtml() {
   const counts = TOPICS.map(topic => [topic,scraps.filter(item => (item.topics ?? []).includes(topic)).length]).filter(([,count]) => count);
   return `<div class="scrap-filters"><div class="scrap-row"><input id="scrap-q" type="search" placeholder="Search saved" aria-label="Search saved" autocomplete="off" maxlength="60">
-    <div class="tabs" aria-label="Type">${[["all","All"],["news","News"],["video","Video"]].map(([id,label]) =>
+    <div class="tabs" aria-label="Type">${[["all","All"],["news","News"],["video","Video"],["read","With translation"]].map(([id,label]) =>
       `<button type="button" data-scrap-type="${id}" aria-pressed="${scrapType === id}">${label}</button>`).join("")}</div>
     <span class="count" data-scrap-count>${scrapFiltered().length}</span><button type="button" data-scrap-reset>Reset</button></div>
     ${counts.length ? `<div class="scrap-topics" role="group" aria-label="Topics">${counts.map(([topic,count]) =>
@@ -197,7 +199,8 @@ function items() {
   if (filter === "scraps") return scraps;
   if (filter === "news") return news;
   if (filter === "video") return videos;
-  return [...news,...videos].sort((a,b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0));
+  if (filter === "read") return reads;
+  return [...news,...videos,...reads].sort((a,b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0));
 }
 function date(item) {
   const stamp = Date.parse(item.date);
@@ -205,7 +208,7 @@ function date(item) {
 }
 function screen(item, detail = false) {
   if (item.type === "video") return `<div class="tv-screen video-screen"><img src="${escape(item.image)}" alt="" loading="lazy" decoding="async"><span class="tv-play" aria-hidden="true">▶</span></div>`;
-  return `<div class="tv-screen news-screen" lang="en"><span>WORLD NEWS</span><strong>${escape(item.title)}</strong>
+  return `<div class="tv-screen news-screen" lang="en"><span>${item.type === "read" ? "THE GUARDIAN" : "WORLD NEWS"}</span><strong>${escape(item.title)}</strong>
     ${item.image ? `<img class="news-thumbnail" src="${escape(item.image)}" alt="" loading="${detail ? "eager" : "lazy"}" decoding="async">` : ""}</div>`;
 }
 function card(item) {
@@ -227,7 +230,9 @@ function merge(current, incoming) {
 }
 async function loadFirst() {
   if (pending) return pending;
-  pending = Promise.allSettled([get("/api/news"),get("/api/videos")]).then(([n,v]) => {
+  pending = Promise.allSettled([get("/api/news"),get("/api/videos"),get("/api/guardian")]).then(([n,v,g]) => {
+    readError = g.status === "rejected";
+    if (!readError) reads = merge([],g.value.items);
     newsError = n.status === "rejected";
     videoError = v.status === "rejected";
     if (!newsError) news = merge([],n.value.items);
@@ -245,12 +250,12 @@ async function loadFirst() {
 async function more() {
   if (pending) return;
   const remaining = items().filter(item => !visible.some(shown => shown.id === item.id));
-  if (remaining.length >= LIMIT || (remaining.length && (!next || filter === "news" || filter === "scraps"))) {
+  if (remaining.length >= LIMIT || (remaining.length && (!next || filter === "news" || filter === "read" || filter === "scraps"))) {
     visible.push(...remaining.slice(0,LIMIT));
     appendCards();
     return;
   }
-  if (!next || filter === "news" || filter === "scraps") return;
+  if (!next || filter === "news" || filter === "read" || filter === "scraps") return;
   const current = generation;
   const token = next;
   notice = "";
@@ -305,7 +310,7 @@ function scrapsPage() {
   const now = new Date(Date.now() + 9 * 3600000);
   const many = scraps.length >= 6;
   const counts = TOPICS.map(topic => [topic,scraps.filter(item => (item.topics ?? []).includes(topic)).length]).filter(([,count]) => count);
-  const kinds = [["all","All"],["news","News"],["video","Video"]].map(([id,label]) => `<button type="button" data-scrap-type="${id}" aria-pressed="${scrapType === id}">${label}</button>`).join("");
+  const kinds = [["all","All"],["news","News"],["video","Video"],["read","With translation"]].map(([id,label]) => `<button type="button" data-scrap-type="${id}" aria-pressed="${scrapType === id}">${label}</button>`).join("");
   const topics = counts.map(([topic,count]) => `<button type="button" data-scrap-topic="${topic}" aria-pressed="${scrapTopics.has(topic)}">${topic} ${count}</button>`).join("");
   const empty = !visible.length ? `<p class="tv-message">${scraps.length ? "No saved items match." : "Nothing saved yet. Use the bookmark button in Explore to save items."}</p>` : "";
   return `<section class="tv-home"><div class="poster-page">
@@ -343,8 +348,9 @@ function paint() {
       : items().slice(0,section === "home" ? 6 : LIMIT);
   }
   const messages = section === "scraps" ? [] : [
-    filter !== "video" && newsError ? "Could not load BBC News." : "",
-    filter !== "news" && videoError ? "Could not load videos." : "",
+    filter !== "video" && filter !== "read" && newsError ? "Could not load BBC News." : "",
+    filter !== "news" && filter !== "read" && videoError ? "Could not load videos." : "",
+    (filter === "read" || filter === "all") && readError ? "Could not load articles." : "",
     ready && filter === "video" && !videoConfigured && !videoError ? "Videos are not available yet." : ""
   ].filter(Boolean);
   const controls = Object.entries(filters).filter(([id]) => id !== "scraps").map(([id,label]) => `<button data-tv-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("");
@@ -382,7 +388,8 @@ function detail(item) {
     <div class="tv-detail-copy"><p class="tv-label">${escape(item.source)} · ${date(item)}</p>
     <h1 lang="en">${escape(item.title)}</h1>
     ${item.summary ? `<p class="tv-summary" lang="en">${escape(item.summary)}</p>` : ""}
-    <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "Open on YouTube" : "Read on BBC"}<span class="ar ne" aria-hidden="true"></span></a>
+    ${item.type === "read" ? '<div class="tv-article" data-article aria-live="polite"><p class="hint">Loading the article…</p></div>' : ""}
+    <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "Open on YouTube" : item.type === "read" ? "Read on The Guardian" : "Read on BBC"}<span class="ar ne" aria-hidden="true"></span></a>
     <button type="button" class="tv-action" data-write-source><span class="ic plus" aria-hidden="true"></span>Write</button>
     <button type="button" class="tv-action" data-scrap aria-label="Save" aria-pressed="${saved}" title="${saved ? "Remove from saved" : "Save"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div></section><aside class="tv-writer" aria-label="Write a note" hidden></aside></div>`;
 }
@@ -391,6 +398,7 @@ function showDetail(item, origin) {
   overlay.classList.remove("is-writing");
   overlay.innerHTML = detail(item);
   overlay.showModal();
+  if (item.type === "read") loadArticle(item);
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
     const target = overlay.getBoundingClientRect();
     const x = origin ? origin.x + origin.width / 2 - target.x - target.width / 2 : 0;
@@ -408,7 +416,63 @@ function openSideWindow(url) {
   const features = `popup=yes,noopener,noreferrer,width=${Math.round(width)},height=${Math.round(screen.availHeight)},left=${screen.availLeft ?? 0},top=${screen.availTop ?? 0}`;
   window.open(url,"article-window",features);
 }
-overlay.addEventListener("click",event => {
+// ---- Guardian article: full text, with a Korean translation that opens under each paragraph ----
+async function loadArticle(item) {
+  const host = overlay.querySelector("[data-article]");
+  try {
+    const response = await fetch("/api/guardian-article?id=" + encodeURIComponent(item.apiId));
+    const article = await response.json();
+    if (!response.ok || !article.paragraphs) throw new Error("article");
+    if (selectedItem !== item || !host.isConnected) return;
+    host.innerHTML = `${article.byline ? `<p class="tv-byline" lang="en">${escape(article.byline)}</p>` : ""}
+      <div class="row"><button type="button" class="tv-action" data-translate-all>Translate all</button></div>
+      ${article.paragraphs.map((text,index) => `<div class="tv-para" data-para="${index}"><p lang="en">${escape(text)}</p>
+        <button type="button" class="tv-link" data-translate aria-expanded="false">Translate</button><p class="tv-ko" lang="ko" hidden></p></div>`).join("")}
+      <p class="hint">Powered by <a href="${escape(article.url)}" target="_blank" rel="noopener noreferrer">The Guardian</a>. Korean translation by Microsoft Translator.</p>`;
+    host.paragraphs = article.paragraphs;
+  } catch {
+    if (host.isConnected) host.innerHTML = '<p class="hint">Could not load the article. Use the link below to read it on The Guardian.</p>';
+  }
+}
+async function translateParas(host, indexes) {
+  const todo = indexes.filter(index => !host.querySelector(`[data-para="${index}"] .tv-ko`).textContent);
+  for (let i = 0; i < todo.length; i += 10) {
+    const chunk = todo.slice(i,i + 10);
+    const response = await fetch("/api/translate-text",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({texts:chunk.map(index => host.paragraphs[index])})});
+    const data = await response.json();
+    if (!data.configured) throw new Error("translate");
+    chunk.forEach((index,at) => { host.querySelector(`[data-para="${index}"] .tv-ko`).textContent = data.translations[at] || ""; });
+  }
+  for (const index of indexes) {
+    const box = host.querySelector(`[data-para="${index}"]`);
+    box.querySelector(".tv-ko").hidden = false;
+    const button = box.querySelector("[data-translate]");
+    button.textContent = "Hide translation";
+    button.setAttribute("aria-expanded","true");
+  }
+}
+overlay.addEventListener("click",async event => {
+  const host = overlay.querySelector("[data-article]");
+  const toggle = event.target.closest("[data-translate]");
+  if (toggle && host?.paragraphs) {
+    const box = toggle.closest("[data-para]");
+    if (toggle.getAttribute("aria-expanded") === "true") {
+      box.querySelector(".tv-ko").hidden = true;
+      toggle.textContent = "Translate";
+      toggle.setAttribute("aria-expanded","false");
+    } else {
+      toggle.disabled = true;
+      try { await translateParas(host,[Number(box.dataset.para)]); }
+      catch { toggle.textContent = "Translation unavailable. Try again"; }
+      toggle.disabled = false;
+    }
+  }
+  const all = event.target.closest("[data-translate-all]");
+  if (all && host?.paragraphs) {
+    all.disabled = true;
+    try { await translateParas(host,host.paragraphs.map((_,index) => index)); all.remove(); }
+    catch { all.textContent = "Translation unavailable. Try again"; all.disabled = false; }
+  }
   if (selectedItem && event.target.closest("[data-write-source]")) {
     // Keep the detail window (and the playing video) open and show the form beside it.
     const host = overlay.querySelector(".tv-writer");
@@ -417,7 +481,7 @@ overlay.addEventListener("click",event => {
     overlay.dispatchEvent(new CustomEvent("write-media",{detail:{item:selectedItem,host}}));
   }
   const articleLink = event.target.closest(".tv-out");
-  if (articleLink && selectedItem?.type === "news" && overlay.classList.contains("is-writing")) {
+  if (articleLink && (selectedItem?.type === "news" || selectedItem?.type === "read") && overlay.classList.contains("is-writing")) {
     event.preventDefault();
     openSideWindow(articleLink.href);
   }
@@ -496,7 +560,7 @@ function resultsActive() {
   return searchTerms().length > 0 || selectedTopics.size > 0 || listView;
 }
 function typeOk(item) {
-  return filter === "news" ? item.type === "news" : filter === "video" ? item.type === "video" : true;
+  return filter === "news" ? item.type === "news" : filter === "video" ? item.type === "video" : filter === "read" ? item.type === "read" : true;
 }
 function currentKey() {
   const q = searchQuery.trim();
@@ -506,7 +570,7 @@ function currentKey() {
 // used only while they belong to the filters that are on screen right now.
 function baseResults() {
   const terms = searchTerms();
-  const local = [...news,...videos].filter(item => terms.every(term => norm(item.title).includes(term)));
+  const local = [...news,...videos,...reads].filter(item => terms.every(term => norm(item.title).includes(term)));
   return merge(local,searchKey === currentKey() ? searchNews : []).filter(typeOk);
 }
 function landingResults() {
@@ -819,7 +883,7 @@ function refreshGlobe() {
 }
 // Keep pulling later video pages in the background so the sphere has more to show.
 function globeMore() {
-  if (pending || !next || globePages >= 4 || filter === "news") return;
+  if (pending || !next || globePages >= 4 || filter === "news" || filter === "read") return;
   globePages++;
   const token = next;
   pending = get("/api/videos?cursor=" + encodeURIComponent(token)).then(result => {
@@ -948,7 +1012,7 @@ export function renderMedia(root, key, view = "") {
   paint();
   if (!ready && section !== "scraps") loadFirst();
   if (key) {
-    const item = [...news,...videos,...globe.list].find(item => item.id === key);
+    const item = [...news,...videos,...reads,...globe.list].find(item => item.id === key);
     if (item) {
       if (!overlay.open) showDetail(item);
       return;

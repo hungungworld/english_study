@@ -201,10 +201,88 @@ async function translateTerm(term, env) {
     return Response.json({configured:true,korean},{headers:{"Cache-Control":"public, max-age=0, s-maxage=86400, must-revalidate"}});
   } catch { return Response.json({configured:false,korean:""}); }
 }
+// ---- The Guardian Open Platform (free non-commercial key): article list, article text, and Korean translation of paragraphs ----
+const GUARDIAN = "https://content.guardianapis.com/";
+const GUARDIAN_SECTIONS = "world|technology|science|environment|business|culture|education|society|lifeandstyle|food|travel|sport";
+async function guardianJson(path, params, env) {
+  const url = new URL(GUARDIAN + path);
+  url.search = new URLSearchParams({...params,"api-key":env.GUARDIAN_API_KEY});
+  const response = await fetch(url,{signal:AbortSignal.timeout(8000)});
+  if (!response.ok) throw new Error("guardian");
+  return (await response.json()).response;
+}
+async function guardianList(env) {
+  if (!env.GUARDIAN_API_KEY) return Response.json({items:[],configured:false},{headers:{"Cache-Control":"no-store"}});
+  try {
+    const data = await guardianJson("search",{section:GUARDIAN_SECTIONS,"order-by":"newest","page-size":"50","show-fields":"trailText,thumbnail,wordcount",type:"article"},env);
+    // Beginners read short pieces: skip very long articles and bare snippets.
+    const items = (data.results ?? []).flatMap(result => {
+      const fields = result.fields ?? {};
+      const words = Number(fields.wordcount) || 0;
+      if (words < 120 || words > 900 || !https(result.webUrl)) return [];
+      const summary = plain(fields.trailText ?? "");
+      return [{id:"gd:" + result.id,apiId:result.id,type:"read",title:plain(result.webTitle),url:result.webUrl,image:https(fields.thumbnail),
+        source:"The Guardian",date:result.webPublicationDate,summary,words,topics:topicsFor(result.webTitle + " " + summary,[])}];
+    });
+    return Response.json({items,configured:true},{headers:{"Cache-Control":"public, max-age=300, s-maxage=600"}});
+  } catch { return Response.json({error:"Could not load content."},{status:502}); }
+}
+// The API often returns the body as one block: group sentences, three per paragraph, so each piece is easy to translate.
+function chunkText(text) {
+  if (text.length < 420) return [text];
+  const sentences = text.split(/(?<=[.!?]["”’]?)\s+(?=["“‘]?[A-Z])/);
+  const out = [];
+  for (let i = 0; i < sentences.length; i += 3) out.push(sentences.slice(i,i + 3).join(" "));
+  return out;
+}
+async function guardianArticle(id, env) {
+  if (!env.GUARDIAN_API_KEY) return Response.json({configured:false},{status:200});
+  try {
+    const data = await guardianJson("" + id,{"show-fields":"bodyText,byline,wordcount"},env);
+    const fields = data.content?.fields ?? {};
+    const paragraphs = String(fields.bodyText ?? "").split(/[\r\n]+/).map(line => line.trim()).filter(Boolean).flatMap(chunkText).slice(0,80);
+    if (!paragraphs.length) throw new Error("empty");
+    return Response.json({configured:true,title:plain(data.content.webTitle),byline:plain(fields.byline ?? ""),url:data.content.webUrl,paragraphs},
+      {headers:{"Cache-Control":"public, max-age=3600, s-maxage=3600"}});
+  } catch { return Response.json({error:"Could not load the article."},{status:502}); }
+}
+const paragraphCache = new Map();
+async function translateParagraphs(texts, env) {
+  if (!env.MS_TRANSLATOR_KEY) return Response.json({configured:false,translations:[]});
+  try {
+    const missing = [...new Set(texts)].filter(text => !paragraphCache.has(text));
+    if (missing.length) {
+      const response = await fetch("https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=en&to=ko",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Ocp-Apim-Subscription-Key":env.MS_TRANSLATOR_KEY,"Ocp-Apim-Subscription-Region":env.MS_TRANSLATOR_REGION || "global"},
+        body:JSON.stringify(missing.map(Text => ({Text}))),signal:AbortSignal.timeout(15000)
+      });
+      if (!response.ok) throw new Error("translator");
+      const data = await response.json();
+      missing.forEach((text,index) => paragraphCache.set(text,data[index]?.translations?.[0]?.text ?? ""));
+      while (paragraphCache.size > 500) paragraphCache.delete(paragraphCache.keys().next().value);
+    }
+    return Response.json({configured:true,translations:texts.map(text => paragraphCache.get(text) ?? "")});
+  } catch { return Response.json({configured:false,translations:[]}); }
+}
 export function handler(assets) {
   return {async fetch(request, env = {}, context) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/translate-text") {
+      if (request.method !== "POST") return new Response(null,{status:405});
+      let body;
+      try { body = await request.json(); } catch { return new Response(null,{status:400}); }
+      const texts = Array.isArray(body?.texts) ? body.texts.filter(text => typeof text === "string" && text.trim() && text.length <= 2000).slice(0,12) : [];
+      if (!texts.length) return new Response(null,{status:400});
+      return translateParagraphs(texts,env);
+    }
     if (request.method !== "GET" && request.method !== "HEAD") return new Response(null,{status:405});
+    if (url.pathname === "/api/guardian") return guardianList(env);
+    if (url.pathname === "/api/guardian-article") {
+      const id = url.searchParams.get("id") ?? "";
+      if (!/^[a-z0-9][a-z0-9\-\/]{4,200}$/i.test(id)) return new Response(null,{status:400});
+      return guardianArticle(id,env);
+    }
     if (url.pathname === "/api/translate") {
       const term = (url.searchParams.get("term") ?? "").trim().toLowerCase();
       if (!/^[a-z' -]{1,60}$/.test(term)) return new Response(null,{status:400});

@@ -198,7 +198,8 @@
       for (const w of words) { const last = lines[lines.length - 1]; if (last && Math.abs(last.top - w.top) < 6) last.words.push(w.w); else lines.push({top: w.top, words: [w.w]}); }
       return lines.map(l => l.words);
     };
-    for (const el of all.filter(e => !inMedia(e) && !e.closest('.sr-only') && !e.matches('.sr-only,option,select,textarea,input') && !e.querySelector('br') && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()))) {
+    // .tv-article holds article text (The Guardian) that we cannot reword, so its line breaks are left to text-wrap: pretty.
+    for (const el of all.filter(e => !inMedia(e) && !e.closest('.sr-only,.tv-article') && !e.matches('.sr-only,option,select,textarea,input') && !e.querySelector('br') && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()))) {
       const lines = lineWords(el);
       if (lines.length < 2) continue;
       const last = lines[lines.length - 1];

@@ -416,3 +416,7 @@ Claude는 화면을 바꾼 뒤 모든 화면(홈·둘러보기·게시판·자�
     - **오답 만들기:** 서버 `/api/quiz-options`가 영어 단어마다 Datamuse로 뜻이 비슷한 영어 단어를 찾고, Microsoft Translator(무료 F0) 사전으로 한국어 뜻을 얻습니다. 키는 서버 환경 변수 `MS_TRANSLATOR_KEY`·`MS_TRANSLATOR_REGION`에만 있고 화면 코드와 저장소에는 두지 않습니다. 서버로는 영어 단어만 보내고 사용자 정보는 보내지 않습니다.
     - **대체 경로:** 키가 없거나 서버가 실패하면 같은 모임의 다른 단어 뜻으로 오답을 채웁니다. 보기를 2개도 못 만들면 예전 방식(Show answer → Got it / Review again)으로 풉니다.
 
+36. **"With translation" 필터와 기사 읽기 화면.** 둘러보기 Type 칩에 **With translation**이 추가되었습니다(All · News · Video · With translation). 이 칩에는 The Guardian 기사만 나오고 News는 BBC만 나옵니다. 기사 카드에는 "THE GUARDIAN" 표시가 붙습니다. 기사 상세는 요약 아래에 전문을 문단으로 보여 주고, 문단마다 **밑줄 링크 Translate**(승인된 부품)를 두며, 누르면 한국어가 문단 바로 아래에 얇은 세로선과 함께 펼쳐집니다(Hide translation으로 접기). 맨 위 **Translate all**은 보조 버튼 하나입니다. 글과 링크 사이는 16px. 기사 아래에 "Powered by The Guardian" 출처와 원문 링크를 반드시 표시합니다.
+    - **데이터:** `/api/guardian`(목록, 120~900단어 기사만), `/api/guardian-article`(본문), `/api/translate-text`(POST, Microsoft Translator). 키 `GUARDIAN_API_KEY`는 서버 환경 변수에만 둡니다. 번역은 문단 단위로 요청하고 서버가 기억해 둡니다.
+    - **검사 예외:** 외부 기사 본문(`.tv-article`)은 우리가 문구를 고칠 수 없으므로 줄 끝 한 단어·약한 단어 검사(`line-orphan`, `line-weak-end`)에서 제외합니다.
+
