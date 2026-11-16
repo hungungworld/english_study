@@ -164,3 +164,19 @@ export function removeComment(postId, commentId) {
   writeLocal("comments",all);
   if (removed && isUuid(commentId)) push("study_comment_remove",{comment_id:commentId,member_no:removed.member});
 }
+
+// A member can change or remove a word that carries their own name.
+export async function updateWord(id, word, memberNo) {
+  if (shared) {
+    await rpc("study_word_update", {word_key:id, member_no:memberNo, new_term:word.term, new_meaning:word.meaning, new_example:word.example});
+    return id;
+  }
+  demo.words = demo.words.map(item => item.id === id ? {...item, term:word.term, meaning:word.meaning, example:word.example} : item);
+  writeLocal("demo", demo);
+  return id;
+}
+export async function removeWord(id, memberNo) {
+  if (shared) return rpc("study_word_remove", {word_key:id, member_no:memberNo});
+  demo.words = demo.words.filter(word => word.id !== id);
+  writeLocal("demo", demo);
+}

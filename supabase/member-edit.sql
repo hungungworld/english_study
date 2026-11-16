@@ -1,4 +1,4 @@
--- Members can edit and delete the posts that carry their own name, from any browser (no edit key needed).
+-- Members can edit and delete the posts and the words that carry their own name, from any browser (no edit key needed).
 -- Run this once in the Supabase SQL editor. Guest posts (author 0) still need their edit key.
 begin;
 
@@ -56,5 +56,37 @@ $$;
 
 revoke all on function public.study_remove_as(uuid,integer), public.study_save_as(jsonb,uuid,integer) from public, anon, authenticated;
 grant execute on function public.study_remove_as(uuid,integer), public.study_save_as(jsonb,uuid,integer) to anon;
+
+create or replace function public.study_word_update(word_key uuid, member_no integer, new_term text, new_meaning text, new_example text)
+returns boolean language plpgsql security definer set search_path = ''
+as $$
+begin
+  if member_no is null or member_no <= 0
+     or coalesce(length(trim(new_term)), 0) not between 1 and 120
+     or coalesce(length(trim(new_meaning)), 0) not between 1 and 300
+     or coalesce(length(new_example), 0) > 600 then
+    raise exception 'Invalid input';
+  end if;
+  update public.study_words
+    set term = trim(new_term), meaning = trim(new_meaning), example = coalesce(new_example, '')
+    where id = word_key and author = member_no;
+  if not found then raise exception 'Not allowed'; end if;
+  return true;
+end;
+$$;
+
+create or replace function public.study_word_remove(word_key uuid, member_no integer)
+returns boolean language plpgsql security definer set search_path = ''
+as $$
+begin
+  if member_no is null or member_no <= 0 then raise exception 'Not allowed'; end if;
+  delete from public.study_words where id = word_key and author = member_no;
+  if not found then raise exception 'Not allowed'; end if;
+  return true;
+end;
+$$;
+
+revoke all on function public.study_word_update(uuid,integer,text,text,text), public.study_word_remove(uuid,integer) from public, anon, authenticated;
+grant execute on function public.study_word_update(uuid,integer,text,text,text), public.study_word_remove(uuid,integer) to anon;
 
 commit;

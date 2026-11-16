@@ -2,7 +2,7 @@ import {members as defaultMembers} from "./config.js";
 import {renderMedia,leaveMedia,mediaClick,setLandingFilter} from "./media.js";
 import {renderHome,leaveHome} from "./home.js";
 import {pagerHtml,pageCount,PER_PAGE} from "./pager.js";
-import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost, addMember, studyState, streakOf, recordStudy, readReactions, toggleReaction, readComments, addComment, removeComment, dayKey, MAX_HEARTS, HEART_EVERY} from "./data.js";
+import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost, updateWord, removeWord, addMember, studyState, streakOf, recordStudy, readReactions, toggleReaction, readComments, addComment, removeComment, dayKey, MAX_HEARTS, HEART_EVERY} from "./data.js";
 
 const main = document.querySelector("#main");
 main.addEventListener("error",event => {
@@ -157,13 +157,16 @@ function postCard(post, index) {
   return `<article class="card post-preview" style="--post-delay:${Math.min(index,8)*45}ms"><h2>${isPinned(post) ? pinIcon : ""}<a href="#post/${e(post.id)}">${e(post.title)}</a></h2>${meta(post)}<p class="snippet">${e(preview)}</p>${postActions(post)}</article>`;
 }
 function wordCard(word, level = 2, noteLink = true) {
-  return `<article class="card"><h${level}>${e(word.term)}</h${level}><p>${e(word.meaning)}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}<div class="meta">${authorLink(word)}${noteLink && word.post_id ? `<a href="#post/${e(word.post_id)}">View note</a>` : ""}</div></article>`;
+  return `<article class="card"><h${level}>${e(word.term)}</h${level}><p>${e(word.meaning)}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}<div class="meta">${authorLink(word)}${noteLink && word.post_id ? `<a href="#post/${e(word.post_id)}">View note</a>` : ""}</div>${wordActions(word)}</article>`;
 }
 const plural = (n, word) => `${n} ${n === 1 ? word : word + "s"}`;
 const empty = message => `<div class="card empty">${e(message)}</div>`;
 const emptyAction = (message, action) => `<div class="card empty"><p>${e(message)}</p><p>${action}</p></div>`;
 const activeMember = () => readLocal("active-member",0);
 // A post is yours if this browser wrote it (it has the edit key) or it carries the name chosen at the top right.
+// A word is yours if it carries the name chosen at the top right.
+const canManageWord = word => word.author > 0 && word.author === activeMember();
+const wordActions = word => canManageWord(word) ? `<div class="row word-actions"><button type="button" data-edit-word="${e(word.id)}">Edit</button><button type="button" data-delete-word="${e(word.id)}">Delete</button></div>` : "";
 const canManage = post => Boolean(own[post.id]) || (post.author > 0 && post.author === activeMember());
 function reactionButton(post, names = false) {
   const list = readReactions()[post.id] ?? [];
@@ -240,7 +243,7 @@ function groupedWords(words) {
     <div class="word-group-head"><h2>${post ? `<a href="#post/${e(post.id)}">${e(post.title)}</a>` : "Words added without a note"}</h2>
       <div class="meta">${post ? `<span>${authorLink(post)}</span><time datetime="${e(post.created_at)}">${dateFormat.format(new Date(post.created_at))}</time>` : ""}<span>${list.length} ${list.length === 1 ? "word" : "words"}</span></div>
       ${post ? `<button type="button" data-quiz="post" data-post-id="${e(post.id)}">Quiz this note</button>` : ""}</div>
-    ${list.map(word => `<div class="word-row"><strong lang="en">${e(word.term)}</strong><span>${e(word.meaning)}</span>${word.example ? `<em lang="en">${e(word.example)}</em>` : ""}</div>`).join("")}
+    ${list.map(word => `<div class="word-row"><strong lang="en">${e(word.term)}</strong><span>${e(word.meaning)}</span>${word.example ? `<em lang="en">${e(word.example)}</em>` : ""}${wordActions(word)}</div>`).join("")}
   </section>`).join("")}</div>${shown.nav}`;
 }
 function chatCard(post) {
@@ -569,9 +572,9 @@ const subjectChips = current => `<fieldset class="tag-options"><legend>What did 
 const whereChips = current => `<fieldset class="tag-options"><legend>Where</legend>${[["study","Study board"],["chat","Free board"]].map(([value,label]) => `<label class="chip-radio"><input type="radio" name="where" value="${value}" ${value === current ? "checked" : ""}><span>${label}</span></label>`).join("")}</fieldset>`;
 const joinList = items => items.length > 1 ? `${items.slice(0,-1).join(", ")} and ${items.at(-1)}` : items[0];
 
-function openEditor(standalone, post, source, host, kind) {
+function openEditor(standalone, post, source, host, kind, editWord) {
   if (!post && !members[readLocal("active-member",0) - 1]) {
-    chooseMember(() => openEditor(standalone,post,source,host,kind));
+    chooseMember(() => openEditor(standalone,post,source,host,kind,editWord));
     return;
   }
   const pre = host ? "writer" : "editor";
@@ -596,13 +599,13 @@ function openEditor(standalone, post, source, host, kind) {
   let link = post?.link ?? source?.url ?? "";
   let bodyText = editing && type === "post" ? post.body : "";
   editorChanged = false;
-  const heading = standalone ? "Add a word" : editing ? (type === "note" ? "Edit note" : "Edit post") : source ? "Write about this item" : "Write";
+  const heading = standalone ? (editWord ? "Edit word" : "Add a word") : editing ? (type === "note" ? "Edit note" : "Edit post") : source ? "Write about this item" : "Write";
   target.innerHTML = `<div class="dialog-head"><h2 id="${pre}-title">${heading}</h2><button type="button" data-close aria-label="Close">✕</button></div>
   <form novalidate><p class="hint">Author · <strong>${writerName(post)}</strong></p><label class="sr-only">Author<select name="author" disabled>${authorOptions(post)}</select></label>
   <label data-guest>Display name<input name="author_name" maxlength="40" value="${e(selected.author_name)}"></label>
   ${canSwitch ? `<div class="tv-seg type-seg" role="group" aria-label="Post type"><button type="button" data-type="note" aria-pressed="${type === "note"}">Note</button><button type="button" data-type="post" aria-pressed="${type === "post"}">Post</button></div>` : ""}
   <div class="compose" data-compose></div>
-  <div class="stack" data-words>${standalone ? wordFields({},false) : words.map(word => wordFields(word)).join("")}</div>
+  <div class="stack" data-words>${standalone ? wordFields(editWord ?? {},false) : words.map(word => wordFields(word)).join("")}</div>
   <p class="hint nudge" data-nudge role="status" hidden>Add the words you learned from this note. Tap “Add a word”, or press “Post note” again to post without words.</p>
   <div class="row"><button type="button" data-add-word><span class="ic plus" aria-hidden="true"></span>Add a word</button><button class="primary" type="submit"></button></div>
   <p class="form-error" id="${pre}-error" role="alert" hidden></p></form>`;
@@ -655,7 +658,7 @@ function openEditor(standalone, post, source, host, kind) {
     }
     wordsBox.hidden = !standalone && type !== "note";
     addWord.hidden = standalone || type !== "note";
-    submit.textContent = standalone ? "Add" : editing ? "Save changes" : type === "note" ? "Post note" : "Post";
+    submit.textContent = standalone ? (editWord ? "Save changes" : "Add") : editing ? "Save changes" : type === "note" ? "Post note" : "Post";
   };
   paint();
   form.addEventListener("input",event => { capture(); editorChanged = true; clearInvalid(event); });
@@ -726,8 +729,8 @@ function openEditor(standalone, post, source, host, kind) {
     submit.disabled = true;
     try {
       const token = editing ? own[post.id] : crypto.randomUUID() + crypto.randomUUID();
-      const id = await saveEntry(entry,token,post?.id,editing ? activeMember() : 0);
-      if (id) {
+      const id = editWord ? await updateWord(editWord.id,entry.words[0],activeMember()) : await saveEntry(entry,token,post?.id,editing ? activeMember() : 0);
+      if (id && !editWord) {
         own[id] = token;
         writeLocal("own",own);
       }
@@ -746,7 +749,7 @@ function openEditor(standalone, post, source, host, kind) {
       editor.close();
       if (standalone) { period = "all"; wordMember = 0; }
       await refresh();
-      if (standalone || type === "note") studied();
+      if ((standalone && !editWord) || type === "note") studied();
       location.hash = standalone ? "words/list" : entry.board === "chat" ? "feed/chat" : "post/" + id;
       flash(!standalone && type === "post" ? "Posted." : "Saved.");
     } catch (failure) {
@@ -926,6 +929,21 @@ main.addEventListener("click",async event => {
   if (data.editId) {
     const target = board.posts.find(post => post.id === data.editId);
     if (target) openEditor(false,target);
+    return;
+  }
+  if (data.editWord) {
+    const word = board.words.find(item => item.id === data.editWord);
+    if (word) openEditor(true,undefined,undefined,undefined,undefined,word);
+    return;
+  }
+  if (data.deleteWord) {
+    if (!(await askConfirm({title:"Delete this word?",message:"This cannot be undone.",confirmLabel:"Delete"}))) return;
+    button.disabled = true;
+    try {
+      await removeWord(data.deleteWord,activeMember());
+      await refresh();
+      flash("Word deleted.");
+    } catch (failure) { flash(failure.message); button.disabled = false; }
     return;
   }
   if (data.deleteId) {

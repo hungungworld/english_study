@@ -660,7 +660,7 @@
 @media (max-width:700px){:root{--ds-pad-hero:var(--ds-sp-5);--ds-pad-std:var(--ds-sp-4);--ds-pad-compact:var(--ds-sp-3)}}
 
 /* Compact tier: small buttons inside lists, filters and sheets (36px tall) */
-:root:root:root body :is(button[data-scrap-reset],button[data-prefs-reset],button[data-reset-filters],button[data-remove-word],button[data-more],button[data-reload],button[data-refresh]):not(.tv-pill *){min-height:var(--ds-h-chip);height:var(--ds-h-chip);padding:0 var(--ds-pad-compact)}
+:root:root:root body :is(button[data-scrap-reset],button[data-prefs-reset],button[data-reset-filters],button[data-remove-word],button[data-more],button[data-reload],button[data-refresh],button[data-edit-word],button[data-delete-word]):not(.tv-pill *){min-height:var(--ds-h-chip);height:var(--ds-h-chip);padding:0 var(--ds-pad-compact)}
 /* Chips follow the compact padding */
 :root:root:root body :is(.chip,.tv-chip){padding:0 var(--ds-pad-compact)}
 :root:root:root body .chip-radio span{padding:0 var(--ds-pad-compact)}
@@ -812,3 +812,6 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body #confirm-box .dialog-head button:hover:enabled{background:var(--ds-wash);color:var(--ds-ink)}
 :root:root:root body #confirm-box button.primary{background:var(--ds-ink);color:var(--ds-paper);border-color:var(--ds-ink)}
 :root:root:root body #confirm-box button.primary:hover:enabled{background:var(--ds-ink-hover,var(--ds-ink-2));border-color:var(--ds-ink-hover,var(--ds-ink-2))}
+
+/* Word Edit / Delete: Compact buttons, 16px under the word's text */
+:root:root:root body .word-actions{margin-top:var(--ds-sp-4)}
