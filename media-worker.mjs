@@ -169,10 +169,34 @@ async function quizOptions(terms, env) {
     return Response.json({configured:true,options},{headers:{"Cache-Control":"public, max-age=86400"}});
   } catch { return Response.json({configured:false,options:{}}); }
 }
+async function translateTerm(term, env) {
+  if (!env.MS_TRANSLATOR_KEY) return Response.json({configured:false,korean:""});
+  const headers = {"Content-Type":"application/json","Ocp-Apim-Subscription-Key":env.MS_TRANSLATOR_KEY,"Ocp-Apim-Subscription-Region":env.MS_TRANSLATOR_REGION || "global"};
+  const call = async (path,signal) => {
+    const response = await fetch(`https://api.cognitive.microsofttranslator.com/${path}`,{method:"POST",headers,body:JSON.stringify([{Text:term}]),signal});
+    if (!response.ok) throw new Error("translator");
+    return (await response.json())[0];
+  };
+  try {
+    const entry = await call("dictionary/lookup?api-version=3.0&from=en&to=ko",AbortSignal.timeout(6000));
+    let korean = [...new Set((entry?.translations ?? []).filter(item => hangul.test(item.displayTarget)).sort((a,b) => b.confidence - a.confidence).map(item => item.displayTarget))].slice(0,2).join(", ");
+    if (!korean) {
+      const phrase = await call("translate?api-version=3.0&from=en&to=ko",AbortSignal.timeout(6000));
+      const text = phrase?.translations?.[0]?.text?.trim() ?? "";
+      if (text.length <= 30 && !/[A-Za-z]{3,}/.test(text)) korean = text;
+    }
+    return Response.json({configured:true,korean},{headers:{"Cache-Control":"public, max-age=86400"}});
+  } catch { return Response.json({configured:false,korean:""}); }
+}
 export function handler(assets) {
   return {async fetch(request, env = {}, context) {
     const url = new URL(request.url);
     if (request.method !== "GET" && request.method !== "HEAD") return new Response(null,{status:405});
+    if (url.pathname === "/api/translate") {
+      const term = (url.searchParams.get("term") ?? "").trim().toLowerCase();
+      if (!/^[a-z' -]{1,60}$/.test(term)) return new Response(null,{status:400});
+      return translateTerm(term,env);
+    }
     if (url.pathname === "/api/quiz-options") {
       const terms = [...new Set((url.searchParams.get("terms") ?? "").split("|").map(term => term.trim().toLowerCase()).filter(term => /^[a-z' -]{1,40}$/.test(term)))].slice(0,10);
       if (!terms.length) return new Response(null,{status:400});

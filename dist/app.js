@@ -506,7 +506,7 @@ function wordFields(word = {}, removable = true) {
   ${removable ? '<button type="button" data-remove-word>Remove word</button>' : ""}</fieldset>`;
 }
 // ---- Word lookup: suggested words while typing, then a suggested Korean meaning and example that stay editable ----
-// Free services, only the typed word is sent: Datamuse (suggestions), Free Dictionary (English definition and example), MyMemory (Korean).
+// Free services, only the typed word is sent: Datamuse (suggestions), Free Dictionary (English definition and example), Microsoft Translator through our server (Korean), with MyMemory as the backup.
 const lookupCache = new Map();
 const getJson = async url => {
   const response = await fetch(url,{signal:AbortSignal.timeout(6000)});
@@ -514,14 +514,24 @@ const getJson = async url => {
   return response.json();
 };
 const suggestWords = async text => (await getJson(`https://api.datamuse.com/sug?s=${encodeURIComponent(text)}&max=6`)).map(item => item.word).filter(word => word.toLowerCase() !== text.toLowerCase());
+async function translateKorean(key) {
+  try {
+    if (/^[a-z' -]{1,60}$/.test(key)) {
+      const ours = await getJson(`/api/translate?term=${encodeURIComponent(key)}`);
+      if (ours.configured) return String(ours.korean ?? "").trim();
+    }
+  } catch {}
+  const backup = await getJson(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(key)}&langpair=en|ko`);
+  return String(backup?.responseData?.translatedText ?? "").trim();
+}
 async function lookupWord(term) {
   const key = term.toLowerCase().replace(/\s+/g," ");
   if (lookupCache.has(key)) return lookupCache.get(key);
   const [dictionary,translation] = await Promise.allSettled([
     getJson(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(key)}`),
-    getJson(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(key)}&langpair=en|ko`)]);
+    translateKorean(key)]);
   const meaning = dictionary.status === "fulfilled" ? dictionary.value[0]?.meanings?.[0] : null;
-  let korean = translation.status === "fulfilled" ? String(translation.value?.responseData?.translatedText ?? "").trim() : "";
+  let korean = translation.status === "fulfilled" ? translation.value : "";
   // The free translator sometimes answers a plain word with a whole sentence; only short Korean answers are used.
   const parts = korean.split(/\s+/).length;
   if (/[A-Za-z]{3,}/.test(korean) || parts > key.split(" ").length + 1 || korean.length > 14) korean = "";
