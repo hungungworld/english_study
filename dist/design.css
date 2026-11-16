@@ -869,7 +869,8 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 /* Highlighter (DESIGN.md 10-40): the one yellow in the product, low opacity, only on article text the reader painted */
 :root{--ds-highlight:rgba(255,214,0,.3)}
 :root:root:root body #tv-overlay mark.hl{background:var(--ds-highlight);color:inherit;border-radius:var(--ds-radius);padding:0}
-:root:root:root body #tv-overlay .word-saved{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+:root:root:root body #tv-overlay .word-saved{background:var(--ds-highlight);border-radius:var(--ds-radius)}
+:root:root:root body #tv-overlay mark.hl .word-saved{background:transparent}
 :root:root:root body #tv-overlay .tv-article.pen-on .tv-para > p[lang=en]{cursor:text}
 :root:root:root body #tv-overlay .tv-fabs{position:sticky;bottom:calc(var(--ds-sp-4) + var(--bar-h,0px));z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:var(--ds-sp-2);width:var(--ds-h-button);margin:0 var(--ds-sp-4) var(--ds-sp-4) auto;pointer-events:none}
 :root:root:root body #tv-overlay .tv-fabs > button{pointer-events:auto}
@@ -918,3 +919,8 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 
 /* The two jump arrows fade when you are already at that end (DESIGN.md 10-48) */
 :root:root:root body #tv-overlay .tv-jump:disabled{opacity:.2;cursor:default}
+
+/* Highlights block: a one-time outline flash when something is added or the "See your highlights" button is used */
+@keyframes ds-flash-box{0%{outline:2px solid transparent;outline-offset:4px}35%{outline:2px solid var(--ds-on-dark);outline-offset:8px}100%{outline:2px solid transparent;outline-offset:12px}}
+:root:root:root body #tv-overlay .tv-highlights.is-nudged{animation:ds-flash-box 1.3s ease-out 2}
+@media (prefers-reduced-motion:reduce){:root:root:root body #tv-overlay .tv-highlights.is-nudged{animation:none;outline:2px solid var(--ds-on-dark);outline-offset:8px}}

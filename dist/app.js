@@ -1164,6 +1164,16 @@ async function refresh() {
 // ---- Reading an article: click a word (or drag a phrase) and a bar offers to add it to the word list ----
 const ARTICLE_TEXT = "[data-article] .tv-para > p[lang=en]";
 let wordPick = null;
+// The Highlights block at the end of the article is where highlighted and added words gather; this scrolls there and flashes its outline once.
+function goToHighlights() {
+  const box = overlayEl.querySelector("[data-highlights]");
+  if (!box || box.hidden) return;
+  box.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+  box.classList.remove("is-nudged");
+  void box.offsetWidth;
+  box.classList.add("is-nudged");
+  setTimeout(() => box.classList.remove("is-nudged"),2800);
+}
 function refreshSavedMarks() {
   const host = overlayEl.querySelector("[data-article]");
   if (!host?.renderMarks) return;
@@ -1177,7 +1187,7 @@ function wordBarHtml() {
   const found = board.words.find(word => sameWord(word,pick.term));
   const close = '<button type="button" class="wb-close" data-wb-close aria-label="Close">✕</button>';
   const sentence = pick.sentence ? `<p class="wb-sentence" lang="en">“${e(pick.sentence)}”</p>` : "";
-  if (pick.done) return `<div class="wb-top"><strong lang="en">${e(pick.term)}</strong><span lang="ko">${e(pick.korean)}</span>${close}</div><p role="status">Added to your words.</p>`;
+  if (pick.done) return `<div class="wb-top"><strong lang="en">${e(pick.term)}</strong><span lang="ko">${e(pick.korean)}</span>${close}</div><p role="status">Added to your words and highlighted in yellow.</p><div class="row"><button type="button" class="tv-action" data-wb-highlights>See your highlights</button></div>`;
   if (found) {
     return `<div class="wb-top"><strong lang="en">${e(pick.term)}</strong><span lang="ko">${e(found.meaning)}</span>${close}</div>
       <p role="status">Already in your words.</p>${canManageWord(found) ? '<div class="row"><button type="button" class="tv-action" data-wb-edit-saved>Edit</button></div>' : ""}`;
@@ -1231,7 +1241,9 @@ function pickWord(para, event) {
   const sentenceStart = Math.max(...breaks) < 0 ? 0 : Math.max(...breaks) + 2;
   const stop = full.slice(start).search(/[.!?]["”’]?(\s|$)/);
   const sentence = full.slice(sentenceStart,stop < 0 ? full.length : start + stop + 1).trim().slice(0,300);
-  const current = {term,sentence,korean:"",loading:true,editing:false,error:"",busy:false,done:false};
+  const paraIndex = Number(para.closest("[data-para]")?.dataset.para);
+  const foundAt = full.indexOf(term,Math.max(0,start - 2));
+  const current = {term,sentence,korean:"",loading:true,editing:false,error:"",busy:false,done:false,mark:Number.isNaN(paraIndex) || foundAt < 0 ? null : [paraIndex,foundAt,foundAt + term.length]};
   wordPick = current;
   paintWordBar();
   lookupWord(term.toLowerCase()).then(found => {
@@ -1258,6 +1270,7 @@ overlayEl.addEventListener("keyup",event => {
 overlayEl.addEventListener("click",async event => {
   if (!wordPick) return;
   if (event.target.closest("[data-wb-close]")) { wordPick = null; paintWordBar(); return; }
+  if (event.target.closest("[data-wb-highlights]")) { goToHighlights(); return; }
   if (event.target.closest("[data-wb-edit]")) { wordPick.editing = true; paintWordBar(true); return; }
   if (event.target.closest("[data-wb-edit-saved]")) {
     const word = board.words.find(item => sameWord(item,wordPick.term));
@@ -1282,7 +1295,10 @@ overlayEl.addEventListener("click",async event => {
     try { board = await loadBoard(); } catch {}
     studied();
     current.done = true;
+    const host = overlayEl.querySelector("[data-article]");
+    if (current.mark) host?.addMark?.(current.mark);
     refreshSavedMarks();
+    if (!readLocal("reader-first-add",false)) { writeLocal("reader-first-add",true); setTimeout(goToHighlights,250); }
     current.busy = false;
     if (wordPick === current) paintWordBar();
     flash("Word added.");

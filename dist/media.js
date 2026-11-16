@@ -448,6 +448,7 @@ async function loadArticle(item) {
     host.savedTerms = [];
     host.renderMarks = () => renderMarks(host);
     host.highlightSeed = highlightSeed;
+    host.addMark = mark => { writeMarks(host.itemId,mergeMarks([...readMarks(host.itemId),mark])); renderMarks(host); };
     penOn = false;
     const scroll = overlay.querySelector(".tv-scroll");
     if (scroll && !scroll.querySelector("[data-pen]")) {
