@@ -156,8 +156,41 @@ function postCard(post, index) {
   const preview = notes ? notes.sections[0]?.text ?? "" : post.body;
   return `<article class="card post-preview" style="--post-delay:${Math.min(index,8)*45}ms"><h2>${isPinned(post) ? pinIcon : ""}<a href="#post/${e(post.id)}">${e(post.title)}</a></h2>${meta(post)}<p class="snippet">${e(preview)}</p>${postActions(post)}</article>`;
 }
+const SPEAKER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 010 6"/><path d="M18.5 6.5a8 8 0 010 11"/></svg>';
+const speakButton = term => `<button type="button" class="speak" data-speak="${e(term)}" aria-label="Hear “${e(term)}”" title="Hear it">${SPEAKER_ICON}</button>`;
+// Pronunciation: a recorded voice from the free dictionary when it has one (single words), otherwise the browser's own English voice.
+const audioCache = new Map();
+let voicePlayer;
+async function findAudio(term) {
+  if (!/^[a-z'-]{2,40}$/.test(term)) return "";
+  const data = await getJson(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(term)}`);
+  const sounds = data.flatMap(entry => entry.phonetics ?? []).map(item => item.audio).filter(Boolean);
+  const pick = sounds.find(url => /-us\./.test(url)) ?? sounds[0] ?? "";
+  return pick.startsWith("//") ? "https:" + pick : pick;
+}
+async function speak(term) {
+  const text = term.trim();
+  try {
+    const key = text.toLowerCase();
+    if (!audioCache.has(key)) audioCache.set(key,await findAudio(key).catch(() => ""));
+    const url = audioCache.get(key);
+    if (url) {
+      voicePlayer?.pause();
+      voicePlayer = new Audio(url);
+      await voicePlayer.play();
+      return;
+    }
+  } catch { /* fall back to the browser voice */ }
+  if ("speechSynthesis" in window) {
+    speechSynthesis.cancel();
+    const voice = new SpeechSynthesisUtterance(text);
+    voice.lang = "en-US";
+    voice.rate = .9;
+    speechSynthesis.speak(voice);
+  } else flash("Pronunciation is not available in this browser.");
+}
 function wordCard(word, level = 2, noteLink = true) {
-  return `<article class="card"><h${level}>${e(word.term)}</h${level}><p>${e(word.meaning)}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}<div class="meta">${authorLink(word)}${noteLink && word.post_id ? `<a href="#post/${e(word.post_id)}">View note</a>` : ""}</div>${wordActions(word)}</article>`;
+  return `<article class="card"><h${level}>${e(word.term)}${speakButton(word.term)}</h${level}><p>${e(word.meaning)}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}<div class="meta">${authorLink(word)}${noteLink && word.post_id ? `<a href="#post/${e(word.post_id)}">View note</a>` : ""}</div>${wordActions(word)}</article>`;
 }
 const plural = (n, word) => `${n} ${n === 1 ? word : word + "s"}`;
 const empty = message => `<div class="card empty">${e(message)}</div>`;
@@ -243,7 +276,7 @@ function groupedWords(words) {
     <div class="word-group-head"><h2>${post ? `<a href="#post/${e(post.id)}">${e(post.title)}</a>` : "Words added without a note"}</h2>
       <div class="meta">${post ? `<span>${authorLink(post)}</span><time datetime="${e(post.created_at)}">${dateFormat.format(new Date(post.created_at))}</time>` : ""}<span>${list.length} ${list.length === 1 ? "word" : "words"}</span></div>
       ${post ? `<button type="button" data-quiz="post" data-post-id="${e(post.id)}">Quiz this note</button>` : ""}</div>
-    ${list.map(word => `<div class="word-row"><strong lang="en">${e(word.term)}</strong><span>${e(word.meaning)}</span>${word.example ? `<em lang="en">${e(word.example)}</em>` : ""}${wordActions(word)}</div>`).join("")}
+    ${list.map(word => `<div class="word-row"><strong lang="en">${e(word.term)}${speakButton(word.term)}</strong><span>${e(word.meaning)}</span>${word.example ? `<em lang="en">${e(word.example)}</em>` : ""}${wordActions(word)}</div>`).join("")}
   </section>`).join("")}</div>${shown.nav}`;
 }
 function chatCard(post) {
@@ -476,7 +509,7 @@ function renderQuiz() {
   if (quiz.loading) return `<section class="card quiz"><h2>Word quiz</h2><p class="hint" role="status">Preparing choices…</p></section>`;
   const choices = choicesFor(word);
   const head = `<h2>Word quiz</h2><p class="hint">${quiz.index + 1} / ${total}</p>
-  <progress value="${quiz.index}" max="${total}" aria-label="Quiz progress"></progress><h2 lang="en">${e(word.term)}</h2>`;
+  <progress value="${quiz.index}" max="${total}" aria-label="Quiz progress"></progress><h2 lang="en">${e(word.term)}${speakButton(word.term)}</h2>`;
   if (choices.length) {
     const done = quiz.picked !== null;
     const list = choices.map((choice,index) => {
@@ -714,7 +747,8 @@ function openEditor(standalone, post, source, host, kind, editWord, seed) {
       }
     }
     wordsBox.hidden = !standalone && type !== "note";
-    addWord.hidden = standalone || type !== "note";
+    addWord.hidden = standalone ? Boolean(editWord) : type !== "note";
+    addWord.lastChild.textContent = standalone ? "Add another word" : "Add a word";
     submit.textContent = standalone ? (editWord ? "Save changes" : "Add") : editing ? "Save changes" : type === "note" ? "Post note" : "Post";
   };
   paint();
@@ -944,6 +978,7 @@ main.addEventListener("click",async event => {
   }
   const id = location.hash.split("/")[1];
   const data = button.dataset;
+  if (data.speak) { speak(data.speak); return; }
   if (data.commentDelete) {
     if (!(await askConfirm({title:"Delete this comment?",message:"This cannot be undone.",confirmLabel:"Delete"}))) return;
     removeComment(data.postId,data.commentDelete);
@@ -1252,6 +1287,46 @@ overlayEl.addEventListener("click",async event => {
     current.error = failure.message;
     if (wordPick === current) paintWordBar();
   }
+});
+const exampleFor = (host, term) => {
+  for (const text of host.paragraphs) {
+    const hit = text.match(new RegExp("(^|[^A-Za-z])" + term.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + "(?![A-Za-z])","i"));
+    if (!hit) continue;
+    const at = hit.index + hit[1].length;
+    const breaks = [". ","! ","? "].map(mark => text.lastIndexOf(mark,at - 1));
+    const from = Math.max(...breaks) < 0 ? 0 : Math.max(...breaks) + 2;
+    const stop = text.slice(at).search(/[.!?]["”’]?(\s|$)/);
+    return text.slice(from,stop < 0 ? text.length : at + stop + 1).trim().slice(0,300);
+  }
+  return "";
+};
+// "Add words to my list" under the highlights: every highlighted word not yet in the list is saved in one go, with its meaning and the article sentence.
+overlayEl.addEventListener("click",async event => {
+  const bulk = event.target.closest("[data-add-highlighted]");
+  const host = overlayEl.querySelector("[data-article]");
+  if (!bulk || !host?.highlightSeed) return;
+  const member = activeMember();
+  if (!members[member - 1]) { chooseMember(() => overlayEl.querySelector("[data-add-highlighted]")?.click()); return; }
+  const fresh = host.highlightSeed().words.filter(term => !board.words.some(word => sameWord(word,term))).slice(0,20);
+  if (!fresh.length) { flash("These words are already in your words."); return; }
+  bulk.disabled = true;
+  const entries = [];
+  for (const term of fresh) {
+    try {
+      const found = await lookupWord(term);
+      if (found.korean) entries.push({id:"",term,meaning:found.korean,example:exampleFor(host,term)});
+    } catch { /* this word is skipped */ }
+  }
+  try {
+    if (!entries.length) throw new Error("Could not find meanings. Tap each word to add it.");
+    await saveEntry({author:member,author_name:"",title:"",body:"",link:"",tag:"",board:"study",words:entries},crypto.randomUUID() + crypto.randomUUID(),undefined,0);
+    try { board = await loadBoard(); } catch {}
+    studied();
+    refreshSavedMarks();
+    flash(`${entries.length} ${entries.length === 1 ? "word" : "words"} added${fresh.length > entries.length ? `, ${fresh.length - entries.length} skipped (no meaning found)` : ""}.`);
+  } catch (failure) { flash(failure.message); }
+  const again = overlayEl.querySelector("[data-add-highlighted]");
+  if (again) again.disabled = false;
 });
 overlayEl.addEventListener("cancel",event => {
   if (!wordPick) return;

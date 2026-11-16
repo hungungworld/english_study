@@ -883,3 +883,12 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body #tv-overlay > .tv-close,:root:root:root body.media-mode #tv-overlay > .tv-close,:root:root:root body.study-mode #tv-overlay > .tv-close{position:fixed;right:auto;bottom:auto;z-index:60;display:flex;align-items:center;justify-content:center;width:var(--ds-h-button);height:var(--ds-h-button);margin:0;padding:0;border:0;border-radius:var(--ds-radius);background:transparent;color:var(--ds-on-dark);font-size:var(--ds-fs-body);box-shadow:none}
 :root:root:root body #tv-overlay > .tv-close:hover,:root:root:root body.media-mode #tv-overlay > .tv-close:hover,:root:root:root body.study-mode #tv-overlay > .tv-close:hover{background:transparent;color:var(--ds-on-dark);opacity:.7}
 :root:root:root body #tv-overlay > .tv-close[hidden]{display:none}
+
+/* The window leaves room above and below for the close button, so the button is always fully outside it (DESIGN.md 10-42) */
+:root:root:root body #tv-overlay:not(.is-writing) .tv-detail{height:min(650px,calc(100dvh - 2 * (var(--ds-h-button) + var(--ds-sp-2))))}
+
+/* Pronunciation (DESIGN.md 10-44): a bare speaker icon button next to the English word; 44px touch area without making the line taller */
+:root:root:root body .speak{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;min-width:var(--ds-h-button);min-height:var(--ds-h-button);margin:-14px 0 -14px var(--ds-sp-1);padding:0;border:0;border-radius:var(--ds-radius);background:transparent;color:inherit;font:inherit;box-shadow:none}
+:root:root:root body .speak:hover:enabled{background:transparent;color:inherit;opacity:.6}
+:root:root:root body .speak svg{width:20px;height:20px;flex:none}
+:root:root:root body .quiz h2 .speak svg{width:24px;height:24px}

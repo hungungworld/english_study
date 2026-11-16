@@ -416,7 +416,7 @@ function placeClose() {
   if (!close || !overlay.open) return;
   const box = overlay.getBoundingClientRect();
   close.hidden = overlay.classList.contains("is-writing");
-  close.style.top = Math.max(0,box.top - 44) + "px";
+  close.style.top = Math.max(0,box.top - 48) + "px";
   close.style.left = Math.max(0,box.right - 44) + "px";
 }
 new MutationObserver(placeClose).observe(overlay,{attributes:true,attributeFilter:["class","open"]});
@@ -447,6 +447,7 @@ async function loadArticle(item) {
     host.itemId = item.id;
     host.savedTerms = [];
     host.renderMarks = () => renderMarks(host);
+    host.highlightSeed = highlightSeed;
     penOn = false;
     const scroll = overlay.querySelector(".tv-scroll");
     if (scroll && !scroll.querySelector("[data-pen]")) scroll.insertAdjacentHTML("beforeend",PEN_BUTTON);
@@ -510,7 +511,7 @@ function renderMarks(host) {
   box.innerHTML = pieces.length ? `<h2>Highlights</h2>
     ${sentences.length ? `<ul class="tv-hl-list" lang="en">${sentences.map(text => `<li>${escape(text)}</li>`).join("")}</ul>` : ""}
     ${words.length ? `<p lang="en"><strong>Words</strong> · ${words.map(escape).join(" · ")}</p>` : ""}
-    <div class="row"><button type="button" class="tv-action" data-note-from-highlights>Write a note with these</button></div>` : "";
+    <div class="row"><button type="button" class="tv-action" data-note-from-highlights>Write a note with these</button>${words.length ? '<button type="button" class="tv-action" data-add-highlighted>Add words to my list</button>' : ""}</div>` : "";
 }
 const paraOffset = (para, node, offset) => {
   const range = document.createRange();
