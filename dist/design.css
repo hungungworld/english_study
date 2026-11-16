@@ -896,3 +896,9 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 
 /* Note panel beside a window: extra room at the bottom so the last fields and the Post button stay reachable even when the browser window's lower edge is partly covered (for example by the Windows taskbar) */
 :root:root:root body #tv-overlay.is-writing .tv-writer{padding-bottom:calc(var(--ds-sp-8) + var(--ds-sp-4))}
+
+/* Note panel beside a window (wide screens): the grid row is exactly the window height, so a long note scrolls inside the panel (before, the row grew with the form and nothing scrolled) */
+@media (min-width:861px){
+  :root:root:root body #tv-overlay.is-writing .tv-stage{grid-template-rows:minmax(0,1fr)}
+  :root:root:root body #tv-overlay.is-writing .tv-writer{min-height:0;max-height:100%}
+}
