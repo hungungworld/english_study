@@ -128,10 +128,56 @@ async function media(request, env, context, path, cursor) {
     return Response.json({error:"Could not load content."},{status:502});
   }
 }
+const koreanCache = new Map();
+const hangul = /^[가-힣 ]{1,14}$/;
+async function similarWords(term) {
+  try {
+    const response = await fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(term)}&max=12`,{signal:AbortSignal.timeout(4000)});
+    if (!response.ok) return [];
+    return (await response.json()).map(item => item.word).filter(word => /^[a-z]{3,16}$/.test(word) && word !== term.toLowerCase()).slice(0,5);
+  } catch { return []; }
+}
+async function koreanFor(words, env) {
+  const missing = [...new Set(words)].filter(word => !koreanCache.has(word));
+  for (let start = 0; start < missing.length; start += 10) {
+    const batch = missing.slice(start,start + 10);
+    const response = await fetch("https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=en&to=ko",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Ocp-Apim-Subscription-Key":env.MS_TRANSLATOR_KEY,"Ocp-Apim-Subscription-Region":env.MS_TRANSLATOR_REGION || "global"},
+      body:JSON.stringify(batch.map(Text => ({Text}))),
+      signal:AbortSignal.timeout(6000)
+    });
+    if (!response.ok) throw new Error("translator");
+    const data = await response.json();
+    batch.forEach((word,index) => {
+      const best = (data[index]?.translations ?? []).filter(item => hangul.test(item.displayTarget)).sort((a,b) => b.confidence - a.confidence)[0];
+      koreanCache.set(word,best ? best.displayTarget : "");
+    });
+  }
+  return words.map(word => koreanCache.get(word) || "");
+}
+async function quizOptions(terms, env) {
+  if (!env.MS_TRANSLATOR_KEY) return Response.json({configured:false,options:{}});
+  try {
+    const similar = await Promise.all(terms.map(similarWords));
+    const korean = await koreanFor(similar.flat(),env);
+    let cursor = 0;
+    const options = {};
+    terms.forEach((term,index) => {
+      options[term] = [...new Set(similar[index].map(() => korean[cursor++]).filter(Boolean))];
+    });
+    return Response.json({configured:true,options},{headers:{"Cache-Control":"public, max-age=86400"}});
+  } catch { return Response.json({configured:false,options:{}}); }
+}
 export function handler(assets) {
   return {async fetch(request, env = {}, context) {
     const url = new URL(request.url);
     if (request.method !== "GET" && request.method !== "HEAD") return new Response(null,{status:405});
+    if (url.pathname === "/api/quiz-options") {
+      const terms = [...new Set((url.searchParams.get("terms") ?? "").split("|").map(term => term.trim().toLowerCase()).filter(term => /^[a-z' -]{1,40}$/.test(term)))].slice(0,10);
+      if (!terms.length) return new Response(null,{status:400});
+      return quizOptions(terms,env);
+    }
     if (url.pathname === "/api/search") {
       const query = (url.searchParams.get("q") ?? "").trim();
       const wanted = (url.searchParams.get("topics") ?? "").split(",").map(topic => topic.trim()).filter(Boolean).slice(0,10);

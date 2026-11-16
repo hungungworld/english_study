@@ -815,3 +815,12 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 
 /* Word Edit / Delete: Compact buttons, 16px under the word's text */
 :root:root:root body .word-actions{margin-top:var(--ds-sp-4)}
+
+/* Quiz choices (DESIGN.md 10-35): Standard buttons stacked; answer states reuse chip selection language */
+:root:root:root body .quiz .choices{display:grid;gap:var(--ds-sp-2);margin-top:var(--ds-sp-4)}
+:root:root:root body .quiz .choices + p,:root:root:root body .quiz .choices + .row{margin-top:var(--ds-sp-4)}
+:root:root:root body .quiz .choice{display:flex;align-items:center;justify-content:space-between;gap:var(--ds-sp-3);width:100%;text-align:left}
+:root:root:root body .quiz .choice:disabled{opacity:1;cursor:default}
+:root:root:root body .quiz .choice:disabled:not(.is-right):not(.is-wrong){opacity:.4}
+:root:root:root body .quiz .choice.is-right,:root:root:root body .quiz .choice.is-right:disabled{background:var(--ds-ink);border-color:var(--ds-ink);color:var(--ds-paper)}
+:root:root:root body .quiz .choice.is-wrong,:root:root:root body .quiz .choice.is-wrong:disabled{background:transparent;border:2px solid var(--ds-ink);color:var(--ds-ink);font-weight:700}

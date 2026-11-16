@@ -425,9 +425,36 @@ function beginQuiz(words) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffled[i],shuffled[j]] = [shuffled[j],shuffled[i]];
   }
-  quiz = {words:shuffled.slice(0,10),index:0,revealed:false,missed:[]};
+  quiz = {words:shuffled.slice(0,10),index:0,revealed:false,missed:[],hints:{},choices:{},picked:null,loading:true};
+  const started = quiz;
   if (location.hash === "#words" || location.hash === "#words/quiz") render();
   else location.hash = "words";
+  loadHints(started);
+}
+async function loadHints(started) {
+  try {
+    const terms = started.words.map(word => word.term.trim().toLowerCase()).filter(term => /^[a-z' -]{1,40}$/.test(term));
+    if (terms.length) {
+      const response = await fetch(`/api/quiz-options?terms=${encodeURIComponent(terms.join("|"))}`,{signal:AbortSignal.timeout(6000)});
+      if (response.ok) started.hints = (await response.json()).options ?? {};
+    }
+  } catch {}
+  started.loading = false;
+  if (quiz === started && (location.hash === "#words" || location.hash === "#words/quiz")) { render(); main.querySelector("[data-choice]")?.focus(); }
+}
+const meaningKey = text => text.replace(/[\s,;.]/g,"");
+function choicesFor(word) {
+  if (quiz.choices[word.id]) return quiz.choices[word.id];
+  const correct = word.meaning.trim();
+  const taken = new Set([meaningKey(correct)]);
+  const clash = text => [...taken].some(key => key.includes(meaningKey(text)) || meaningKey(text).includes(key));
+  const shuffle = list => list.map(item => [Math.random(),item]).sort((a,b) => a[0] - b[0]).map(pair => pair[1]);
+  const picks = [];
+  const add = list => { for (const text of list) { if (picks.length < 3 && text && text.length <= 40 && !clash(text)) { picks.push(text); taken.add(meaningKey(text)); } } };
+  add(shuffle(quiz.hints[word.term.trim().toLowerCase()] ?? []));
+  add(shuffle([...new Set(board.words.map(item => item.meaning.trim()))]));
+  const list = picks.length ? shuffle([correct,...picks]) : [];
+  return quiz.choices[word.id] = list.length >= 2 ? list.map(text => ({text,right:text === correct})) : [];
 }
 function renderQuiz() {
   if (!quiz) {
@@ -446,8 +473,23 @@ function renderQuiz() {
     return `<section class="card quiz"><h2>Quiz complete</h2><p>You got ${total - quiz.missed.length} of ${total} right.</p>${quiz.missed.length ? '<p class="hint">Missed words are saved for review.</p>' : ""}
     <div class="row">${quiz.missed.length ? '<button class="primary" data-quiz="retry">Retry missed words only</button>' : ""}<button data-quiz="reset">Choose another range</button></div></section>`;
   }
-  return `<section class="card quiz"><h2>Word quiz</h2><p class="hint">${quiz.index + 1} / ${total}</p>
-  <progress value="${quiz.index}" max="${total}" aria-label="Quiz progress"></progress><h2 lang="en">${e(word.term)}</h2>
+  if (quiz.loading) return `<section class="card quiz"><h2>Word quiz</h2><p class="hint" role="status">Preparing choices…</p></section>`;
+  const choices = choicesFor(word);
+  const head = `<h2>Word quiz</h2><p class="hint">${quiz.index + 1} / ${total}</p>
+  <progress value="${quiz.index}" max="${total}" aria-label="Quiz progress"></progress><h2 lang="en">${e(word.term)}</h2>`;
+  if (choices.length) {
+    const done = quiz.picked !== null;
+    const list = choices.map((choice,index) => {
+      const state = !done ? "" : choice.right ? " is-right" : index === quiz.picked ? " is-wrong" : "";
+      const mark = !done ? "" : choice.right ? '<span class="ic check" aria-hidden="true"></span>' : index === quiz.picked ? '<span aria-hidden="true">✕</span>' : "";
+      return `<button type="button" class="choice${state}" data-choice="${index}" ${done ? "disabled" : ""}><span lang="ko">${e(choice.text)}</span>${mark}</button>`;
+    }).join("");
+    const right = done && choices[quiz.picked].right;
+    return `<section class="card quiz">${head}<p>Pick the meaning.</p><div class="choices" role="group" aria-label="Meanings">${list}</div>
+    ${done ? `<p role="status">${right ? "Correct." : `Not quite. It means ${e(word.meaning)}.`}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}
+    <div class="row"><button type="button" class="primary" data-next>${quiz.index + 1 < total ? "Next" : "Finish"}</button></div>` : ""}</section>`;
+  }
+  return `<section class="card quiz">${head}
   ${quiz.revealed ? `<p>${e(word.meaning)}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}
     <div class="row"><button class="primary" data-answer="correct">Got it</button><button data-answer="missed">Review again</button></div>` :
     '<p>Try to recall the meaning.</p><div class="row"><button class="primary" data-reveal>Show answer</button></div>'}</section>`;
@@ -1011,6 +1053,25 @@ main.addEventListener("click",async event => {
   if (data.quiz) {
     const choices = {week:inPeriod(board.words,"week"),all:board.words,words:wordSelection(),post:board.words.filter(word => word.post_id === (data.postId || id)),retry:quiz?.missed,review:reviewWords()};
     beginQuiz(choices[data.quiz] ?? []);
+  }
+  if (data.choice !== undefined && quiz && quiz.picked === null) {
+    const word = quiz.words[quiz.index];
+    const choice = choicesFor(word)[Number(data.choice)];
+    if (choice) {
+      const review = new Set(readLocal("review",[]));
+      if (choice.right) review.delete(word.id); else { quiz.missed.push(word); review.add(word.id); }
+      writeLocal("review",[...review]);
+      studied();
+      quiz.picked = Number(data.choice);
+      render();
+      main.querySelector("[data-next]")?.focus();
+    }
+  }
+  if ("next" in data && quiz) {
+    quiz.index++;
+    quiz.picked = null;
+    render();
+    main.querySelector("[data-choice], [data-reveal], [data-quiz]")?.focus();
   }
   if ("reveal" in data && quiz) {
     quiz.revealed = true;
