@@ -584,7 +584,7 @@
 
 /* Home scroll cue (DESIGN.md 6-8): a soft light at the bottom edge of the first screen, just above the poster strip.
    It is a real element because the scene's ::before (film grain) and ::after (vignette) are already taken. */
-:root:root:root body .home-scene .scroll-glow{color:var(--ds-on-dark);position:absolute;left:25%;right:25%;bottom:0;width:auto;height:calc(var(--ds-sp-7) * 2);min-height:0;padding:0;border:0;border-radius:0;cursor:pointer;z-index:1;background:radial-gradient(ellipse 100% 100% at 50% 100%,rgba(241,239,233,.3),rgba(241,239,233,0) 70%);animation:ds-cue 2.8s ease-in-out infinite;transition:opacity .4s}
+:root:root:root body .home-scene .scroll-glow{color:var(--ds-on-dark);position:absolute;left:25%;right:25%;bottom:0;width:auto;height:calc(var(--ds-sp-7) * 2);min-height:0;padding:0;border:0;border-radius:0;cursor:pointer;z-index:1;background:radial-gradient(ellipse 50% 100% at 50% 100%,rgba(241,239,233,.3) 0%,rgba(241,239,233,.16) 30%,rgba(241,239,233,.06) 62%,rgba(241,239,233,0) 100%);animation:ds-cue 2.8s ease-in-out infinite;transition:opacity .4s}
 :root:root:root body .home-scene.is-scrolled .scroll-glow{opacity:0;animation:none;pointer-events:none}
 :root:root:root body .home-scene .scroll-glow:is(:hover,:focus-visible){animation:none;opacity:1}
 :root:root:root body .home-scene .scroll-glow:focus-visible{outline:2px solid var(--ds-on-dark);outline-offset:-2px}
