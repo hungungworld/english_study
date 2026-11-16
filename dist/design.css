@@ -847,3 +847,12 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body #tv-overlay .tv-wordbar .wb-input{flex:1 1 160px;min-width:0;min-height:var(--ds-h-input);padding:0 var(--ds-sp-3);background:var(--ds-dark);color:var(--ds-on-dark);border:1px solid var(--ds-on-dark-muted);border-radius:var(--ds-radius);font:400 var(--ds-fs-body)/1.4 var(--ds-sans)}
 :root:root:root body #tv-overlay .tv-wordbar .wb-close{margin-left:auto;min-width:var(--ds-h-button);min-height:var(--ds-h-button);padding:0;border:0;background:transparent;border-radius:var(--ds-radius);color:var(--ds-on-dark);font-size:var(--ds-fs-body)}
 @media (max-width:700px){:root:root:root body #tv-overlay .tv-wordbar{padding:var(--ds-sp-3) var(--ds-sp-4)}}
+
+/* "My topics" Reset (DESIGN.md 10-38): an action, not a choice, so it is the underline link, not a chip-like box; dimmed when nothing is selected */
+:root:root:root body .pp-prefs .row button[data-prefs-reset]{min-height:var(--ds-h-chip);height:var(--ds-h-chip);padding:0 var(--ds-sp-2);margin-left:calc(var(--ds-sp-2) * -1);border:0;background:transparent;color:var(--ds-ink);text-decoration:underline;text-underline-offset:4px;font:500 var(--ds-fs-ui)/1.2 var(--ds-sans)}
+:root:root:root body .pp-prefs .row button[data-prefs-reset]:disabled{opacity:.4;cursor:not-allowed;text-decoration:none}
+
+/* Article reader: the picture and the text scroll together, so a long article never squeezes the picture away (DESIGN.md 10-36) */
+:root:root:root body #tv-overlay .tv-detail.is-reader{grid-template-rows:minmax(0,1fr)}
+:root:root:root body #tv-overlay .tv-detail.is-reader .tv-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain;border-radius:inherit}
+:root:root:root body #tv-overlay .tv-detail.is-reader .tv-screen{height:auto;aspect-ratio:16/9;max-height:none}

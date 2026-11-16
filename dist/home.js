@@ -20,7 +20,7 @@ function prefsHtml() {
     <div class="dialog-head"><h2 id="prefs-title">My topics</h2><button type="button" data-prefs-toggle data-close aria-label="Close article settings">✕</button></div>
     <p class="hint" aria-live="polite">${prefs.length ? `${prefs.length} ${prefs.length === 1 ? "topic" : "topics"} selected · shown first on the home TV and the strip below.` : "Pick topics and those articles show first on the home TV and the strip below. Saved in this browser only."}</p>
     <div class="pp-prefs-topics" role="group" aria-label="Topics">${TOPICS.map(topic => `<button type="button" class="chip" data-pref-topic="${escape(topic)}" aria-pressed="${prefs.includes(topic)}">${escape(topic)}</button>`).join("")}</div>
-    <div class="row"><button type="button" data-prefs-reset>Reset</button></div>
+    <div class="row"><button type="button" data-prefs-reset ${prefs.length ? "" : "disabled"}>Reset</button></div>
   </div>`;
 }
 const DAY = 86400000;

@@ -1138,7 +1138,7 @@ function wordBarHtml() {
     <div class="row"><button type="button" class="tv-action" data-wb-add ${pick.busy ? "disabled" : ""}>Add to words</button>${pick.editing || (!pick.loading && !pick.korean) ? "" : '<button type="button" class="tv-action" data-wb-edit>Edit meaning</button>'}</div>`;
 }
 function paintWordBar(focusInput) {
-  const detail = overlayEl.querySelector(".tv-detail");
+  const detail = overlayEl.querySelector(".tv-scroll") ?? overlayEl.querySelector(".tv-detail");
   if (!detail) return;
   let bar = detail.querySelector(".tv-wordbar");
   if (!wordPick) { bar?.remove(); return; }
