@@ -752,7 +752,11 @@ function openEditor(standalone, post, source, host, kind, editWord, seed) {
     submit.textContent = standalone ? (editWord ? "Save changes" : "Add") : editing ? "Save changes" : type === "note" ? "Post note" : "Post";
   };
   paint();
-  if (seed && !editing && seed.words.length) form.querySelectorAll(".word-fields").forEach(box => fillWord(box,box.querySelector('[name="term"]').value.trim()));
+  if (seed && !editing && seed.words.length) {
+    form.querySelectorAll(".word-fields").forEach(box => fillWord(box,box.querySelector('[name="term"]').value.trim()));
+    // The panel opens with the highlighted words already in it; bring them into view so it is clear they were added.
+    setTimeout(() => form.querySelector(".word-fields")?.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"}),350);
+  }
   form.addEventListener("input",event => { capture(); editorChanged = true; clearInvalid(event); });
   form.addEventListener("change",event => {
     const input = event.target;

@@ -871,7 +871,13 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body #tv-overlay mark.hl{background:var(--ds-highlight);color:inherit;border-radius:var(--ds-radius);padding:0}
 :root:root:root body #tv-overlay .word-saved{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
 :root:root:root body #tv-overlay .tv-article.pen-on .tv-para > p[lang=en]{cursor:text}
-:root:root:root body #tv-overlay .tv-pen{position:sticky;bottom:calc(var(--ds-sp-4) + var(--bar-h,0px));z-index:3;display:flex;align-items:center;justify-content:center;width:var(--ds-h-button);height:var(--ds-h-button);margin:0 var(--ds-sp-4) var(--ds-sp-4) auto;padding:0;border:1px solid var(--ds-on-dark);border-radius:var(--ds-radius);background:var(--ds-dark-2);color:var(--ds-on-dark)}
+:root:root:root body #tv-overlay .tv-fabs{position:sticky;bottom:calc(var(--ds-sp-4) + var(--bar-h,0px));z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:var(--ds-sp-2);width:var(--ds-h-button);margin:0 var(--ds-sp-4) var(--ds-sp-4) auto;pointer-events:none}
+:root:root:root body #tv-overlay .tv-fabs > button{pointer-events:auto}
+:root:root:root body #tv-overlay .tv-pen{display:flex;align-items:center;justify-content:center;width:var(--ds-h-button);height:var(--ds-h-button);margin:0;padding:0;border:1px solid var(--ds-on-dark);border-radius:var(--ds-radius);background:var(--ds-dark-2);color:var(--ds-on-dark)}
+:root:root:root body #tv-overlay .tv-jump{display:flex;align-items:center;justify-content:center;width:var(--ds-h-button);height:var(--ds-h-button);margin:0;padding:0;border:1px solid rgba(241,239,233,.45);border-radius:var(--ds-radius);background:rgba(11,9,7,.5);color:var(--ds-on-dark);opacity:.55;transition:opacity .2s}
+:root:root:root body #tv-overlay .tv-jump:hover:enabled,:root:root:root body #tv-overlay .tv-jump:focus-visible{background:rgba(11,9,7,.85);color:var(--ds-on-dark);opacity:1}
+:root:root:root body #tv-overlay .tv-jump[hidden]{display:none}
+:root:root:root body #tv-overlay .tv-jump svg{width:22px;height:22px}
 :root:root:root body #tv-overlay .tv-pen[aria-pressed=true]{background:var(--ds-on-dark);color:var(--ds-dark)}
 :root:root:root body #tv-overlay .tv-pen svg{width:22px;height:22px}
 :root:root:root body #tv-overlay .tv-highlights{display:grid;gap:var(--ds-sp-4);padding-top:var(--ds-sp-5);border-top:1px solid var(--ds-on-dark-muted)}
@@ -902,3 +908,10 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
   :root:root:root body #tv-overlay.is-writing .tv-stage{grid-template-rows:minmax(0,1fr)}
   :root:root:root body #tv-overlay.is-writing .tv-writer{min-height:0;max-height:100%}
 }
+
+/* Note panel: no visible scrollbar (user choice); it still scrolls with the wheel, touch and keyboard (DESIGN.md 10-43 exception) */
+:root:root:root body #tv-overlay .tv-writer{scrollbar-width:none;-ms-overflow-style:none}
+:root:root:root body #tv-overlay .tv-writer::-webkit-scrollbar{display:none;width:0;height:0}
+
+/* Word fields: the Remove word button sits 16px under the last hint line (the gap alone is 12px) */
+:root:root:root body .word-fields > button{margin-top:var(--ds-sp-1)}

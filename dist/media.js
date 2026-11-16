@@ -450,7 +450,11 @@ async function loadArticle(item) {
     host.highlightSeed = highlightSeed;
     penOn = false;
     const scroll = overlay.querySelector(".tv-scroll");
-    if (scroll && !scroll.querySelector("[data-pen]")) scroll.insertAdjacentHTML("beforeend",PEN_BUTTON);
+    if (scroll && !scroll.querySelector("[data-pen]")) {
+      scroll.insertAdjacentHTML("beforeend",PEN_BUTTON);
+      scroll.addEventListener("scroll",() => syncJump(scroll),{passive:true});
+      setTimeout(() => syncJump(scroll),400);
+    }
     renderMarks(host);
     overlay.dispatchEvent(new CustomEvent("article-ready",{detail:{host}}));
     if (!readLocal("reader-hint",false)) showReaderHint(host);
@@ -459,7 +463,22 @@ async function loadArticle(item) {
   }
 }
 // ---- Highlighter: yellow marks stored as positions only (paragraph, start, end) in this browser; the article text itself is never saved ----
-const PEN_BUTTON = '<button type="button" class="tv-pen" data-pen aria-pressed="false" aria-label="Highlighter" title="Highlighter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 20l1-5L16 4l4 4L9 19z"/><path d="M13 7l4 4"/></svg></button>';
+const ICON_ATTRS = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"';
+const PEN_BUTTON = `<div class="tv-fabs"><button type="button" class="tv-jump" data-jump data-dir="down" aria-label="Jump to the end of the article" title="Jump to the end"><svg ${ICON_ATTRS}><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg></button><button type="button" class="tv-pen" data-pen aria-pressed="false" aria-label="Highlighter" title="Highlighter"><svg ${ICON_ATTRS}><path d="M4 20l1-5L16 4l4 4L9 19z"/><path d="M13 7l4 4"/></svg></button></div>`;
+// One arrow: it points down while you are near the top (jump to the end) and up once you have scrolled (back to the top).
+function syncJump(scroll) {
+  const jump = scroll.querySelector("[data-jump]");
+  if (!jump) return;
+  const long = scroll.scrollHeight > scroll.clientHeight * 1.6;
+  jump.hidden = !long;
+  const down = scroll.scrollTop < scroll.clientHeight * .4;
+  if ((jump.dataset.dir === "down") !== down) {
+    jump.dataset.dir = down ? "down" : "up";
+    jump.setAttribute("aria-label",down ? "Jump to the end of the article" : "Back to the top");
+    jump.title = down ? "Jump to the end" : "Back to the top";
+    jump.querySelector("svg").innerHTML = down ? '<path d="M12 5v14"/><path d="M6 13l6 6 6-6"/>' : '<path d="M12 19V5"/><path d="M6 11l6-6 6 6"/>';
+  }
+}
 let penOn = false;
 const readMarks = id => readLocal("reader-marks",{})[id] ?? [];
 function writeMarks(id, list) {
@@ -620,6 +639,12 @@ async function translateParas(host, indexes) {
 overlay.addEventListener("click",async event => {
   const host = overlay.querySelector("[data-article]");
   if (event.target.closest("[data-hint-close]")) dismissReaderHint();
+  const jump = event.target.closest("[data-jump]");
+  if (jump) {
+    const scroll = overlay.querySelector(".tv-scroll");
+    const smooth = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    scroll.scrollTo({top:jump.dataset.dir === "down" ? scroll.scrollHeight : 0,behavior:smooth});
+  }
   const pen = event.target.closest("[data-pen]");
   if (pen) {
     penOn = !penOn;
