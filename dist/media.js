@@ -431,10 +431,33 @@ async function loadArticle(item) {
         <button type="button" class="tv-link" data-translate aria-expanded="false">Translate</button><p class="tv-ko" lang="ko" hidden></p></div>`).join("")}
       <p class="hint">Powered by <a href="${escape(article.url)}" target="_blank" rel="noopener noreferrer">The Guardian</a>. Korean translation by Microsoft Translator.</p>`;
     host.paragraphs = article.paragraphs;
+    if (!readLocal("reader-hint",false)) showReaderHint(host);
   } catch {
     if (host.isConnected) host.innerHTML = '<p class="hint">Could not load the article. Use the link below to read it on The Guardian.</p>';
   }
 }
+// First time in an article: one line says words can be tapped, and one word in the first paragraph blinks its outline once and keeps a dotted underline.
+function showReaderHint(host) {
+  host.insertAdjacentHTML("afterbegin",'<div class="tv-hint" data-hint><p>Tap any word to see its meaning and save it.</p><button type="button" class="tv-hint-close" data-hint-close aria-label="Close hint">✕</button></div>');
+  const para = host.querySelector(".tv-para > p[lang=en]");
+  const node = [...(para?.childNodes ?? [])].find(item => item.nodeType === 3);
+  const found = node?.textContent.match(/\b[a-z]{8,}\b/);
+  if (!found) return;
+  const word = node.splitText(found.index);
+  word.splitText(found[0].length);
+  const mark = document.createElement("span");
+  mark.className = "word-nudge";
+  mark.textContent = word.textContent;
+  word.replaceWith(mark);
+}
+function dismissReaderHint() {
+  writeLocal("reader-hint",true);
+  overlay.querySelector("[data-hint]")?.remove();
+  for (const mark of overlay.querySelectorAll(".word-nudge")) mark.replaceWith(...mark.childNodes);
+}
+overlay.addEventListener("pointerup",event => {
+  if (event.target.closest?.(".tv-article .tv-para > p[lang=en]") && overlay.querySelector("[data-hint]")) setTimeout(dismissReaderHint,60);
+});
 async function translateParas(host, indexes) {
   const todo = indexes.filter(index => !host.querySelector(`[data-para="${index}"] .tv-ko`).textContent);
   for (let i = 0; i < todo.length; i += 10) {
@@ -454,6 +477,7 @@ async function translateParas(host, indexes) {
 }
 overlay.addEventListener("click",async event => {
   const host = overlay.querySelector("[data-article]");
+  if (event.target.closest("[data-hint-close]")) dismissReaderHint();
   const toggle = event.target.closest("[data-translate]");
   if (toggle && host?.paragraphs) {
     const box = toggle.closest("[data-para]");
