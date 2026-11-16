@@ -72,7 +72,9 @@ export async function loadBoard() {
   if (board.streaks) mergeStreaks(board.streaks);
   return board;
 }
-export async function saveEntry(entry, token, id) {
+// An edit key (token) proves a post is yours; without one, a member can still change a post that carries their own name (memberNo).
+export async function saveEntry(entry, token, id, memberNo) {
+  if (shared && id && !token && memberNo) return rpc("study_save_as", {entry, post_key:id, member_no:memberNo});
   if (shared) return rpc("study_save", {entry, edit_token:token, post_key:id ?? null});
   const created_at = new Date().toISOString();
   const previous = demo.posts.find(post => post.id === id);
@@ -91,7 +93,8 @@ export async function saveEntry(entry, token, id) {
   writeLocal("demo", demo);
   return postId;
 }
-export async function removePost(id, token) {
+export async function removePost(id, token, memberNo) {
+  if (shared && !token && memberNo) return rpc("study_remove_as", {post_key:id,member_no:memberNo});
   if (shared) return rpc("study_remove", {post_key:id,edit_token:token});
   demo.posts = demo.posts.filter(post => post.id !== id);
   demo.words = demo.words.filter(word => word.post_id !== id);

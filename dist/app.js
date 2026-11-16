@@ -163,6 +163,8 @@ const plural = (n, word) => `${n} ${n === 1 ? word : word + "s"}`;
 const empty = message => `<div class="card empty">${e(message)}</div>`;
 const emptyAction = (message, action) => `<div class="card empty"><p>${e(message)}</p><p>${action}</p></div>`;
 const activeMember = () => readLocal("active-member",0);
+// A post is yours if this browser wrote it (it has the edit key) or it carries the name chosen at the top right.
+const canManage = post => Boolean(own[post.id]) || (post.author > 0 && post.author === activeMember());
 function reactionButton(post, names = false) {
   const list = readReactions()[post.id] ?? [];
   const mine = list.includes(activeMember());
@@ -245,7 +247,7 @@ function chatCard(post) {
   return `<article class="card chat-post"><p class="chat-body">${e(post.body)}</p>
     <div class="meta"><span>${monogram(post)}${e(author(post))}</span><time datetime="${e(post.created_at)}">${dateFormat.format(new Date(post.created_at))}</time></div>
     ${postActions(post)}
-    ${own[post.id] ? `<div class="row"><button type="button" data-edit-id="${e(post.id)}">Edit</button><button type="button" data-delete-id="${e(post.id)}">Delete</button></div>` : ""}</article>`;
+    ${canManage(post) ? `<div class="row"><button type="button" data-edit-id="${e(post.id)}">Edit</button><button type="button" data-delete-id="${e(post.id)}">Delete</button></div>` : ""}</article>`;
 }
 function wordSelection() {
   return inPeriod(board.words,period).filter(word => !wordMember || word.author === wordMember);
@@ -405,7 +407,7 @@ function renderPost(id) {
   return `<a class="back" href="${chatPost ? "#feed/chat" : "#feed"}"><span class="ar l" aria-hidden="true"></span>${chatPost ? "Free board" : "Study board"}</a><article class="card">${chatPost ? "" : `<h1>${isPinned(post) ? pinIcon : ""}${e(post.title)}</h1>`}${meta(post)}${body}
   <div class="post-actions">${reactionButton(post,true)}<a class="comment-link" href="#post/${e(post.id)}/comment"><span class="ic chat" aria-hidden="true"></span>Comment · ${commentCount(post)}</a></div>
   ${link ? `<p><a class="back" href="${e(link)}" target="_blank" rel="noopener noreferrer">Reference link<span class="ar ne" aria-hidden="true"></span></a></p>` : ""}
-  ${own[id] ? '<div class="row"><button data-edit>Edit</button><button data-delete>Delete</button></div>' : ""}</article>
+  ${canManage(post) ? '<div class="row"><button data-edit>Edit</button><button data-delete>Delete</button></div>' : ""}</article>
   ${commentsSection(post)}
   ${words.length ? `<h2 class="section-title">Words in this note</h2><div class="toolbar">${quizButton("post","Quiz this note’s words",words)}</div><div class="stack">${words.map(word => wordCard(word,3,false)).join("")}</div>` : ""}`;
 }
@@ -724,7 +726,7 @@ function openEditor(standalone, post, source, host, kind) {
     submit.disabled = true;
     try {
       const token = editing ? own[post.id] : crypto.randomUUID() + crypto.randomUUID();
-      const id = await saveEntry(entry,token,post?.id);
+      const id = await saveEntry(entry,token,post?.id,editing ? activeMember() : 0);
       if (id) {
         own[id] = token;
         writeLocal("own",own);
@@ -930,7 +932,7 @@ main.addEventListener("click",async event => {
     if (!(await askConfirm({title:"Delete this post?",message:"This cannot be undone.",confirmLabel:"Delete"}))) return;
     button.disabled = true;
     try {
-      await removePost(data.deleteId,own[data.deleteId]);
+      await removePost(data.deleteId,own[data.deleteId],activeMember());
       delete own[data.deleteId];
       writeLocal("own",own);
       await refresh();
@@ -980,7 +982,7 @@ main.addEventListener("click",async event => {
   })()})) {
     button.disabled = true;
     try {
-      await removePost(id,own[id]);
+      await removePost(id,own[id],activeMember());
       delete own[id];
       writeLocal("own",own);
       location.hash = "feed";
