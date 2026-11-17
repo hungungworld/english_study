@@ -100,7 +100,7 @@ function hero(title, description, button = "") {
   return `<section class="hero"><div><h1>${e(title)}</h1><p>${e(description)}</p></div>${button}</section>`;
 }
 function meta(item) {
-  return `<div class="meta"><span>${monogram(item)}${authorLink(item)}</span><time datetime="${e(item.created_at)}">${dateFormat.format(new Date(item.created_at))}</time>${item.tag && item.tag !== "Pinned" ? `<span class="tag">${e(item.tag)}</span>` : ""}</div>`;
+  return `<div class="meta"><span>${authorLink(item)}</span><time datetime="${e(item.created_at)}">${dateFormat.format(new Date(item.created_at))}</time>${item.tag && item.tag !== "Pinned" ? `<span class="tag">${e(item.tag)}</span>` : ""}</div>`;
 }
 // ---- Writing: a Note follows the form of its subject (one master list); a Post is plain text ----
 // To add a subject (Grammar, Writing ...) add one entry here. "required" fields must be filled; "quote" fields are shown as a quotation.
@@ -240,7 +240,6 @@ function commentsSection(post) {
     <form class="comment-form" data-comment-form="${e(post.id)}" novalidate><label>Comment<textarea name="text" maxlength="500" rows="3" placeholder="Leave a cheer or a question"></textarea></label><p class="form-error" role="alert" hidden></p><div class="row"><button class="primary" type="submit">Post comment</button></div></form></section>`;
 }
 const writerName = post => e(author(post ?? {author:readLocal("active-member",0),author_name:""}));
-const monogram = item => item.author ? `<span class="mono" aria-hidden="true">${item.author}</span>` : "";
 const MONTHS = ["Jan.","Feb.","Mar.","Apr.","May","Jun.","Jul.","Aug.","Sep.","Oct.","Nov.","Dec."];
 const hearts = count => `<span class="hearts" role="img" aria-label="${count} hearts">${Array.from({length:MAX_HEARTS},(_,i) => `<span class="ic heart${i < count ? "" : " off"}" aria-hidden="true"></span>`).join("")}</span>`;
 const weekdays = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -304,7 +303,7 @@ function groupedWords(words) {
 }
 function chatCard(post) {
   return `<article class="card chat-post"><p class="chat-body">${e(post.body)}</p>
-    <div class="meta"><span>${monogram(post)}${e(author(post))}</span><time datetime="${e(post.created_at)}">${dateFormat.format(new Date(post.created_at))}</time></div>
+    <div class="meta"><span>${e(author(post))}</span><time datetime="${e(post.created_at)}">${dateFormat.format(new Date(post.created_at))}</time></div>
     ${postActions(post)}
     ${canManage(post) ? `<div class="row"><button type="button" data-edit-id="${e(post.id)}">Edit</button><button type="button" data-delete-id="${e(post.id)}">Delete</button></div>` : ""}</article>`;
 }
@@ -1203,14 +1202,16 @@ function refreshSavedMarks() {
   host.savedTerms = board.words.map(word => word.term.trim().toLowerCase()).filter(term => term.length >= 2);
   host.renderMarks();
 }
-overlayEl.addEventListener("article-ready",refreshSavedMarks);
+// Words added from the article that is open, so the bar can list them (on a phone the Highlights block is far below).
+let addedHere = [];
+overlayEl.addEventListener("article-ready",() => { addedHere = []; refreshSavedMarks(); });
 const sameWord = (word, term) => word.term.trim().toLowerCase() === term.toLowerCase();
 function wordBarHtml() {
   const pick = wordPick;
   const found = board.words.find(word => sameWord(word,pick.term));
   const close = '<button type="button" class="wb-close" data-wb-close aria-label="Close">✕</button>';
   const sentence = pick.sentence ? `<p class="wb-sentence" lang="en">“${e(pick.sentence)}”</p>` : "";
-  if (pick.done) return `<div class="wb-top"><strong lang="en">${e(pick.term)}</strong><span lang="ko">${e(pick.korean)}</span>${close}</div><p role="status">Added to your words and highlighted in yellow.</p><div class="row"><button type="button" class="tv-action" data-wb-highlights>See your highlights</button></div>`;
+  if (pick.done) return `<div class="wb-top"><strong lang="en">${e(pick.term)}</strong><span lang="ko">${e(pick.korean)}</span>${close}</div><p role="status">Added to your words and highlighted in yellow.</p>${addedHere.length > 1 ? `<p lang="en" data-added-here>Added from this article (${addedHere.length}): ${addedHere.map(e).join(" · ")}</p>` : ""}<div class="row"><button type="button" class="tv-action" data-wb-highlights>See your highlights</button></div>`;
   if (found) {
     return `<div class="wb-top"><strong lang="en">${e(pick.term)}</strong><span lang="ko">${e(found.meaning)}</span>${close}</div>
       <p role="status">Already in your words.</p>${canManageWord(found) ? '<div class="row"><button type="button" class="tv-action" data-wb-edit-saved>Edit</button></div>' : ""}`;
@@ -1234,10 +1235,10 @@ function paintWordBar(focusInput) {
 }
 function pickWord(para, event) {
   const selection = getSelection();
-  if (!selection.rangeCount) return;
-  let range = selection.getRangeAt(0);
-  if (!para.contains(range.commonAncestorContainer)) return;
-  if (selection.isCollapsed) {
+  // A tap on a phone often leaves no selection at all (a mouse click leaves a caret), so a missing or collapsed selection means "use the tapped point".
+  let range = selection.rangeCount ? selection.getRangeAt(0) : null;
+  if (range && !selection.isCollapsed && !para.contains(range.commonAncestorContainer)) return;
+  if (!range || selection.isCollapsed) {
     const at = document.caretPositionFromPoint?.(event.clientX,event.clientY);
     const node = at?.offsetNode ?? document.caretRangeFromPoint?.(event.clientX,event.clientY)?.startContainer;
     const offset = at?.offset ?? document.caretRangeFromPoint?.(event.clientX,event.clientY)?.startOffset ?? 0;
@@ -1318,6 +1319,7 @@ overlayEl.addEventListener("click",async event => {
     try { board = await loadBoard(); } catch {}
     studied();
     current.done = true;
+    if (!addedHere.includes(current.term.toLowerCase())) addedHere.push(current.term.toLowerCase());
     const host = overlayEl.querySelector("[data-article]");
     if (current.mark) host?.addMark?.(current.mark);
     refreshSavedMarks();

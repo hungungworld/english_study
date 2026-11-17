@@ -613,7 +613,7 @@ function highlightSeed() {
 }
 // First time in an article: one line says words can be tapped, and one word in the first paragraph blinks its outline once and keeps a dotted underline.
 function showReaderHint(host) {
-  host.insertAdjacentHTML("afterbegin",'<div class="tv-hint" data-hint><p>Tap any word to see its meaning and save it.</p><button type="button" class="tv-hint-close" data-hint-close aria-label="Close hint">✕</button></div>');
+  host.insertAdjacentHTML("afterbegin",'<div class="tv-hint" data-hint><p>Tap any word to see its meaning and save it. Turn on the pen, then tap a word or press and drag over a sentence to paint it yellow.</p><button type="button" class="tv-hint-close" data-hint-close aria-label="Close hint">✕</button></div>');
   const para = host.querySelector(".tv-para > p[lang=en]");
   const node = [...(para?.childNodes ?? [])].find(item => item.nodeType === 3);
   const found = node?.textContent.match(/\b[a-z]{8,}\b/);

@@ -523,8 +523,6 @@
 :root:root:root body .poster-page .stack > article{padding-block:var(--ds-sp-5);border-bottom:1px solid var(--ds-line)}
 :root:root:root body .poster-page .stack > article:last-child{border-bottom:0}
 :root:root:root body .poster-page .stack > article:first-child{padding-top:var(--ds-sp-3)}
-:root:root:root body .mono{display:none}
-:root:root:root body .poster-page .mono{display:inline-flex;align-items:center;justify-content:center;width:var(--ds-h-tag);height:var(--ds-h-tag);margin-right:var(--ds-sp-2);background:var(--ds-sand);color:var(--ds-ink-2);border-radius:var(--ds-radius);font:700 var(--ds-fs-caption)/1 var(--ds-sans);vertical-align:middle}
 :root:root:root body .poster-page .meta > span{display:inline-flex;align-items:center}
 /* 상단 메뉴: 모두 같은 크기·톤, 현재 위치는 진하고 굵게 + 밑줄 (내 스크랩만 흐리던 것 통일) */
 :root:root:root body.study-mode .top nav a{color:var(--ds-muted);font:500 var(--ds-fs-ui)/1.2 var(--ds-sans);opacity:1;margin-left:0;border-bottom:2px solid transparent;border-radius:0;background:transparent}
@@ -931,3 +929,6 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body.media-mode .tv-sheet-row .tv-seg{max-width:100%}
 /* The first card used to start under the fixed filter pills (their ✕ and Reset buttons caught the tap). The list now starts below the pills, whatever their height. */
 :root:root:root body.media-mode .tv-results{padding-top:var(--tv-results-top,104px)}
+
+/* ---- Phone reader (DESIGN.md 10-54): the three floating buttons sit in one row, so they hide only one line of text instead of the right edge of six ---- */
+@media (max-width:560px){:root:root:root body #tv-overlay .tv-fabs{flex-direction:row;justify-content:flex-end;width:auto}:root:root:root body #tv-overlay .tv-fabs > button{flex:none;min-width:var(--ds-h-button)}}
