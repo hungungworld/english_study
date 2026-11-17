@@ -332,6 +332,23 @@ function scrapsPage() {
     </div>
   </div></section>`;
 }
+// The filter pills are fixed at the top and can wrap to several lines on a phone; the results list starts just below them so no card sits under a pill.
+let summaryWatch, summaryMutations;
+function watchSummary() {
+  summaryWatch?.disconnect();
+  summaryMutations?.disconnect();
+  const box = feed?.querySelector("[data-summary]");
+  if (!box || !("ResizeObserver" in window)) return;
+  let later = 0;
+  const set = () => document.body.style.setProperty("--tv-results-top",(box.childElementCount ? Math.ceil(box.getBoundingClientRect().bottom) + 16 : 104) + "px");
+  // Measured right away and once more shortly after, because the pills can wrap one more line as the page settles.
+  const fit = () => { set(); clearTimeout(later); later = setTimeout(set,80); };
+  summaryWatch = new ResizeObserver(fit);
+  summaryWatch.observe(box);
+  summaryMutations = new MutationObserver(fit);
+  summaryMutations.observe(box,{childList:true,subtree:true,characterData:true});
+  fit();
+}
 function paint() {
   if (!feed?.isConnected) return;
   if (section === "scraps") {
@@ -368,6 +385,7 @@ function paint() {
     <div class="tv-footer" role="status"></div></section>`;
   paintFooter();
   bendWall();
+  watchSummary();
   if (section === "scraps") {
     const search = feed.querySelector("#scrap-q");
     if (search) search.value = scrapQuery;

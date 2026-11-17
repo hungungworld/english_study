@@ -924,3 +924,10 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 @keyframes ds-flash-box{0%{outline:2px solid transparent;outline-offset:4px}35%{outline:2px solid var(--ds-on-dark);outline-offset:8px}100%{outline:2px solid transparent;outline-offset:12px}}
 :root:root:root body #tv-overlay .tv-highlights.is-nudged{animation:ds-flash-box 1.3s ease-out 2}
 @media (prefers-reduced-motion:reduce){:root:root:root body #tv-overlay .tv-highlights.is-nudged{animation:none;outline:2px solid var(--ds-on-dark);outline-offset:8px}}
+
+/* ---- Phone: filtered results must be tappable (DESIGN.md 10-53) ---- */
+/* The type tabs plus Reset did not fit on one line at 375px, so Reset sat on top of "With translation". Reset now wraps to its own line. */
+:root:root:root body.media-mode .tv-sheet-row{flex-wrap:wrap}
+:root:root:root body.media-mode .tv-sheet-row .tv-seg{max-width:100%}
+/* The first card used to start under the fixed filter pills (their ✕ and Reset buttons caught the tap). The list now starts below the pills, whatever their height. */
+:root:root:root body.media-mode .tv-results{padding-top:var(--tv-results-top,104px)}
