@@ -265,6 +265,27 @@ async function translateParagraphs(texts, env) {
     return Response.json({configured:true,translations:texts.map(text => paragraphCache.get(text) ?? "")});
   } catch { return Response.json({configured:false,translations:[]}); }
 }
+// Natural English voice (Microsoft Azure Speech, free tier). The key stays on the server; answers are cached because the same word is asked for again and again.
+const speechCache = new Map();
+async function speakText(text, env) {
+  if (!env.MS_SPEECH_KEY || !env.MS_SPEECH_REGION) return new Response(null,{status:204});
+  const clean = text.replace(/\([^)]*\)/g," ").replace(/\s+/g," ").trim();
+  if (!clean) return new Response(null,{status:400});
+  try {
+    if (!speechCache.has(clean)) {
+      const ssml = `<speak version="1.0" xml:lang="en-US"><voice xml:lang="en-US" name="en-US-AriaNeural"><prosody rate="-8%">${clean.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</prosody></voice></speak>`;
+      const response = await fetch(`https://${env.MS_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`,{
+        method:"POST",
+        headers:{"Ocp-Apim-Subscription-Key":env.MS_SPEECH_KEY,"Content-Type":"application/ssml+xml","X-Microsoft-OutputFormat":"audio-24khz-48kbitrate-mono-mp3","User-Agent":"axciting"},
+        body:ssml,signal:AbortSignal.timeout(8000)
+      });
+      if (!response.ok) throw new Error("speech");
+      speechCache.set(clean,new Uint8Array(await response.arrayBuffer()));
+      while (speechCache.size > 300) speechCache.delete(speechCache.keys().next().value);
+    }
+    return new Response(speechCache.get(clean),{headers:{"Content-Type":"audio/mpeg","Cache-Control":"public, max-age=2592000, immutable"}});
+  } catch { return new Response(null,{status:204}); }
+}
 export function handler(assets) {
   return {async fetch(request, env = {}, context) {
     const url = new URL(request.url);
@@ -277,6 +298,11 @@ export function handler(assets) {
       return translateParagraphs(texts,env);
     }
     if (request.method !== "GET" && request.method !== "HEAD") return new Response(null,{status:405});
+    if (url.pathname === "/api/speak") {
+      const text = (url.searchParams.get("text") ?? "").trim();
+      if (!/^[A-Za-z][A-Za-z0-9 ',.()\-]{0,119}$/.test(text)) return new Response(null,{status:400});
+      return speakText(text,env);
+    }
     if (url.pathname === "/api/guardian") return guardianList(env);
     if (url.pathname === "/api/guardian-article") {
       const id = url.searchParams.get("id") ?? "";

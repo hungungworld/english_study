@@ -181,13 +181,40 @@ async function speak(term) {
       return;
     }
   } catch { /* fall back to the browser voice */ }
-  if ("speechSynthesis" in window) {
-    speechSynthesis.cancel();
-    const voice = new SpeechSynthesisUtterance(text);
-    voice.lang = "en-US";
-    voice.rate = .9;
-    speechSynthesis.speak(voice);
-  } else flash("Pronunciation is not available in this browser.");
+  // No recording in the dictionary: ask our server for a natural neural voice (works once the Azure Speech key is set).
+  try {
+    const key = "tts:" + text.toLowerCase();
+    if (!audioCache.has(key)) {
+      const reply = await fetch("/api/speak?text=" + encodeURIComponent(text),{signal:AbortSignal.timeout(9000)});
+      audioCache.set(key,reply.ok && reply.status === 200 ? URL.createObjectURL(await reply.blob()) : "");
+    }
+    const url = audioCache.get(key);
+    if (url) {
+      voicePlayer?.pause();
+      voicePlayer = new Audio(url);
+      await voicePlayer.play();
+      return;
+    }
+  } catch { /* fall back to the browser voice */ }
+  if (!("speechSynthesis" in window)) return flash("Pronunciation is not available in this browser.");
+  // Without picking a voice the browser may read English with its default (often Korean) voice, so an English voice is chosen on purpose, best-sounding first.
+  const voice = await englishVoice();
+  if (!voice) return flash("No English voice is installed on this device.");
+  speechSynthesis.cancel();
+  const say = new SpeechSynthesisUtterance(text);
+  say.voice = voice;
+  say.lang = voice.lang;
+  say.rate = .9;
+  speechSynthesis.speak(say);
+}
+async function englishVoice() {
+  let voices = speechSynthesis.getVoices();
+  if (!voices.length) {
+    await new Promise(done => { speechSynthesis.addEventListener("voiceschanged",done,{once:true}); setTimeout(done,1500); });
+    voices = speechSynthesis.getVoices();
+  }
+  const rank = voice => (/Natural|Neural/i.test(voice.name) ? 0 : /Google/i.test(voice.name) ? 1 : /Online/i.test(voice.name) ? 2 : /Aria|Jenny|Guy|Samantha|Daniel/i.test(voice.name) ? 3 : 4) + (/en[-_]US/i.test(voice.lang) ? 0 : .5);
+  return voices.filter(voice => /^en[-_]/i.test(voice.lang)).sort((a,b) => rank(a) - rank(b))[0] ?? null;
 }
 function wordCard(word, level = 2, noteLink = true) {
   return `<article class="card"><h${level}>${e(word.term)}${speakButton(word.term)}</h${level}><p>${e(word.meaning)}</p>${word.example ? `<p lang="en">${e(word.example)}</p>` : ""}<div class="meta">${authorLink(word)}${noteLink && word.post_id ? `<a href="#post/${e(word.post_id)}">View note</a>` : ""}</div>${wordActions(word)}</article>`;
