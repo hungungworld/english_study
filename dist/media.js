@@ -543,7 +543,7 @@ function renderMarks(host) {
   box.hidden = !pieces.length;
   box.innerHTML = pieces.length ? `<h2>Highlights</h2>
     ${sentences.length ? `<ul class="tv-hl-list" lang="en">${sentences.map(text => `<li>${escape(text)}</li>`).join("")}</ul>` : ""}
-    ${words.length ? `<p lang="en"><strong>Words</strong> · ${words.map(escape).join(" · ")}</p>` : ""}
+    ${words.length ? `<p class="tv-hl-words" lang="en"><strong>Words</strong> · ${words.map(word => `<mark class="hl">${escape(word)}</mark>`).join(" · ")}</p>` : ""}
     <div class="row"><button type="button" class="tv-action" data-note-from-highlights>Write a note with these</button>${words.length ? '<button type="button" class="tv-action" data-add-highlighted>Add words to my list</button>' : ""}</div>` : "";
 }
 const paraOffset = (para, node, offset) => {

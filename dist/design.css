@@ -867,8 +867,9 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 /* Highlighter (DESIGN.md 10-40): the one yellow in the product, low opacity, only on article text the reader painted */
 :root{--ds-highlight:rgba(255,214,0,.3)}
 :root:root:root body #tv-overlay mark.hl{background:var(--ds-highlight);color:inherit;border-radius:var(--ds-radius);padding:0}
-:root:root:root body #tv-overlay .word-saved{background:var(--ds-highlight);border-radius:var(--ds-radius)}
-:root:root:root body #tv-overlay mark.hl .word-saved{background:transparent}
+:root:root:root body #tv-overlay .word-saved{text-decoration:underline dotted;text-decoration-thickness:1px;text-underline-offset:4px}
+:root:root:root body #tv-overlay mark.hl .word-saved{text-decoration:none}
+:root:root:root body #tv-overlay .tv-highlights .tv-hl-words{font:400 var(--ds-fs-body)/2 var(--ds-sans);margin:0}
 :root:root:root body #tv-overlay .tv-article.pen-on .tv-para > p[lang=en]{cursor:text}
 :root:root:root body #tv-overlay .tv-fabs{position:sticky;bottom:calc(var(--ds-sp-4) + var(--bar-h,0px));z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:var(--ds-sp-2);width:var(--ds-h-button);margin:0 var(--ds-sp-4) var(--ds-sp-4) auto;pointer-events:none}
 :root:root:root body #tv-overlay .tv-fabs > button{pointer-events:auto}

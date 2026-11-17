@@ -1281,9 +1281,15 @@ function pickWord(para, event) {
     paintWordBar(true);
   });
 }
+// Tap or scroll? On a touch screen a word is picked only when the finger barely moved (a scroll or flick is not a tap; the browser also cancels the pointer then). A mouse drag still picks the selected phrase.
+let pressStart = null;
+overlayEl.addEventListener("pointerdown",event => { pressStart = {x:event.clientX,y:event.clientY,t:performance.now()}; });
 overlayEl.addEventListener("pointerup",event => {
   const para = event.target.closest?.(ARTICLE_TEXT);
-  if (para) setTimeout(() => pickWord(para,event),0);
+  if (!para) return;
+  const moved = pressStart ? Math.hypot(event.clientX - pressStart.x,event.clientY - pressStart.y) : 0;
+  if (event.pointerType === "touch" && moved > 10) return;
+  setTimeout(() => pickWord(para,event),0);
 });
 overlayEl.addEventListener("keyup",event => {
   if (event.key !== "Shift" && !event.shiftKey) return;
