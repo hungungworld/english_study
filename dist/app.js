@@ -157,7 +157,9 @@ function postCard(post, index) {
   return `<article class="card post-preview" style="--post-delay:${Math.min(index,8)*45}ms"><h2>${isPinned(post) ? pinIcon : ""}<a href="#post/${e(post.id)}">${e(post.title)}</a></h2>${meta(post)}<p class="snippet">${e(preview)}</p>${postActions(post)}</article>`;
 }
 const SPEAKER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 010 6"/><path d="M18.5 6.5a8 8 0 010 11"/></svg>';
-const speakButton = term => `<button type="button" class="speak" data-speak="${e(term)}" aria-label="Hear “${e(term)}”" title="Hear it">${SPEAKER_ICON}</button>`;
+// Pronunciation buttons are switched off until the Azure Speech key is ready (the code and /api/speak stay). Set this to true to show them again.
+const SPEAK_ENABLED = false;
+const speakButton = term => !SPEAK_ENABLED ? "" : `<button type="button" class="speak" data-speak="${e(term)}" aria-label="Hear “${e(term)}”" title="Hear it">${SPEAKER_ICON}</button>`;
 // Pronunciation, in order: our neural voice (/api/speak), a dictionary recording (single words), the browser's own English voice.
 const audioCache = new Map();
 let voicePlayer;
