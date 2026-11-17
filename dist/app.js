@@ -158,7 +158,7 @@ function postCard(post, index) {
 }
 const SPEAKER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 010 6"/><path d="M18.5 6.5a8 8 0 010 11"/></svg>';
 const speakButton = term => `<button type="button" class="speak" data-speak="${e(term)}" aria-label="Hear “${e(term)}”" title="Hear it">${SPEAKER_ICON}</button>`;
-// Pronunciation: a recorded voice from the free dictionary when it has one (single words), otherwise the browser's own English voice.
+// Pronunciation, in order: our neural voice (/api/speak), a dictionary recording (single words), the browser's own English voice.
 const audioCache = new Map();
 let voicePlayer;
 async function findAudio(term) {
@@ -170,18 +170,12 @@ async function findAudio(term) {
 }
 async function speak(term) {
   const text = term.trim();
-  try {
-    const key = text.toLowerCase();
-    if (!audioCache.has(key)) audioCache.set(key,await findAudio(key).catch(() => ""));
-    const url = audioCache.get(key);
-    if (url) {
-      voicePlayer?.pause();
-      voicePlayer = new Audio(url);
-      await voicePlayer.play();
-      return;
-    }
-  } catch { /* fall back to the browser voice */ }
-  // No recording in the dictionary: ask our server for a natural neural voice (works once the Azure Speech key is set).
+  const play = async url => {
+    voicePlayer?.pause();
+    voicePlayer = new Audio(url);
+    await voicePlayer.play();
+  };
+  // 1) Our server's natural neural voice first, so every word and phrase sounds like the same speaker (works once the Azure Speech key is set).
   try {
     const key = "tts:" + text.toLowerCase();
     if (!audioCache.has(key)) {
@@ -189,12 +183,14 @@ async function speak(term) {
       audioCache.set(key,reply.ok && reply.status === 200 ? URL.createObjectURL(await reply.blob()) : "");
     }
     const url = audioCache.get(key);
-    if (url) {
-      voicePlayer?.pause();
-      voicePlayer = new Audio(url);
-      await voicePlayer.play();
-      return;
-    }
+    if (url) { await play(url); return; }
+  } catch { /* try the dictionary recording */ }
+  // 2) A recorded voice from the free dictionary (single words only).
+  try {
+    const key = text.toLowerCase();
+    if (!audioCache.has(key)) audioCache.set(key,await findAudio(key).catch(() => ""));
+    const url = audioCache.get(key);
+    if (url) { await play(url); return; }
   } catch { /* fall back to the browser voice */ }
   if (!("speechSynthesis" in window)) return flash("Pronunciation is not available in this browser.");
   // Without picking a voice the browser may read English with its default (often Korean) voice, so an English voice is chosen on purpose, best-sounding first.
