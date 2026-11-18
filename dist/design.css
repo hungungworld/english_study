@@ -870,7 +870,8 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body #tv-overlay .word-saved{text-decoration:underline dotted;text-decoration-thickness:1px;text-underline-offset:4px}
 :root:root:root body #tv-overlay mark.hl .word-saved{text-decoration:none}
 :root:root:root body #tv-overlay .tv-highlights .tv-hl-words{font:400 var(--ds-fs-body)/2 var(--ds-sans);margin:0}
-:root:root:root body #tv-overlay .tv-article.pen-on .tv-para > p[lang=en]{cursor:text}
+/* Pen on: the pointer over the article text is a yellow highlighter (tip at the lower left); touch screens have no pointer, so the yellow button carries the state there */
+:root:root:root body #tv-overlay .tv-article.pen-on .tv-para > p[lang=en]{cursor:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cpath%20d%3D%22M4%2028l2-7%2014-14%205%205-14%2014z%22%20fill%3D%22%23ffd600%22%20stroke%3D%22%2314100c%22%20stroke-width%3D%221.5%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M20%207l3-3a2%202%200%200%201%203%200l2%202a2%202%200%200%201%200%203l-3%203z%22%20fill%3D%22%2314100c%22%2F%3E%3Cpath%20d%3D%22M4%2028l2-7%205%205z%22%20fill%3D%22%2314100c%22%2F%3E%3C%2Fsvg%3E") 4 28,text}
 :root:root:root body #tv-overlay .tv-fabs{position:sticky;bottom:calc(var(--ds-sp-4) + var(--bar-h,0px));z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:var(--ds-sp-2);width:var(--ds-h-button);margin:0 var(--ds-sp-4) var(--ds-sp-4) auto;pointer-events:none}
 :root:root:root body #tv-overlay .tv-fabs > button{pointer-events:auto}
 :root:root:root body #tv-overlay .tv-pen{display:flex;align-items:center;justify-content:center;width:var(--ds-h-button);height:var(--ds-h-button);margin:0;padding:0;border:1px solid var(--ds-on-dark);border-radius:var(--ds-radius);background:var(--ds-dark-2);color:var(--ds-on-dark)}
@@ -941,3 +942,17 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 
 /* ---- Phone reader (DESIGN.md 10-54): the three floating buttons sit in one row, so they hide only one line of text instead of the right edge of six ---- */
 @media (max-width:560px){:root:root:root body #tv-overlay .tv-fabs{flex-direction:row;justify-content:flex-end;width:auto}:root:root:root body #tv-overlay .tv-fabs > button{flex:none;min-width:var(--ds-h-button)}}
+
+/* Word list rows: a fixed grid (word | meaning | Edit · Delete), so columns line up on every row whatever the word length or whether there is an example.
+   The buttons sit in the right-hand column; the example runs under the word and meaning. On phones the buttons stay top-right and the meaning moves under the word. */
+:root:root:root body .word-row{display:grid;grid-template-columns:minmax(120px,200px) minmax(0,1fr) auto;align-items:center;column-gap:var(--ds-sp-4);row-gap:var(--ds-sp-1)}
+:root:root:root body .word-row > strong{grid-column:1;grid-row:1;min-width:0;overflow-wrap:anywhere}
+:root:root:root body .word-row > span{grid-column:2;grid-row:1;min-width:0}
+:root:root:root body .word-row > em{grid-column:1 / 3;grid-row:2;flex-basis:auto}
+:root:root:root body .word-row > .word-actions{grid-column:3;grid-row:1 / span 2;align-self:center;margin:0;flex-wrap:nowrap;justify-content:flex-end}
+@media (max-width:560px){
+  :root:root:root body .word-row{grid-template-columns:minmax(0,1fr) auto}
+  :root:root:root body .word-row > span{grid-column:1 / 3;grid-row:2}
+  :root:root:root body .word-row > em{grid-column:1 / 3;grid-row:3}
+  :root:root:root body .word-row > .word-actions{grid-column:2;grid-row:1;align-self:start}
+}
