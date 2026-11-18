@@ -195,6 +195,8 @@ document.addEventListener("click",event => {
   if (event.detail && event.target.closest(".media-mode :is(.tv-grid,.globe-stage)")) event.stopPropagation();
 },true);
 
+// Articles that open in our own reader come from The Guardian or The Korea Herald.
+const readSource = item => item.source === "The Korea Herald" ? "The Korea Herald" : "The Guardian";
 function items() {
   if (filter === "scraps") return scraps;
   if (filter === "news") return news;
@@ -208,7 +210,7 @@ function date(item) {
 }
 function screen(item, detail = false) {
   if (item.type === "video") return `<div class="tv-screen video-screen"><img src="${escape(item.image)}" alt="" loading="lazy" decoding="async"><span class="tv-play" aria-hidden="true">▶</span></div>`;
-  return `<div class="tv-screen news-screen" lang="en"><span>${item.type === "read" ? "THE GUARDIAN" : item.source === "The Korea Herald" ? "KOREA HERALD" : "WORLD NEWS"}</span><strong>${escape(item.title)}</strong>
+  return `<div class="tv-screen news-screen" lang="en"><span>${item.type === "read" ? readSource(item).replace(/^The /,"").toUpperCase() : "WORLD NEWS"}</span><strong>${escape(item.title)}</strong>
     ${item.image ? `<img class="news-thumbnail" src="${escape(item.image)}" alt="" loading="${detail ? "eager" : "lazy"}" decoding="async">` : ""}</div>`;
 }
 function card(item) {
@@ -232,10 +234,11 @@ async function loadFirst() {
   if (pending) return pending;
   pending = Promise.allSettled([get("/api/news"),get("/api/videos"),get("/api/guardian")]).then(([n,v,g]) => {
     readError = g.status === "rejected";
-    if (!readError) reads = merge([],g.value.items);
+    const herald = n.status === "fulfilled" ? n.value.items.filter(item => item.type === "read") : [];   /* Korea Herald articles arrive with the news list but belong with the readable ones */
+    if (!readError || herald.length) reads = merge([],[...(readError ? [] : g.value.items),...herald]);
     newsError = n.status === "rejected";
     videoError = v.status === "rejected";
-    if (!newsError) news = merge([],n.value.items);
+    if (!newsError) news = merge([],n.value.items.filter(item => item.type !== "read"));
     if (!videoError) {
       videos = merge([],v.value.items);
       next = v.value.next;
@@ -408,7 +411,7 @@ function detail(item) {
     <h1 lang="en">${escape(item.title)}</h1>
     ${item.summary ? `<p class="tv-summary" lang="en">${escape(item.summary)}</p>` : ""}
     ${item.type === "read" ? '<div class="tv-article" data-article aria-live="polite"><p class="hint">Loading the article…</p></div>' : ""}
-    <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "Open on YouTube" : item.type === "read" ? "Read on The Guardian" : item.source === "The Korea Herald" ? "Read on Korea Herald" : "Read on BBC"}<span class="ar ne" aria-hidden="true"></span></a>
+    <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "Open on YouTube" : item.type === "read" ? "Read on " + readSource(item) : "Read on BBC"}<span class="ar ne" aria-hidden="true"></span></a>
     <button type="button" class="tv-action" data-write-source><span class="ic plus" aria-hidden="true"></span>Write</button>
     <button type="button" class="tv-action" data-scrap aria-label="Save" aria-pressed="${saved}" title="${saved ? "Remove from saved" : "Save"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div>${reader ? "</div>" : ""}</section><aside class="tv-writer" aria-label="Write a note" hidden></aside></div>`;
 }
@@ -451,7 +454,7 @@ function openSideWindow(url) {
 async function loadArticle(item) {
   const host = overlay.querySelector("[data-article]");
   try {
-    const response = await fetch("/api/guardian-article?id=" + encodeURIComponent(item.apiId));
+    const response = await fetch((item.source === "The Korea Herald" ? "/api/herald-article?id=" : "/api/guardian-article?id=") + encodeURIComponent(item.apiId));
     const article = await response.json();
     if (!response.ok || !article.paragraphs) throw new Error("article");
     if (selectedItem !== item || !host.isConnected) return;
@@ -460,7 +463,7 @@ async function loadArticle(item) {
       ${article.paragraphs.map((text,index) => `<div class="tv-para" data-para="${index}"><p lang="en">${escape(text)}</p>
         <button type="button" class="tv-link" data-translate aria-expanded="false">Translate</button><p class="tv-ko" lang="ko" hidden></p></div>`).join("")}
       <div class="tv-highlights" data-highlights hidden></div>
-      <p class="hint">Powered by <a href="${escape(article.url)}" target="_blank" rel="noopener noreferrer">The Guardian</a>. Korean translation by Microsoft Translator.</p>`;
+      <p class="hint">${item.source === "The Korea Herald" ? "Source:" : "Powered by"} <a href="${escape(article.url)}" target="_blank" rel="noopener noreferrer">${readSource(item)}</a>. Korean translation by Microsoft Translator.</p>`;
     host.paragraphs = article.paragraphs;
     host.itemId = item.id;
     host.savedTerms = [];

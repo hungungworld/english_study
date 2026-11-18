@@ -48,7 +48,9 @@ export function parseNews(xml, withSummary = false, hint = [], source = "BBC New
       return https(plain(value));
     }).find(Boolean) ?? "";
     const summary = read("description");
-    return [{id:url,type:"news",title,url,image,source,date:read("pubDate"),
+    // Korea Herald articles open in our reader (full text, translation, highlights), so they are "read" items like The Guardian's.
+    const herald = source === HERALD_NAME ? url.match(/\/article\/(\d+)/)?.[1] : "";
+    return [{id:herald ? "kh:" + herald : url,...(herald ? {apiId:herald} : {}),type:herald ? "read" : "news",title,url,image,source,date:read("pubDate"),
       summary,topics:topicsFor(title + " " + summary,hint)}];
   });
 }
@@ -262,6 +264,28 @@ async function guardianArticle(id, env) {
       {headers:{"Cache-Control":"public, max-age=3600, s-maxage=3600"}});
   } catch { return Response.json({error:"Could not load the article."},{status:502}); }
 }
+// ---- The Korea Herald: article text read from the public article page (the RSS feed only has a summary) ----
+async function heraldArticle(id) {
+  try {
+    const response = await fetch("https://www.koreaherald.com/article/" + id,{headers:{"User-Agent":"Mozilla/5.0 (compatible; axciting-reader)","Accept-Language":"en"},signal:AbortSignal.timeout(8000)});
+    if (!response.ok) throw new Error("herald");
+    const html = await response.text();
+    const start = html.indexOf('id="articleText"');
+    if (start < 0) throw new Error("no body");
+    let body = html.slice(start);
+    const end = body.search(/<\/article>/i);
+    if (end > 0) body = body.slice(0,end);
+    body = body.replace(/<figure[\s\S]*?<\/figure>/gi,"").replace(/<script[\s\S]*?<\/script>/gi,"").replace(/<style[\s\S]*?<\/style>/gi,"").replace(/<iframe[\s\S]*?<\/iframe>/gi,"");
+    const lines = [...body.matchAll(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/gi)]
+      .map(([,text]) => plain(text.replace(/<br\s*\/?>/gi," ")).replace(/\s+/g," "))
+      .filter(text => text.length > 1 && !/^(Copyright|\(.*\)$)/i.test(text));
+    const paragraphs = lines.flatMap(chunkText).slice(0,80);
+    if (!paragraphs.length) throw new Error("empty");
+    const title = plain(html.match(/<meta property="og:title" content="([^"]*)"/i)?.[1] ?? "");
+    return Response.json({configured:true,title,byline:"",url:"https://www.koreaherald.com/article/" + id,paragraphs},
+      {headers:{"Cache-Control":"public, max-age=3600, s-maxage=3600"}});
+  } catch { return Response.json({error:"Could not load the article."},{status:502}); }
+}
 const paragraphCache = new Map();
 async function translateParagraphs(texts, env) {
   if (!env.MS_TRANSLATOR_KEY) return Response.json({configured:false,translations:[]});
@@ -324,6 +348,11 @@ export function handler(assets) {
       const id = url.searchParams.get("id") ?? "";
       if (!/^[a-z0-9][a-z0-9\-\/]{4,200}$/i.test(id)) return new Response(null,{status:400});
       return guardianArticle(id,env);
+    }
+    if (url.pathname === "/api/herald-article") {
+      const id = url.searchParams.get("id") ?? "";
+      if (!/^\d{5,12}$/.test(id)) return new Response(null,{status:400});
+      return heraldArticle(id);
     }
     if (url.pathname === "/api/translate") {
       const term = (url.searchParams.get("term") ?? "").trim().toLowerCase();
