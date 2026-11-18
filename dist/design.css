@@ -956,3 +956,14 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
   :root:root:root body .word-row > em{grid-column:1 / 3;grid-row:3}
   :root:root:root body .word-row > .word-actions{grid-column:2;grid-row:1;align-self:start}
 }
+
+/* Quiz page: the quiz comes first; the streak is a single line with a button that opens the full panel in a window (DESIGN.md 62) */
+:root:root:root body .study-line{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--ds-sp-4)}
+:root:root:root body .study-line .streak{margin:0;font:400 var(--ds-fs-body)/1.6 var(--ds-sans)}
+:root:root:root body .study-line .streak strong{font-weight:700}
+:root:root:root body .quiz + .study-line,:root:root:root body .card.quiz + .study-line{margin-top:var(--ds-sp-4)}
+:root:root:root body #confirm-box.is-study{width:min(440px,calc(100% - 2 * var(--ds-sp-4)))}
+:root:root:root body #confirm-box.is-study .study-panel{display:grid;gap:var(--ds-sp-4)}
+:root:root:root body #confirm-box.is-study .week-dots{flex-wrap:wrap}
+:root:root:root body #confirm-box.is-study .study-panel :is(h3,p,ol,ul){margin:0}
+:root:root:root body #confirm-box.is-study{overflow-x:hidden}

@@ -245,7 +245,7 @@ const writerName = post => e(author(post ?? {author:readLocal("active-member",0)
 const MONTHS = ["Jan.","Feb.","Mar.","Apr.","May","Jun.","Jul.","Aug.","Sep.","Oct.","Nov.","Dec."];
 const hearts = count => `<span class="hearts" role="img" aria-label="${count} hearts">${Array.from({length:MAX_HEARTS},(_,i) => `<span class="ic heart${i < count ? "" : " off"}" aria-hidden="true"></span>`).join("")}</span>`;
 const weekdays = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-function studyPanel() {
+function studyPanel(popup = false) {
   const member = activeMember();
   const name = members[member - 1];
   const state = studyState(member);
@@ -256,13 +256,32 @@ function studyPanel() {
   const week = members.map((who,index) => ({who,id:index + 1,notes:inPeriod(board.posts.filter(post => boardKind(post) === "study"),"week").filter(post => post.author === index + 1).length,
     words:inPeriod(board.words,"week").filter(word => word.author === index + 1).length})).filter(row => row.who);
   const into = streak % HEART_EVERY;
-  return `<section class="card study-panel" aria-labelledby="study-panel-title"><h2 id="study-panel-title">${name ? e(name) + "’s " : ""}study streak</h2>
+  return `<section class="${popup ? "" : "card "}study-panel"${popup ? "" : ' aria-labelledby="study-panel-title"'}>${popup ? "" : `<h2 id="study-panel-title">${name ? e(name) + "’s " : ""}study streak</h2>`}
     ${name ? `<p class="streak"><strong>${streak} ${streak === 1 ? "day" : "days"}</strong> in a row · Hearts ${hearts(state.hearts)}</p>
     <ol class="week-dots" aria-label="Days studied this week">${dots}</ol>
     <p class="hint">Take a quiz or post a note or word and today fills in. Every ${HEART_EVERY} days in a row earns a heart (up to ${MAX_HEARTS}), and a heart covers one missed day. ${streak ? `${HEART_EVERY - into} more ${HEART_EVERY - into === 1 ? "day" : "days"} to the next heart.` : ""}</p>` :
     '<p>Choose your name at the top right to start a streak.</p>'}
     <h3>This week’s activity</h3>
     <ul class="week-members">${week.map(row => `<li><span>${e(row.who)}</span><span>${row.notes} ${row.notes === 1 ? "note" : "notes"} · ${row.words} ${row.words === 1 ? "word" : "words"}</span></li>`).join("")}</ul></section>`;
+}
+// The Quiz page shows the quiz first; the streak is one line with a button that opens the full panel in a window.
+function studyLine() {
+  const member = activeMember();
+  const name = members[member - 1];
+  const state = studyState(member);
+  const streak = streakOf(state);
+  return `<section class="card study-line" aria-label="Study streak">${name
+    ? `<p class="streak"><strong>${e(name)}</strong> · ${streak} ${streak === 1 ? "day" : "days"} in a row · Hearts ${hearts(state.hearts)}</p>`
+    : '<p class="streak">Choose your name at the top right to start a streak.</p>'}
+    <button type="button" data-study-open>Study streak</button></section>`;
+}
+function openStudyBox() {
+  if (confirmBox.open) return;
+  const name = members[activeMember() - 1];
+  confirmBox.setAttribute("aria-labelledby","study-title");
+  confirmBox.classList.add("is-study");
+  confirmBox.innerHTML = `<div class="dialog-head"><h2 id="study-title">${name ? e(name) + "’s " : ""}study streak</h2><button type="button" data-study-close aria-label="Close">✕</button></div>${studyPanel(true)}`;
+  confirmBox.showModal();
 }
 function studied() {
   const member = activeMember();
@@ -446,7 +465,7 @@ function renderWords(key) {
   if (quizView) {
     return posterPage({title:"Vocab",sub:"Take quizzes with the words we collect",label:"Vocab info",
       bottom:nav + `<div class="pr-group"><b>This week</b><span>${plural(inPeriod(board.words,"week").length,"new word")}</span><span>${board.words.length} total</span></div>`,
-      body:studyPanel() + renderQuiz()});
+      body:renderQuiz() + studyLine()});
   }
   const words = sorted(wordSelection());
   const names = [[0,"All members"],...members.map((name,index) => [index + 1,name]).filter(([,name]) => name)];
@@ -886,6 +905,11 @@ function openEditor(standalone, post, source, host, kind, editWord, seed) {
 }
 // Our own confirmation window. The browser's confirm() is blocked in app browsers and phone web views (it answers "no" at once, so buttons seem dead).
 const confirmBox = document.querySelector("#confirm-box");
+document.addEventListener("click",event => {
+  if (event.target.closest("[data-study-open]")) openStudyBox();
+  if (event.target.closest("[data-study-close]")) confirmBox.close();
+});
+confirmBox.addEventListener("close",() => { confirmBox.classList.remove("is-study"); confirmBox.setAttribute("aria-labelledby","confirm-title"); });
 function askConfirm({title,message,confirmLabel = "OK",cancelLabel = "Cancel"}) {
   return new Promise(resolve => {
     confirmBox.innerHTML = `<div class="dialog-head"><h2 id="confirm-title">${e(title)}</h2><button type="button" data-confirm="no" aria-label="Close">✕</button></div>
