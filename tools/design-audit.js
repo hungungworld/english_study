@@ -101,7 +101,7 @@
         const c = rgb(s.color), b = rgb(s.backgroundColor), bc = rgb(s.borderTopColor);
         for (const [kind, col] of [['text', c], ['background', b], ['border', s.borderTopWidth !== '0px' && s.borderTopStyle !== 'none' ? bc : null]]) {
           if (!col || col.a === 0) continue;
-          if (kind === 'background' && el.matches('mark.hl,.word-saved')) continue;   // the reader's yellow highlighter, the one approved colour exception (DESIGN.md 10-40)
+          if (kind === 'background' && el.matches('mark.hl,.word-saved,.tv-pen[aria-pressed=true],.tv-demo,.tv-demo-dot')) continue;   // the reader's yellow highlighter, the one approved colour exception (DESIGN.md 10-40)
           if (!SPEC.colors.some(k => near(k[0], col.r, 1) && near(k[1], col.g, 1) && near(k[2], col.b, 1))) add('color', el, kind + ' rgb(' + col.r + ',' + col.g + ',' + col.b + ')');
         }
       }

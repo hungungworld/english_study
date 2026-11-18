@@ -519,7 +519,9 @@ function renderQuiz() {
     const wrongBox = wrong.length ? `<div class="wrong-box"><h3>Retry missed words</h3><p class="hint">${wrong.length} ${wrong.length === 1 ? "word" : "words"} missed in past quizzes. Get one right and it leaves the list.</p>
       <ul class="wrong-list">${wrong.slice(0,6).map(word => `<li><strong lang="en">${e(word.term)}</strong><span>${e(word.meaning)}</span></li>`).join("")}</ul>
       <div class="row"><button type="button" class="primary" data-quiz="review">Retry ${wrong.length} missed ${wrong.length === 1 ? "word" : "words"}</button></div></div>` : "";
-    const options = [quizButton("week","This week’s words",inPeriod(board.words,"week")),quizButton("all","All words",board.words)].join("");
+    const mine = board.words.filter(word => activeMember() && word.author === activeMember());
+    const options = [quizButton("week","This week’s words",inPeriod(board.words,"week")),quizButton("all","All words",board.words),
+      quizButton("mineweek","My words this week",inPeriod(mine,"week")),quizButton("mine","My words",mine)].join("");
     return `<section class="card quiz"><h2>Choose a quiz range</h2>${options
       ? `${wrongBox}<p>Pick a range for up to 10 questions.</p><div class="row">${options}</div>`
       : "<p>No words to quiz yet. Add words while you write a note.</p>"}</section>`;
@@ -1130,7 +1132,8 @@ main.addEventListener("click",async event => {
     } catch (failure) { flash(failure.message); button.disabled = false; }
   }
   if (data.quiz) {
-    const choices = {week:inPeriod(board.words,"week"),all:board.words,words:wordSelection(),post:board.words.filter(word => word.post_id === (data.postId || id)),retry:quiz?.missed,review:reviewWords()};
+    const mine = board.words.filter(word => activeMember() && word.author === activeMember());
+    const choices = {week:inPeriod(board.words,"week"),all:board.words,mine,mineweek:inPeriod(mine,"week"),words:wordSelection(),post:board.words.filter(word => word.post_id === (data.postId || id)),retry:quiz?.missed,review:reviewWords()};
     beginQuiz(choices[data.quiz] ?? []);
   }
   if (data.choice !== undefined && quiz && quiz.picked === null) {

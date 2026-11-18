@@ -878,7 +878,15 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body #tv-overlay .tv-jump:hover:enabled,:root:root:root body #tv-overlay .tv-jump:focus-visible{background:rgba(11,9,7,.85);color:var(--ds-on-dark);opacity:1}
 :root:root:root body #tv-overlay .tv-jump[hidden]{display:none}
 :root:root:root body #tv-overlay .tv-jump svg{width:22px;height:22px}
-:root:root:root body #tv-overlay .tv-pen[aria-pressed=true]{background:var(--ds-on-dark);color:var(--ds-dark)}
+:root{--ds-highlight-solid:#ffd600}
+/* Pen on = the button turns highlighter yellow and text selection is yellow too; pen off = neutral grey selection, so it is clear nothing is being painted */
+:root:root:root body #tv-overlay .tv-pen[aria-pressed=true]{background:var(--ds-highlight-solid);border-color:var(--ds-highlight-solid);color:var(--ds-dark)}
+:root:root:root body #tv-overlay .tv-article.pen-on .tv-para > p[lang=en]::selection{background:rgba(255,214,0,.45);color:inherit}
+:root:root:root body #tv-overlay .tv-article:not(.pen-on) .tv-para > p[lang=en]::selection{background:rgba(160,160,160,.35);color:inherit}
+/* First time the pen is turned on in an article: a yellow stroke sweeps over the start of the first paragraph, with a dot that shows where the finger presses and drags */
+:root:root:root body #tv-overlay .tv-para > p[lang=en]{position:relative}
+:root:root:root body #tv-overlay .tv-demo{position:absolute;pointer-events:none;background:var(--ds-highlight);border-radius:var(--ds-radius);transform-origin:left center}
+:root:root:root body #tv-overlay .tv-demo-dot{position:absolute;pointer-events:none;width:var(--ds-sp-4);height:var(--ds-sp-4);margin:calc(var(--ds-sp-2) * -1) 0 0 calc(var(--ds-sp-2) * -1);border:2px solid var(--ds-highlight-solid);border-radius:50%;background:rgba(255,214,0,.35)}
 :root:root:root body #tv-overlay .tv-pen svg{width:22px;height:22px}
 :root:root:root body #tv-overlay .tv-highlights{display:grid;gap:var(--ds-sp-4);padding-top:var(--ds-sp-5);border-top:1px solid var(--ds-on-dark-muted)}
 :root:root:root body #tv-overlay .tv-highlights[hidden]{display:none}

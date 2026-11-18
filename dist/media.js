@@ -497,6 +497,36 @@ function syncJump(scroll) {
   }
 }
 let penOn = false;
+// The first time the pen goes on in an article, a yellow stroke sweeps across the start of the first paragraph (twice), so "press and drag" is seen rather than read.
+function showPenDemo(host) {
+  if (!host?.itemId) return;
+  const seen = readLocal("reader-demo",[]);
+  if (seen.includes(host.itemId)) return;
+  writeLocal("reader-demo",[...seen,host.itemId].slice(-200));
+  const para = host.querySelector(".tv-para > p[lang=en]");
+  const node = para?.firstChild;
+  if (!node || node.nodeType !== 3 || node.textContent.length < 12) return;
+  para.scrollIntoView({block:"center",behavior:"auto"});
+  const range = document.createRange();
+  range.setStart(node,0);
+  range.setEnd(node,Math.min(node.textContent.length,Math.max(12,(node.textContent.slice(0,48).lastIndexOf(" ") + 1) || 40)));
+  const rect = range.getClientRects()[0];
+  if (!rect) return;
+  const base = para.getBoundingClientRect();
+  const bar = document.createElement("span");
+  bar.className = "tv-demo";
+  bar.style.cssText = `left:${rect.left - base.left}px;top:${rect.top - base.top}px;width:${rect.width}px;height:${rect.height}px`;
+  const dot = document.createElement("span");
+  dot.className = "tv-demo-dot";
+  dot.style.cssText = `left:${rect.left - base.left}px;top:${rect.top - base.top + rect.height / 2}px`;
+  para.append(bar,dot);
+  const done = () => { bar.remove(); dot.remove(); };
+  setTimeout(done,4500);   // safety: never leave the stroke behind, even if the animation is paused (hidden tab)
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { setTimeout(done,1800); return; }
+  const timing = {duration:1100,iterations:2,easing:"ease-in-out",delay:300};
+  bar.animate([{transform:"scaleX(0)"},{transform:"scaleX(1)"}],timing);
+  dot.animate([{transform:"translateX(0)",opacity:1},{transform:`translateX(${rect.width}px)`,opacity:1}],timing).finished.then(done,done);
+}
 const readMarks = id => readLocal("reader-marks",{})[id] ?? [];
 function writeMarks(id, list) {
   const all = readLocal("reader-marks",{});
@@ -667,6 +697,7 @@ overlay.addEventListener("click",async event => {
     penOn = !penOn;
     pen.setAttribute("aria-pressed",String(penOn));
     overlay.querySelector(".tv-article")?.classList.toggle("pen-on",penOn);
+    if (penOn) showPenDemo(overlay.querySelector("[data-article]"));
   }
   if (selectedItem && event.target.closest("[data-note-from-highlights]")) {
     const writer = overlay.querySelector(".tv-writer");
