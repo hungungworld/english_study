@@ -119,8 +119,11 @@ function fillPoster(root,ctx) {
   const paper = root.querySelector(".home-paper");
   if (!paper || !ctx) return;
   lastCtx = ctx;
-  const news = pool.filter(item => item.type === "news").slice(0,2);
-  const picks = (pool.length > 9 ? pool.slice(4,9) : pool.slice(0,5));
+  // The first four items are on the TV screens; the "New news" list and the picture strip show other items, so no article appears twice.
+  const later = pool.slice(4);
+  const news = (later.length >= 2 ? later : pool).filter(item => item.type === "news").slice(0,2);
+  const strip = later.filter(item => !news.includes(item));
+  const picks = strip.length >= 3 ? strip.slice(0,5) : pool.slice(0,5);
   const link = item => `#tv/${encodeURIComponent(item.id)}`;
   const posts = ctx.loading ? '<p>Loading…</p>' : ctx.error ? `<p>${escape(ctx.error)}</p>` :
     ctx.posts.length ? ctx.posts.map(post => `<p><a href="#post/${escape(post.id)}">${escape(post.title)}</a><br>${escape(post.by)} · ${escape(post.date)}</p>`).join("") :

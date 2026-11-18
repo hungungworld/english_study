@@ -975,6 +975,9 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 /* Side rail: items sit indented under their small heading; the member names fold away behind "Members" (DESIGN.md 64) */
 @media(min-width:901px){
   :root:root:root body .pr-group > :not(b){margin-left:var(--ds-sp-4)}
+  /* Home rail ("This week", "Sources"): the lines indent under the small heading, which stays flush left */
+  :root:root:root body .pp-rail p:has(> .pp-k){padding-left:var(--ds-sp-4)}
+  :root:root:root body .pp-rail p > .pp-k{margin-left:calc(var(--ds-sp-4) * -1)}
 }
 :root:root:root body .pr-fold{display:block}
 :root:root:root body .pr-fold > summary{display:flex;align-items:center;gap:var(--ds-sp-2);min-height:var(--ds-sp-6);padding:0;list-style:none;cursor:pointer;font:500 var(--ds-fs-caption)/1.5 var(--ds-sans);letter-spacing:.04em;color:var(--ds-muted)}

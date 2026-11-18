@@ -1069,7 +1069,7 @@ const CAP = Math.cos(66*DEG);
 const NEAR = Math.cos(38*DEG);
 const DRIFT = 0; // idle rotation is off; the globe only moves when dragged, scrolled or flicked
 const globe = {stage:null,world:null,slots:[],live:new Map(),list:[],offLon:0,offLat:0,velLon:0,velLat:0,
-  last:0,raf:0,hover:false,drag:null,speed:1,R:0,w:0,h:0,stepC:1,stepR:1,latPeriod:360,dirty:false};
+  last:0,raf:0,hover:false,drag:null,speed:1,R:0,w:0,h:0,stepC:1,stepR:1,cols:1,latPeriod:360,dirty:false};
 let globePages = 0;
 
 function coprime(n,seed) {
@@ -1083,7 +1083,16 @@ function wrap(value,period) {
 }
 function pickItem(slot) {
   const n = globe.list.length;
-  return n ? globe.list[(slot.col*globe.stepC + slot.row*globe.stepR) % n] : null;
+  // One running number per slot, so two slots share an item only when their numbers differ by a multiple of the item count (far apart on the sphere, never side by side).
+  if (!n) return null;
+  const start = ((slot.row*globe.cols + slot.col)*globe.stepC) % n;
+  // The sphere has more slots than items, so an item can come around again; skip any item already on a card that is showing right now.
+  const showing = new Set([...globe.live.values()].map(el => el.dataset.media));
+  for (let step = 0; step < n; step++) {
+    const item = globe.list[(start + step) % n];
+    if (!showing.has(item.id)) return item;
+  }
+  return globe.list[start];
 }
 function buildGlobe() {
   const {stage,world} = globe;
@@ -1111,6 +1120,7 @@ function buildGlobe() {
     }
   }
   globe.slots = slots;
+  globe.cols = cols;
   globe.dirty = true;
 }
 function setGlobeList() {
