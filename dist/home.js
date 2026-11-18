@@ -91,7 +91,7 @@ async function show(screen,item) {
   screen.dataset.kind = item.type;
   screen.title = item.title + (item.views ? ` · ${compact(item.views)} views` : "");
   screen.querySelector(".ps-img").style.backgroundImage = url ? `url("${url}")` : "";
-  screen.dataset.cap = `${item.type === "video" ? "English video" : "BBC News"}${item.views ? ` · ${compact(item.views)} views` : ""}|${item.title}|${item.topics?.[0] ?? ""}`;
+  screen.dataset.cap = `${item.type === "video" ? "English video" : item.source === "The Korea Herald" ? "Korea Herald" : "BBC News"}${item.views ? ` · ${compact(item.views)} views` : ""}|${item.title}|${item.topics?.[0] ?? ""}`;
   setTimeout(() => screen.classList.remove("is-static"),260);
 }
 // The four TVs: newest news, most-viewed recent video, second news, second video.
@@ -133,7 +133,7 @@ function fillPoster(root,ctx) {
     <div class="pp-rail">
       <div class="pp-rail-top">
         <p><span class="pp-k">This week</span>${plural(ctx.memberCount,"member")}<br>${plural(ctx.postCount,"note")}<br>${plural(ctx.wordCount,"word")}</p>
-        <p><span class="pp-k">Sources</span>BBC News<br>BBC Learning English</p>
+        <p><span class="pp-k">Sources</span>BBC News<br>The Korea Herald<br>BBC Learning English</p>
       </div>
       <div class="pp-dates">${escape(ctx.today.label)}<span>${ctx.today.year}</span></div>
       <div class="pp-rail-foot">${ctx.shared ? "" : '<p class="pp-note">Demo mode<br>Sample data.</p>'}</div>

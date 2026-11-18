@@ -35,19 +35,20 @@ function topicsFor(text, hint = []) {
   for (const [label,pattern] of TOPIC_RULES) if (pattern.test(text)) found.add(label);
   return TOPIC_RULES.map(([label]) => label).filter(label => found.has(label));
 }
-export function parseNews(xml, withSummary = false, hint = []) {
+export function parseNews(xml, withSummary = false, hint = [], source = "BBC News") {
   return [...xml.matchAll(/<item(?:\s[^>]*)?>([\s\S]*?)<\/item>/gi)].flatMap(([,item]) => {
     const read = name => plain(item.match(new RegExp("<" + name + "(?:\\s[^>]*)?>([\\s\\S]*?)<\\/" + name + ">", "i"))?.[1]);
     const url = https(read("link"));
     const title = read("title");
     if (!url || !title) return [];
-    const thumbnails = [...item.matchAll(/<media:thumbnail\b([^>]*)>/gi)];
+    // BBC gives <media:thumbnail>; Korea Herald gives <media:content medium="image">.
+    const thumbnails = [...item.matchAll(/<media:(?:thumbnail|content)\b([^>]*)>/gi)];
     const image = thumbnails.map(([,attributes]) => {
       const value = attributes.match(/\burl\s*=\s*(["'])(.*?)\1/i)?.[2];
       return https(plain(value));
     }).find(Boolean) ?? "";
     const summary = read("description");
-    return [{id:url,type:"news",title,url,image,source:"BBC News",date:read("pubDate"),
+    return [{id:url,type:"news",title,url,image,source,date:read("pubDate"),
       summary,topics:topicsFor(title + " " + summary,hint)}];
   });
 }
@@ -62,8 +63,23 @@ const SEARCH_FEEDS = [["world",[]],["technology",["AI & Tech"]],["science_and_en
   ["business",["Economy & Finance"]],["entertainment_and_arts",["Culture & Entertainment"]],["education",["Education"]],["uk",[]],
   ["world/us_and_canada",[]],["world/asia",[]],["world/europe",[]]]
   .map(([name,hint]) => ["https://feeds.bbci.co.uk/news/" + name + "/rss.xml",hint]);
+// The Korea Herald publishes public RSS feeds too (50 items each).
+const HERALD_NAME = "The Korea Herald";
+const HERALD_FEEDS = [["newsAll",[]],["kh_National",[]],["kh_Business",["Economy & Finance"]],["kh_World",["Politics & World"]],
+  ["kh_LifenCulture",["Culture & Entertainment"]],["kh_Kpop",["Culture & Entertainment"]]]
+  .map(([name,hint]) => ["https://www.koreaherald.com/rss/" + name,hint]);
+const newest = (a,b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0);
+async function news() {
+  const [bbc,herald] = await Promise.allSettled([
+    upstream(BBC_FEED).then(response => response.text()).then(xml => parseNews(xml)),
+    upstream(HERALD_FEEDS[0][0]).then(response => response.text()).then(xml => parseNews(xml,false,[],HERALD_NAME))]);
+  if (bbc.status === "rejected" && herald.status === "rejected") throw new Error("Upstream unavailable");
+  return [...(bbc.value ?? []),...(herald.value ?? [])].sort(newest);
+}
 async function search(query, wanted = []) {
-  const results = await Promise.allSettled(SEARCH_FEEDS.map(async ([url,hint]) => parseNews(await (await upstream(url)).text(),true,hint)));
+  const results = await Promise.allSettled([
+    ...SEARCH_FEEDS.map(async ([url,hint]) => parseNews(await (await upstream(url)).text(),true,hint)),
+    ...HERALD_FEEDS.map(async ([url,hint]) => parseNews(await (await upstream(url)).text(),true,hint,HERALD_NAME))]);
   if (!results.some(result => result.status === "fulfilled")) return Response.json({error:"Could not load content."},{status:502});
   const unique = new Map();
   for (const result of results) {
@@ -119,7 +135,7 @@ async function media(request, env, context, path, cursor) {
   if (cached) return cached;
   try {
     const data = path === "/api/news"
-      ? {items:parseNews(await (await upstream(BBC_FEED)).text())}
+      ? {items:await news()}
       : await videos(env,cursor);
     const response = Response.json(data,{headers:{"Cache-Control":data.configured === false ? "no-store" : "public, max-age=300"}});
     if (cache && context && data.configured !== false) context.waitUntil(cache.put(cacheKey,response.clone()).catch(() => {}));

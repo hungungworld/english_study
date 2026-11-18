@@ -719,7 +719,7 @@ function openEditor(standalone, post, source, host, kind, editWord, seed) {
   <label data-guest>Display name<input name="author_name" maxlength="40" value="${e(selected.author_name)}"></label>
   ${canSwitch ? `<div class="tv-seg type-seg" role="group" aria-label="Post type"><button type="button" data-type="note" aria-pressed="${type === "note"}">Note</button><button type="button" data-type="post" aria-pressed="${type === "post"}">Post</button></div>` : ""}
   <div class="compose" data-compose></div>
-  <div class="stack" data-words>${standalone ? wordFields(editWord ?? {},false) : (seed && !editing ? seed.words.slice(0,8).map(term => wordFields({term})) : words).map(word => typeof word === "string" ? word : wordFields(word)).join("")}</div>
+  <div class="stack" data-words>${standalone ? wordFields(editWord ?? {},false) : (seed && !editing ? seed.words.slice(0,20).map(term => wordFields(seedWord(term))) : words).map(word => typeof word === "string" ? word : wordFields(word)).join("")}</div>
   <p class="hint nudge" data-nudge role="status" hidden>Add the words you learned from this note. Tap “Add a word”, or press “Post note” again to post without words.</p>
   <div class="row"><button type="button" data-add-word><span class="ic plus" aria-hidden="true"></span>Add a word</button><button class="primary" type="submit"></button></div>
   <p class="form-error" id="${pre}-error" role="alert" hidden></p></form>`;
@@ -777,7 +777,7 @@ function openEditor(standalone, post, source, host, kind, editWord, seed) {
   };
   paint();
   if (seed && !editing && seed.words.length) {
-    form.querySelectorAll(".word-fields").forEach(box => fillWord(box,box.querySelector('[name="term"]').value.trim()));
+    form.querySelectorAll(".word-fields").forEach(box => { if (!box.querySelector('[name="meaning"]').value) fillWord(box,box.querySelector('[name="term"]').value.trim()); });
     // The panel opens with the highlighted words already in it; bring them into view so it is clear they were added.
     setTimeout(() => form.querySelector(".word-fields")?.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"}),350);
   }
@@ -1388,10 +1388,54 @@ overlayEl.addEventListener("cancel",event => {
   paintWordBar();
 });
 overlayEl.addEventListener("close",() => { wordPick = null; });
+// Highlighted words go into the note as ready-made word cards. A word already in the list brings its saved meaning and example along.
+const seedWord = term => {
+  const saved = board.words.find(word => sameWord(word,term));
+  return {term,meaning:saved?.meaning ?? "",example:saved?.example ?? ""};
+};
+// Pressing "Write a note with these" again must never clear what was typed: the open form only gets the missing words (and the key sentences, if that box is empty).
+function addSeedToWriter(host, seed) {
+  const wordsBox = host.querySelector("[data-words]");
+  const have = [...wordsBox.querySelectorAll('[name="term"]')].map(input => input.value.trim().toLowerCase());
+  const missing = seed.words.filter(term => !have.includes(term.toLowerCase()));
+  const room = Math.max(0,20 - wordsBox.children.length);
+  const added = [];
+  for (const term of missing.slice(0,room)) {
+    // A blank card left over from "Add a word" is filled first instead of being left empty next to the new ones.
+    const blank = [...wordsBox.querySelectorAll(".word-fields")].find(box => !box.querySelector('[name="term"]').value.trim() && !box.querySelector('[name="meaning"]').value.trim());
+    if (blank) {
+      const fill = seedWord(term);
+      blank.querySelector('[name="term"]').value = fill.term;
+      blank.querySelector('[name="meaning"]').value = fill.meaning;
+      blank.querySelector('[name="example"]').value = fill.example;
+      added.push(blank);
+    } else {
+      wordsBox.insertAdjacentHTML("beforeend",wordFields(seedWord(term)));
+      added.push(wordsBox.lastElementChild);
+    }
+  }
+  added.forEach(box => { if (!box.querySelector('[name="meaning"]').value) fillWord(box,box.querySelector('[name="term"]').value.trim()); });
+  const sentenceInput = [...host.querySelectorAll("form label")].find(label => label.firstChild?.textContent?.startsWith("Key sentence"))?.querySelector("textarea,input");
+  if (sentenceInput && !sentenceInput.value.trim() && seed.sentences.length) {
+    sentenceInput.value = seed.sentences.join(" / ").slice(0,3900);
+    sentenceInput.dispatchEvent(new Event("input",{bubbles:true}));
+  }
+  if (added.length) editorChanged = true;
+  const hidden = host.querySelector("[data-nudge]");
+  if (hidden) hidden.hidden = true;
+  const target = added[0] ?? wordsBox.querySelector(".word-fields");
+  setTimeout(() => target?.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"}),50);
+  flash(added.length ? `${added.length} ${added.length === 1 ? "word" : "words"} added to your note.` : seed.words.length ? "All highlighted words are already in your note." : "No highlighted words yet.");
+}
 overlayEl.addEventListener("write-media",event => {
   const {item,host,seed} = event.detail;
   writerSource = item;
-  openEditor(false,undefined,item,host,undefined,undefined,seed ? {sentences:seed.sentences,words:seed.words.filter(term => !board.words.some(word => sameWord(word,term)))} : undefined);
+  // The form is already open: keep it as it is.
+  if (host.querySelector("form [data-words]")) {
+    if (seed) addSeedToWriter(host,seed);
+    return;
+  }
+  openEditor(false,undefined,item,host,undefined,undefined,seed ? {sentences:seed.sentences,words:seed.words} : undefined);
   host.querySelector("textarea")?.focus();
 });
 function chooseMember(afterSelection) {

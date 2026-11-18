@@ -208,7 +208,7 @@ function date(item) {
 }
 function screen(item, detail = false) {
   if (item.type === "video") return `<div class="tv-screen video-screen"><img src="${escape(item.image)}" alt="" loading="lazy" decoding="async"><span class="tv-play" aria-hidden="true">▶</span></div>`;
-  return `<div class="tv-screen news-screen" lang="en"><span>${item.type === "read" ? "THE GUARDIAN" : "WORLD NEWS"}</span><strong>${escape(item.title)}</strong>
+  return `<div class="tv-screen news-screen" lang="en"><span>${item.type === "read" ? "THE GUARDIAN" : item.source === "The Korea Herald" ? "KOREA HERALD" : "WORLD NEWS"}</span><strong>${escape(item.title)}</strong>
     ${item.image ? `<img class="news-thumbnail" src="${escape(item.image)}" alt="" loading="${detail ? "eager" : "lazy"}" decoding="async">` : ""}</div>`;
 }
 function card(item) {
@@ -365,7 +365,7 @@ function paint() {
       : items().slice(0,section === "home" ? 6 : LIMIT);
   }
   const messages = section === "scraps" ? [] : [
-    filter !== "video" && filter !== "read" && newsError ? "Could not load BBC News." : "",
+    filter !== "video" && filter !== "read" && newsError ? "Could not load news." : "",
     filter !== "news" && filter !== "read" && videoError ? "Could not load videos." : "",
     (filter === "read" || filter === "all") && readError ? "Could not load articles." : "",
     ready && filter === "video" && !videoConfigured && !videoError ? "Videos are not available yet." : ""
@@ -408,7 +408,7 @@ function detail(item) {
     <h1 lang="en">${escape(item.title)}</h1>
     ${item.summary ? `<p class="tv-summary" lang="en">${escape(item.summary)}</p>` : ""}
     ${item.type === "read" ? '<div class="tv-article" data-article aria-live="polite"><p class="hint">Loading the article…</p></div>' : ""}
-    <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "Open on YouTube" : item.type === "read" ? "Read on The Guardian" : "Read on BBC"}<span class="ar ne" aria-hidden="true"></span></a>
+    <div class="row"><a class="tv-out" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${item.type === "video" ? "Open on YouTube" : item.type === "read" ? "Read on The Guardian" : item.source === "The Korea Herald" ? "Read on Korea Herald" : "Read on BBC"}<span class="ar ne" aria-hidden="true"></span></a>
     <button type="button" class="tv-action" data-write-source><span class="ic plus" aria-hidden="true"></span>Write</button>
     <button type="button" class="tv-action" data-scrap aria-label="Save" aria-pressed="${saved}" title="${saved ? "Remove from saved" : "Save"}"><span class="bookmark-icon" aria-hidden="true"></span></button></div></div>${reader ? "</div>" : ""}</section><aside class="tv-writer" aria-label="Write a note" hidden></aside></div>`;
 }
@@ -747,9 +747,9 @@ const spanOf = list => {
 function aboutHtml() {
   const loaded = (list,word) => list.length ? `${list.length} ${word}${list.length === 1 ? "" : "s"} loaded, ${spanOf(list)}. ` : "";
   return `<div class="tv-about" id="tv-about" role="region" aria-label="About this list" ${aboutOpen ? "" : "hidden"}><h2>About this list</h2><dl>
-    <dt>Articles</dt><dd>${loaded(news,"article")}BBC World News feed, newest first. BBC keeps only about the last 2 days, so older articles drop off.</dd>
+    <dt>Articles</dt><dd>${loaded(news,"article")}BBC World News and The Korea Herald feeds, newest first. They keep only the most recent articles, so older ones drop off.</dd>
     <dt>Videos</dt><dd>${loaded(videos,"video")}BBC Learning English on YouTube, newest first. Older videos load as you scroll in Video.</dd>
-    <dt>Search</dt><dd>Looks through BBC’s section feeds, about 280 recent articles going back a couple of months.</dd>
+    <dt>Search</dt><dd>Looks through the section feeds of BBC and The Korea Herald, several hundred recent articles.</dd>
     <dt>Updated</dt><dd>About every 5 minutes. We don’t store articles. Items you save stay in this browser.</dd></dl></div>`;
 }
 function setAbout(open) {
@@ -812,12 +812,12 @@ function dockHtml() {
   const count = filterCount();
   return `<nav class="tv-dock" aria-label="Explore menu"><button type="button" class="tv-explore" data-sheet-toggle aria-expanded="${sheetOpen}" aria-controls="tv-sheet">Search${count ? `<span class="badge" aria-label="${count} filters applied">${count}</span>` : ""}</button><a href="#home">Home</a><a href="#scraps">Saved</a></nav>`;
 }
-// "Loaded from BBC · updated 3 min ago": says the list really came from the feeds, and how fresh it is. Hidden while loading or after an error.
+// "Loaded from BBC and Korea Herald · updated 3 min ago": says the list really came from the feeds, and how fresh it is. Hidden while loading or after an error.
 function freshText() {
   if (!ready || !loadedAt || newsError || videoError) return "";
   const minutes = Math.floor((Date.now() - loadedAt) / 60000);
   const ago = minutes < 1 ? "just now" : minutes < 60 ? `${minutes} min ago` : `${Math.floor(minutes / 60)} hr ago`;
-  return `<span class="ic check" aria-hidden="true"></span>Loaded from BBC · updated ${ago}`;
+  return `<span class="ic check" aria-hidden="true"></span>Loaded from BBC and Korea Herald · updated ${ago}`;
 }
 function sheetHtml() {
   const counts = topicCounts();
@@ -837,7 +837,7 @@ function summaryHtml() {
   for (const topic of selectedTopics) pills.push(`<span class="tv-pill">${escape(topic)} <button type="button" data-remove-topic="${escape(topic)}" aria-label="Remove ${escape(topic)}">✕</button></span>`);
   if (filter !== "all") pills.push(`<span class="tv-pill">${filters[filter]} <button type="button" data-remove-type aria-label="Clear type">✕</button></span>`);
   const total = resultsActive() ? landingResults().length : items().length;
-  pills.push(`<span class="tv-pill">${total} ${total === 1 ? "result" : "results"}${searchState === "loading" ? " · Searching BBC…" : searchState === "error" ? " · BBC search failed. Showing loaded items only." : ""}</span>`);
+  pills.push(`<span class="tv-pill">${total} ${total === 1 ? "result" : "results"}${searchState === "loading" ? " · Searching feeds…" : searchState === "error" ? " · Search failed. Showing loaded items only." : ""}</span>`);
   pills.push('<span class="tv-pill"><button type="button" data-reset-filters>Reset</button></span>');
   return pills.join("");
 }
@@ -845,7 +845,7 @@ function viewInner() {
   if (!resultsActive()) return '<div class="globe-stage" role="group" tabindex="0" aria-label="Explore globe. Rotate it with the arrow keys"><div class="globe-world"></div></div>';
   const list = landingResults();
   if (!list.length) {
-    return `<div class="tv-results"><div class="tv-empty"><p>${searchState === "loading" ? "Searching BBC too…" : "No results."}</p>${searchState === "loading" ? "" :
+    return `<div class="tv-results"><div class="tv-empty"><p>${searchState === "loading" ? "Searching feeds too…" : "No results."}</p>${searchState === "loading" ? "" :
       '<p>Try another keyword or reset the filters.</p><button type="button" data-reset-filters>Reset filters</button>'}</div></div>`;
   }
   return `<div class="tv-results">${list.slice(0,60).map(card).join("")}</div>`;
