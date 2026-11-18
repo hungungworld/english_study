@@ -971,3 +971,17 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 /* Name picker: "Add a member" is the approved underline link, left-aligned under its hint, 16px below the form */
 :root:root:root body #member-picker .tv-link{margin-left:0;padding-left:0}
 :root:root:root body #member-picker form + .hint{margin-top:var(--ds-sp-4)}
+
+/* Side rail: items sit indented under their small heading; the member names fold away behind "Members" (DESIGN.md 64) */
+@media(min-width:901px){
+  :root:root:root body .pr-group > :not(b){margin-left:var(--ds-sp-4)}
+}
+:root:root:root body .pr-fold{display:block}
+:root:root:root body .pr-fold > summary{display:flex;align-items:center;gap:var(--ds-sp-2);min-height:var(--ds-sp-6);padding:0;list-style:none;cursor:pointer;font:500 var(--ds-fs-caption)/1.5 var(--ds-sans);letter-spacing:.04em;color:var(--ds-muted)}
+:root:root:root body .pr-fold > summary::-webkit-details-marker{display:none}
+:root:root:root body .pr-fold > summary::after{content:"+";margin-left:var(--ds-sp-1);font-size:var(--ds-fs-ui);color:var(--ds-ink)}
+:root:root:root body .pr-fold[open] > summary::after{content:"−"}
+:root:root:root body .pr-fold > summary span{letter-spacing:0;color:var(--ds-ink);font-weight:700}
+:root:root:root body .pr-fold > summary:hover{color:var(--ds-ink)}
+:root:root:root body .pr-fold > summary:focus-visible{outline:2px solid var(--ds-ink);outline-offset:2px}
+:root:root:root body .pr-fold > .pr-group{margin-top:var(--ds-sp-2)}

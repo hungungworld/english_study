@@ -44,6 +44,16 @@ export async function addMember(email,password,name) {
   const {access_token} = await response.json();
   return rpc("study_add_member",{member_name:name},access_token);
 }
+// Admin only: change a member's status. "inactive" removes the name from the lists; "hidden" also hides their notes, words and comments.
+export async function setMemberStatus(email,password,memberId,active,hidden) {
+  const response = await fetch(supabaseUrl.replace(/\/$/, "") + "/auth/v1/token?grant_type=password", {
+    method:"POST",headers:{apikey:supabaseKey,"Content-Type":"application/json"},
+    body:JSON.stringify({email,password})
+  });
+  if (!response.ok) throw new Error("Check the admin email and password.");
+  const {access_token} = await response.json();
+  return rpc("study_set_member",{member_no:memberId,make_active:active,hide_content:hidden},access_token);
+}
 const isUuid = id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id));
 // Writes to the shared database run in the background; the screen uses the local copy right away.
 const push = (name, payload) => {

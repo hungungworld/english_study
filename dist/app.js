@@ -2,7 +2,7 @@ import {members as defaultMembers} from "./config.js";
 import {renderMedia,leaveMedia,mediaClick,setLandingFilter} from "./media.js";
 import {renderHome,leaveHome} from "./home.js";
 import {pagerHtml,pageCount,PER_PAGE} from "./pager.js";
-import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost, updateWord, removeWord, addMember, studyState, streakOf, recordStudy, readReactions, toggleReaction, readComments, addComment, removeComment, dayKey, MAX_HEARTS, HEART_EVERY} from "./data.js";
+import {shared, readLocal, writeLocal, loadBoard, saveEntry, removePost, updateWord, removeWord, addMember, setMemberStatus, studyState, streakOf, recordStudy, readReactions, toggleReaction, readComments, addComment, removeComment, dayKey, MAX_HEARTS, HEART_EVERY} from "./data.js";
 
 const main = document.querySelector("#main");
 main.addEventListener("error",event => {
@@ -20,7 +20,10 @@ const day = 86400000;
 const kst = 9 * 3600000;
 const dateFormat = new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Seoul",month:"short",day:"numeric"});
 const e = (value = "") => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[char]);
-const author = item => members[item.author - 1] ?? item.author_name;
+// Deactivated members are blank in `members` (so every picker and filter skips them); their name is kept here for the notes and comments that stay visible.
+let formerNames = {};
+const nameOf = id => members[id - 1] || formerNames[id] || "";
+const author = item => members[item.author - 1] || formerNames[item.author] || item.author_name;
 const own = readLocal("own", {});
 let board = {posts:[],words:[]};
 let loading = true;
@@ -229,7 +232,7 @@ const canManage = post => Boolean(own[post.id]) || (post.author > 0 && post.auth
 function reactionButton(post, names = false) {
   const list = readReactions()[post.id] ?? [];
   const mine = list.includes(activeMember());
-  const who = names && list.length ? `<span class="meta">${list.map(id => e(members[id - 1] ?? "")).filter(Boolean).join(", ")} cheered</span>` : "";
+  const who = names && list.length ? `<span class="meta">${list.map(id => e(nameOf(id))).filter(Boolean).join(", ")} cheered</span>` : "";
   return `<button type="button" class="react" data-react="${e(post.id)}" aria-pressed="${mine}" aria-label="Cheer, ${list.length} so far"><span class="ic thumb" aria-hidden="true"></span>Cheer · ${list.length}</button>${who}`;
 }
 const commentCount = post => (readComments()[post.id] ?? []).length;
@@ -238,7 +241,7 @@ function commentsSection(post) {
   const list = readComments()[post.id] ?? [];
   const me = activeMember();
   return `<section class="comments" aria-labelledby="comments-title"><h2 id="comments-title" class="section-title">Comments ${list.length}</h2>
-    ${list.length ? `<ul class="comment-list">${list.map(item => `<li><div class="meta"><span>${e(members[item.member - 1] ?? "Member")}</span><time datetime="${e(item.at)}">${dateFormat.format(new Date(item.at))}</time>${item.member === me ? `<button type="button" data-comment-delete="${e(item.id)}" data-post-id="${e(post.id)}">Delete</button>` : ""}</div><p>${e(item.text)}</p></li>`).join("")}</ul>` : '<p class="hint">Be the first to comment.</p>'}
+    ${list.length ? `<ul class="comment-list">${list.map(item => `<li><div class="meta"><span>${e(nameOf(item.member) || "Member")}</span><time datetime="${e(item.at)}">${dateFormat.format(new Date(item.at))}</time>${item.member === me ? `<button type="button" data-comment-delete="${e(item.id)}" data-post-id="${e(post.id)}">Delete</button>` : ""}</div><p>${e(item.text)}</p></li>`).join("")}</ul>` : '<p class="hint">Be the first to comment.</p>'}
     <form class="comment-form" data-comment-form="${e(post.id)}" novalidate><label>Comment<textarea name="text" maxlength="500" rows="3" placeholder="Leave a cheer or a question"></textarea></label><p class="form-error" role="alert" hidden></p><div class="row"><button class="primary" type="submit">Post comment</button></div></form></section>`;
 }
 const writerName = post => e(author(post ?? {author:readLocal("active-member",0),author_name:""}));
@@ -346,7 +349,7 @@ function titleFor(page, key) {
   if (page === "home") return "Home";
   if (page === "explore" || page === "tv") return "Explore";
   if (page === "feed") return key === "chat" ? "Free board" : "Study board";
-  if (page === "member") return "Board · " + (members[Number(key) - 1] ?? "Member");
+  if (page === "member") return "Board · " + (nameOf(Number(key)) || "Member");
   if (page === "post") return board.posts.find(post => post.id === key)?.title ?? "Note";
   if (page === "words") return key === "list" ? "Vocab · Word list" : "Vocab · Quiz";
   if (page === "scraps") return "Saved";
@@ -402,7 +405,7 @@ function render() {
   const member = page === "member" ? Number(key) : 0;
   if (page === "member") labMember = member;
   document.body.classList.toggle("board-view",page === "feed" || page === "member");
-  document.querySelector("#members").innerHTML = '<a class="member" href="#feed">All members</a>' + members.map((name,index) =>
+  document.querySelector("#members").innerHTML = '<a class="member" href="#feed">All members</a>' + members.map((name,index) => !name ? "" :
     `<a class="member" href="#member/${index + 1}" ${member === index + 1 ? 'aria-current="page"' : ""}><span class="avatar" aria-hidden="true" style="--avatar:${colors[index % colors.length]}">${index + 1}</span>${e(name)}</a>`).join("");
   document.querySelectorAll("#nav a").forEach(link => {
     const current = homePage ? "#home" : landing ? "#explore" : page === "scraps" ? "#scraps" : page === "words" ? "#words" : "#feed";
@@ -432,6 +435,9 @@ function render() {
   main.innerHTML = (!shared ? '<div class="banner">Demo mode · sample notes are shown, and what you write stays in this browser.</div>' : "") + content;
 }
 // 포스터 레이아웃(왼쪽 정보 칸 + 큰 제목 + 목록): 게시판·단어장이 함께 쓴다. 홈과 같은 가로 행을 공유한다.
+// The member list is folded away in the side rail; the chosen member shows beside the title, and the open/closed state survives re-rendering.
+let membersOpen = false;
+const memberFold = (buttons, chosen) => `<details class="pr-fold" ${membersOpen ? "open" : ""}><summary>Members${chosen && chosen !== "All members" ? ` <span>· ${e(chosen)}</span>` : ""}</summary><div class="pr-group" role="group" aria-label="Members">${buttons}</div></details>`;
 function posterPage({title,sub,action = "",label = "Info and filters",bottom,body}) {
   const now = new Date(Date.now() + kst);
   return `<div class="poster-page">
@@ -456,7 +462,7 @@ function renderBoard(chat) {
   return posterPage({title:chat ? "Free board" : "Study board",sub:chat ? "Say hi and cheer each other on" : "English study notes from the group",action:write,label:"Board info and filters",
     bottom:`<nav class="pr-group" aria-label="Board type"><b>Board</b><a href="#feed" ${chat ? "" : 'aria-current="page"'}>Study board</a><a href="#feed/chat" ${chat ? 'aria-current="page"' : ""}>Free board</a></nav>
       <div class="pr-group"><b>This week</b><span>${plural(weekCount("study"),"note")}</span><span>${plural(weekCount("chat"),"post")}</span><span>${plural(members.filter(Boolean).length,"member")}</span></div>
-      <div class="pr-group" role="group" aria-label="Members"><b>Members</b>${names.map(([id,name]) => `<button type="button" data-lab-member="${id}" aria-pressed="${labMember === id}">${e(name)}</button>`).join("")}</div>`,
+      ${memberFold(names.map(([id,name]) => `<button type="button" data-lab-member="${id}" aria-pressed="${labMember === id}">${e(name)}</button>`).join(""),names.find(([id]) => id === labMember)?.[1])}`,
     body:`<div class="stack">${shown.items.map(chat ? chatCard : postCard).join("") || blank}</div>${shown.nav}`});
 }
 function renderWords(key) {
@@ -472,7 +478,7 @@ function renderWords(key) {
   return posterPage({title:"Vocab",sub:"English words and phrases we collect",action:'<button type="button" class="primary" data-new-word><span class="ic plus" aria-hidden="true"></span>Add a word</button>',label:"Vocab info and filters",
     bottom:nav + `<div class="pr-group" role="group" aria-label="View"><b>View</b><button type="button" data-wview="all" aria-pressed="${wordView === "all"}">By word</button><button type="button" data-wview="group" aria-pressed="${wordView === "group"}">By note</button></div>
       <div class="pr-group"><b>Words</b><span>${words.length}</span></div>
-      <div class="pr-group" role="group" aria-label="Author"><b>Members</b>${names.map(([id,name]) => `<button type="button" data-word-member="${id}" aria-pressed="${wordMember === id}">${e(name)}</button>`).join("")}</div>`,
+      ${memberFold(names.map(([id,name]) => `<button type="button" data-word-member="${id}" aria-pressed="${wordMember === id}">${e(name)}</button>`).join(""),names.find(([id]) => id === wordMember)?.[1])}`,
     body:wordView === "group" ? groupedWords(words) : wordList(words)});
 }
 function renderPost(id) {
@@ -986,6 +992,8 @@ overlayEl.addEventListener("cancel",event => {
   closeWriter(overlayEl.querySelector(".tv-writer"));
 });
 overlayEl.addEventListener("close",() => { editorChanged = false; });
+// "toggle" does not bubble, so it is caught on the way down.
+main.addEventListener("toggle",event => { if (event.target.matches?.(".pr-fold")) membersOpen = event.target.open; },true);
 main.addEventListener("change",event => {
   if (event.target.id === "word-member") {
     wordMember = Number(event.target.value);
@@ -1203,7 +1211,20 @@ async function refresh() {
     board = await loadBoard();
     if (shared) {
       members = [];
-      for (const {id,name} of board.members) members[id - 1] = name;
+      formerNames = {};
+      const hiddenIds = new Set();
+      for (const {id,name,active,hidden} of board.members) {
+        if (active === false) { members[id - 1] = ""; formerNames[id] = name; } else members[id - 1] = name;
+        if (hidden) hiddenIds.add(id);
+      }
+      // "Hidden" members vanish from the site: their notes, words, comments, cheers and streaks are left out.
+      if (hiddenIds.size) {
+        board.posts = board.posts.filter(post => !hiddenIds.has(post.author));
+        const postIds = new Set(board.posts.map(post => post.id));
+        board.words = board.words.filter(word => !hiddenIds.has(word.author) && (!word.post_id || postIds.has(word.post_id)));
+        for (const id of Object.keys(board.comments ?? {})) board.comments[id] = board.comments[id].filter(item => !hiddenIds.has(item.member));
+        for (const id of Object.keys(board.reactions ?? {})) board.reactions[id] = board.reactions[id].filter(member => !hiddenIds.has(member));
+      }
     }
     loadError = "";
   } catch (failure) { loadError = failure.message; }
@@ -1473,9 +1494,9 @@ function chooseMember(afterSelection) {
     <p class="hint">Your notes and words are posted under this name.</p>
     <form method="dialog"><label>Member<select name="member" required>
       <option value="">Select your name</option>
-      ${members.map((name,index) => `<option value="${index+1}" ${active === index+1 ? "selected" : ""}>${e(name)}</option>`).join("")}
+      ${members.map((name,index) => name ? `<option value="${index+1}" ${active === index+1 ? "selected" : ""}>${e(name)}</option>` : "").join("")}
     </select></label><button class="primary">Start with this name</button></form>
-    <p class="hint">Not on the list?</p><button type="button" class="tv-link" data-add-member>Add a member</button>`;
+    <p class="hint">Admin only</p><button type="button" class="tv-link" data-add-member>Manage members</button>`;
   memberPicker.querySelector("form").onsubmit = event => {
     event.preventDefault();
     writeLocal("active-member",Number(event.currentTarget.elements.member.value));
@@ -1497,26 +1518,63 @@ memberDrawer.addEventListener("click",event => {
 });
 document.querySelector("#rename-members").onclick = () => {
   memberDrawer.close();
-  if (!shared) return flash("Members cannot be added in demo mode.");
-  memberEditor.innerHTML = `<div class="dialog-head"><h2 id="member-editor-title">Admin · Add a member</h2></div>
+  if (!shared) return flash("Members cannot be managed in demo mode.");
+  const everyone = board.members ?? [];
+  const status = member => member.hidden ? " (hidden)" : member.active === false ? " (inactive)" : "";
+  const pick = test => everyone.filter(test).map(member => `<option value="${member.id}">${e(member.name)}${status(member)}</option>`).join("");
+  const ACTIONS = {
+    add:{label:"Add a member",hint:"Adds a new name to the list.",button:"Add member"},
+    deactivate:{label:"Deactivate a member",hint:"Removes the name from the lists. Their notes, words and comments stay and keep the name.",button:"Deactivate"},
+    hide:{label:"Deactivate and hide their content",hint:"Removes the name and hides their notes, words and comments from the whole site. You can restore them later.",button:"Deactivate and hide"},
+    restore:{label:"Restore a member",hint:"Brings the name back, with everything they wrote.",button:"Restore"}
+  };
+  memberEditor.innerHTML = `<div class="dialog-head"><h2 id="member-editor-title">Admin · Manage members</h2></div>
     <form><label>Admin email<input name="email" type="email" autocomplete="username" required></label>
     <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
-    <label>New member name<input name="name" required maxlength="24"></label>
+    <label>What do you want to do?<select name="action">${Object.entries(ACTIONS).map(([value,item]) => `<option value="${value}">${item.label}</option>`).join("")}</select></label>
+    <label data-for="add">New member name<input name="name" maxlength="24"></label>
+    <label data-for="pick" hidden>Member<select name="member"></select></label>
+    <p class="hint" data-action-hint></p>
     <p class="form-error" role="alert" hidden></p>
-    <div class="row"><button class="primary" type="submit">Add member</button><button type="button" id="cancel-rename">Cancel</button></div></form>`;
+    <div class="row"><button class="primary" type="submit"></button><button type="button" id="cancel-rename">Cancel</button></div></form>`;
+  const form = memberEditor.querySelector("form");
+  const error = form.querySelector(".form-error");
+  const submit = form.querySelector("[type=submit]");
+  const sync = () => {
+    const action = form.elements.action.value;
+    const adding = action === "add";
+    form.querySelector('[data-for="add"]').hidden = !adding;
+    form.querySelector('[data-for="pick"]').hidden = adding;
+    form.elements.name.required = adding;
+    // Deactivate/hide list the active names; restore lists the inactive ones.
+    form.elements.member.innerHTML = adding ? "" : action === "restore" ? pick(member => member.active === false) : pick(member => member.active !== false);
+    form.querySelector("[data-action-hint]").textContent = ACTIONS[action].hint + (!adding && !form.elements.member.options.length ? (action === "restore" ? " There is nobody to restore." : " There is nobody to deactivate.") : "");
+    submit.textContent = ACTIONS[action].button;
+  };
+  form.elements.action.onchange = sync;
+  sync();
   memberEditor.querySelector("#cancel-rename").onclick = () => memberEditor.close();
-  memberEditor.querySelector("form").onsubmit = async event => {
+  form.onsubmit = async event => {
     event.preventDefault();
-    const form = event.currentTarget;
-    const submit = form.querySelector("[type=submit]");
-    const error = form.querySelector(".form-error");
+    const action = form.elements.action.value;
+    const email = form.elements.email.value.trim();
+    const password = form.elements.password.value;
     error.hidden = true;
+    if (action !== "add" && !form.elements.member.value) { error.textContent = "There is nobody to choose."; error.hidden = false; return; }
+    const target = everyone.find(member => String(member.id) === form.elements.member.value);
+    if (action === "deactivate" || action === "hide") {
+      const ok = await askConfirm({title:`${action === "hide" ? "Deactivate and hide" : "Deactivate"} ${target.name}?`,
+        message:action === "hide" ? "Their name, notes, words and comments will disappear from the site. You can restore them later." : "Their name leaves the lists. Their notes and words stay.",
+        confirmLabel:action === "hide" ? "Deactivate and hide" : "Deactivate"});
+      if (!ok) return;
+    }
     submit.disabled = true;
     try {
-      await addMember(form.elements.email.value.trim(),form.elements.password.value,form.elements.name.value.trim());
+      if (action === "add") await addMember(email,password,form.elements.name.value.trim());
+      else await setMemberStatus(email,password,target.id,action === "restore",action === "hide");
       memberEditor.close();
       await refresh();
-      flash("Member added.");
+      flash(action === "add" ? "Member added." : action === "restore" ? `${target.name} is back.` : `${target.name} deactivated.`);
     } catch (failure) {
       error.textContent = failure.message;
       error.hidden = false;
