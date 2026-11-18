@@ -1474,7 +1474,8 @@ function chooseMember(afterSelection) {
     <form method="dialog"><label>Member<select name="member" required>
       <option value="">Select your name</option>
       ${members.map((name,index) => `<option value="${index+1}" ${active === index+1 ? "selected" : ""}>${e(name)}</option>`).join("")}
-    </select></label><button class="primary">Start with this name</button></form>`;
+    </select></label><button class="primary">Start with this name</button></form>
+    <p class="hint">Not on the list?</p><button type="button" class="tv-link" data-add-member>Add a member</button>`;
   memberPicker.querySelector("form").onsubmit = event => {
     event.preventDefault();
     writeLocal("active-member",Number(event.currentTarget.elements.member.value));
@@ -1482,6 +1483,7 @@ function chooseMember(afterSelection) {
     updateMemberLabel();
     afterSelection?.();
   };
+  memberPicker.querySelector("[data-add-member]").onclick = () => { memberPicker.close(); document.querySelector("#rename-members").onclick(); };
   memberPicker.showModal();
 }
 function updateMemberLabel() {

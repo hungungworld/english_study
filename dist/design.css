@@ -967,3 +967,7 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 :root:root:root body #confirm-box.is-study .week-dots{flex-wrap:wrap}
 :root:root:root body #confirm-box.is-study .study-panel :is(h3,p,ol,ul){margin:0}
 :root:root:root body #confirm-box.is-study{overflow-x:hidden}
+
+/* Name picker: "Add a member" is the approved underline link, left-aligned under its hint, 16px below the form */
+:root:root:root body #member-picker .tv-link{margin-left:0;padding-left:0}
+:root:root:root body #member-picker form + .hint{margin-top:var(--ds-sp-4)}
