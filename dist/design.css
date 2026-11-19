@@ -991,16 +991,16 @@ html:has(body.media-mode)::-webkit-scrollbar-thumb,body.media-mode #tv-overlay::
 
 /* Topic row in the Search window: slim round arrows sit in gutters at both ends, so no chip is ever half-hidden under them; chips snap to the row's edge (DESIGN.md 66). */
 :root:root:root body .tv-topics-wrap{position:relative}
-:root:root:root body .tv-topics-wrap.is-wide{padding:0 var(--ds-h-button)}
+:root:root:root body .tv-topics-wrap.is-wide{padding:0 calc(var(--ds-sp-6) + var(--ds-sp-1))}
 :root:root:root body .tv-topics-wrap.is-wide .tv-topics{scroll-snap-type:x mandatory}
 :root:root:root body .tv-topics-wrap.is-wide .tv-topics.is-dragging{scroll-snap-type:none}
 :root:root:root body .tv-topics-wrap.is-wide .tv-chip{scroll-snap-align:start}
-:root:root:root body .tv-chip-arrow{position:absolute;top:50%;display:inline-flex;align-items:center;justify-content:center;width:var(--ds-h-button);height:var(--ds-h-button);min-height:0;padding:0;margin:0;transform:translateY(-50%);border:0;border-radius:0;background:transparent;color:var(--ds-ink);cursor:pointer;outline:0}
+:root:root:root body .tv-chip-arrow{position:absolute;top:calc(2px + var(--ds-h-chip) / 2);display:inline-flex;align-items:center;justify-content:center;width:var(--ds-h-button);height:var(--ds-h-button);min-height:0;padding:0;margin:0;transform:translateY(-50%);border:0;border-radius:0;background:transparent;color:var(--ds-ink);cursor:pointer;outline:0}
 /* the 44px box is the touch target; the visible disc is a slim 24px */
-:root:root:root body .tv-chip-arrow::before{content:"";position:absolute;top:50%;left:50%;width:var(--ds-sp-5);height:var(--ds-sp-5);transform:translate(-50%,-50%);border-radius:50%;background:var(--ds-paper);transition:background-color .12s ease-out}
+:root:root:root body .tv-chip-arrow::before{content:"";position:absolute;top:50%;left:50%;width:var(--ds-sp-5);height:var(--ds-sp-5);transform:translate(-50%,-50%);border-radius:50%;background:rgba(241,239,233,.55);transition:background-color .12s ease-out}
 :root:root:root body .tv-chip-arrow[hidden]{display:block;visibility:hidden}
-:root:root:root body .tv-chip-arrow.is-left{left:0}
-:root:root:root body .tv-chip-arrow.is-right{right:0}
+:root:root:root body .tv-chip-arrow.is-left{left:calc(var(--ds-sp-1) * -1)}
+:root:root:root body .tv-chip-arrow.is-right{right:calc(var(--ds-sp-1) * -1)}
 :root:root:root body .tv-chip-arrow .ar{position:relative;margin:0;background:var(--ds-ink);width:var(--ds-sp-3);height:var(--ds-sp-3)}
-:root:root:root body .tv-chip-arrow:hover::before{background:var(--ds-sand)}
+:root:root:root body .tv-chip-arrow:hover::before{background:rgba(241,239,233,.8)}
 :root:root:root body .tv-chip-arrow:focus-visible::before{outline:2px solid var(--ds-paper);outline-offset:2px}
