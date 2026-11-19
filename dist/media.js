@@ -859,8 +859,10 @@ function sheetHtml() {
     <div class="dialog-head"><div class="dialog-title"><h2>Search</h2><p class="tv-fresh" data-fresh>${freshText()}</p></div><button type="button" data-sheet-toggle data-close aria-label="Close search">✕</button></div>
     <form role="search" data-tv-search><input id="tv-q" type="search" name="q" placeholder="e.g. climate, AI" aria-keyshortcuts="/" autocomplete="off" enterkeyhint="search" aria-label="Search news and videos" maxlength="60"></form>
     <div class="tv-sheet-row"><div class="tv-seg" role="group" aria-label="Type">${typeControls()}</div><button type="button" class="tv-link" data-reset-filters>Reset</button></div>
+    <div class="tv-topics-wrap" data-chip-wrap><button type="button" class="tv-chip-arrow is-left" data-chip-scroll="-1" aria-label="Show earlier topics" hidden><span class="ar l" aria-hidden="true"></span></button>
     <div class="tv-topics" role="group" aria-label="Topics">${TOPICS.map(topic =>
       `<button type="button" class="tv-chip${counts[topic] ? "" : " is-zero"}" data-topic="${topic}" aria-pressed="${selectedTopics.has(topic)}">${topic}<small>${counts[topic]}</small></button>`).join("")}</div>
+    <button type="button" class="tv-chip-arrow is-right" data-chip-scroll="1" aria-label="Show more topics" hidden><span class="ar r" aria-hidden="true"></span></button></div>
     <button type="button" class="tv-apply" data-sheet-apply>${applyLabel()}</button>
   </div>`;
 }
@@ -1352,6 +1354,39 @@ document.addEventListener("wheel",event => {
   row.scrollLeft += event.deltaY;
   event.preventDefault();
 },{passive:false});
+// The round arrow at the end of the topic row says "this row scrolls" and moves it a page at a time. It shows only on the side that has more chips.
+function chipHints(wrap) {
+  const row = wrap?.querySelector(".tv-topics");
+  if (!row) return;
+  const wide = row.scrollWidth > wrap.clientWidth + 2;   // more chips than the full width holds
+  wrap.classList.toggle("is-wide",wide);
+  const room = wide ? row.scrollWidth - row.clientWidth : 0;
+  const left = wrap.querySelector(".is-left"), right = wrap.querySelector(".is-right");
+  const set = (button,hide) => { if (button && button.hidden !== hide) button.hidden = hide; };   // only on a real change, so the observer below never loops
+  const first = row.firstElementChild ? row.firstElementChild.offsetLeft - row.offsetLeft : 0;   // where the first chip sits when the row is at its start
+  set(left,!(room > 2 && row.scrollLeft > first + 2));
+  set(right,!(room > 2 && row.scrollLeft < room - 2));
+  wrap.classList.toggle("has-left",!!left && !left.hidden);
+  wrap.classList.toggle("has-right",!!right && !right.hidden);
+}
+const chipHintsAll = () => document.querySelectorAll("[data-chip-wrap]").forEach(chipHints);
+for (const type of ["scroll","scrollend"]) document.addEventListener(type,event => { if (event.target.classList?.contains("tv-topics")) chipHints(event.target.closest("[data-chip-wrap]")); },true);
+document.addEventListener("click",event => {
+  const button = event.target.closest?.("[data-chip-scroll]");
+  if (!button) return;
+  const row = button.closest("[data-chip-wrap]").querySelector(".tv-topics");
+  // Move about 70% of the row, then stop exactly at the start of a chip, so no chip is left cut off at the edge.
+  const goal = row.scrollLeft + Number(button.dataset.chipScroll) * row.clientWidth * .7;
+  const starts = [...row.children].map(chip => chip.offsetLeft - row.offsetLeft);
+  const direction = Number(button.dataset.chipScroll);
+  let target = starts.reduce((best,start) => Math.abs(start - goal) < Math.abs(best - goal) ? start : best,starts[0] ?? 0);
+  if (Math.abs(target - row.scrollLeft) < 2) target = (direction > 0 ? starts.find(start => start > row.scrollLeft + 2) : [...starts].reverse().find(start => start < row.scrollLeft - 2)) ?? target;
+  row.scrollTo({left:target,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+  const wrap = button.closest("[data-chip-wrap]");
+  for (const wait of [60,400,900]) setTimeout(() => chipHints(wrap),wait);   // the arrows follow the row even where scroll events come late
+});
+window.addEventListener("resize",chipHintsAll);
+new MutationObserver(() => setTimeout(chipHintsAll,0)).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["hidden"]});
 // Chip rows can also be dragged with the mouse (the thin scrollbar is hard to grab). A drag never counts as a click on a chip.
 let dragRow = null, dragX = 0, dragLeft = 0, dragMoved = false;
 document.addEventListener("pointerdown",event => {

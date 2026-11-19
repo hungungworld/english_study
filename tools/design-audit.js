@@ -97,7 +97,7 @@
 
       if (!inMedia(el)) {
         const br = s.borderTopLeftRadius;
-        if (px(br) > 0 && !SPEC.radii.includes(br)) add('radius', el, br);
+        if (px(br) > 0 && !SPEC.radii.includes(br) && !el.matches('.tv-chip-arrow')) add('radius', el, br);   // the round scroll arrow (DESIGN.md 6-9)
         const c = rgb(s.color), b = rgb(s.backgroundColor), bc = rgb(s.borderTopColor);
         for (const [kind, col] of [['text', c], ['background', b], ['border', s.borderTopWidth !== '0px' && s.borderTopStyle !== 'none' ? bc : null]]) {
           if (!col || col.a === 0) continue;
@@ -138,6 +138,7 @@
       const a = inter[i], b = inter[j];
       if (a.contains(b) || b.contains(a)) continue;
       if (a.closest('.tv-wordbar') !== b.closest('.tv-wordbar')) continue;   // the sticky word bar floats above the scrolling article
+      if (a.matches('.tv-chip-arrow') || b.matches('.tv-chip-arrow')) continue;   // the scroll arrow floats over the chips that scroll under it (DESIGN.md 66)
       if (a.parentElement === b.parentElement && a.parentElement.matches('.tabs,.tv-seg,.tv-dock')) continue;
       const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
       const dx = Math.max(ra.left - rb.right, rb.left - ra.right), dy = Math.max(ra.top - rb.bottom, rb.top - ra.bottom);
